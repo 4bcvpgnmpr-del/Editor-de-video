@@ -309,7 +309,11 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .tk:hover{outline:2px solid var(--text)}
 
 /* ---- descriptores, búsqueda de botones y filtros ---- */
-.dstrip{position:sticky;top:-10px;z-index:4;background:var(--panel);margin:0 -10px 10px;padding:8px 10px 4px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.dstrip{position:sticky;bottom:-10px;z-index:4;background:var(--panel);margin:14px -10px -10px;padding:8px 10px 6px;border-top:1px solid var(--line)}
+.dchip:disabled{opacity:.45;cursor:default}
+.dchip:disabled:hover{border-color:var(--line)}
+.dstrip .pls-in{width:72px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:4px 8px;color:var(--text);font-size:13.5px}
+.hdr-per .seg button{padding:4px 10px;font-size:14px;border-bottom-width:3px}
 .dstrip .dh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:13px}
 .dstrip .dhint{margin:0 0 6px;font-size:12.5px;color:var(--muted)}
 .dstrip .dh b{font:700 15px var(--f-head);letter-spacing:.03em}
@@ -450,6 +454,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
       <small id="videoName">Ningún vídeo abierto</small>
     </div>
     <div class="score" id="score" aria-label="Puntos etiquetados"></div>
+    <div class="hdr-per" title="Equipo de las acciones que etiquetas (tecla 0)"><span>Equipo</span><div class="seg" role="group" aria-label="Equipo de la acción"><button id="teamL" style="--c:var(--local)" aria-pressed="true"></button><button id="teamR" style="--c:var(--rival)" aria-pressed="false"></button></div></div>
     <label class="hdr-per" title="Cuarto en el que se etiquetan las acciones (atajo: Mayús+1 a 5)"><span>Cuarto</span><select id="periodSel" aria-label="Cuarto actual"></select></label>
     <div class="top-actions">
       <button class="btn primary" id="bOpen">Abrir vídeo</button>
@@ -556,18 +561,8 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
           <button class="pb" data-pa="max" title="Maximizar o restaurar" aria-label="Maximizar panel"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></button>
         </div>
         <div class="p-body">
-          <div class="tagbar">
-            <div class="f">
-              <span>Equipo (tecla 0)</span>
-              <div class="seg" role="group" aria-label="Equipo de la acción">
-                <button id="teamL" style="--c:var(--local)" aria-pressed="true"></button>
-                <button id="teamR" style="--c:var(--rival)" aria-pressed="false"></button>
-              </div>
-            </div>
-          </div>
-          <div class="dstrip" id="dstrip"></div>
-          <div class="pages" id="pages" role="tablist" aria-label="Páginas de la botonera"></div>
           <div class="codes" id="codes" data-team="L"></div>
+          <div class="dstrip" id="dstrip"></div>
         </div>
         <i class="rz rz-e" data-rz="e"></i><i class="rz rz-s" data-rz="s"></i><i class="rz rz-se" data-rz="se"></i>
       </section>
@@ -605,7 +600,6 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
               </div>
             </details>
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
-            <div class="detail" id="detail"></div>
           </div>
           <div class="foot">
             <button class="btn" id="bCsv">Exportar CSV</button>
@@ -729,7 +723,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
     <button role="tab" data-ctab="btn" aria-selected="true">Botones</button>
     <button role="tab" data-ctab="cat" aria-selected="false">Categorías</button>
     <button role="tab" data-ctab="desc" aria-selected="false">Descriptores</button>
-    <button role="tab" data-ctab="set" aria-selected="false">Equipos y páginas</button>
+    <button role="tab" data-ctab="set" aria-selected="false">Equipos y plantillas</button>
   </div>
   <div class="dlg-b">
     <div data-sec="btn" style="display:flex;flex-direction:column;gap:10px">
@@ -760,7 +754,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
           <label class="f grow"><span>Plantilla del equipo rival</span><textarea id="rosR" rows="8" placeholder="4 Laura Pérez&#10;9 Marta Ruiz"></textarea></label>
         </div>
       </div>
-      <div>
+      <div hidden>
         <h3 class="sec-t">Páginas de la botonera</h3>
         <p class="hint" style="margin-bottom:6px">Cada página es una pestaña. Las teclas funcionan en todas.</p>
         <div class="prow" id="prows"></div>
@@ -1005,24 +999,30 @@ function toggleDesc(ev,gid,iid){
   else{ if(!g.multi) ev.desc=ev.desc.filter(o=>o.d!==gid); ev.desc.push({d:gid,i:iid,g:g.name,l:it.label}); }
   commit(); renderDetail(); renderDescStrip();
 }
-function descChipsHTML(ev){
+function descChipsHTML(ev,off){
   const gs=cfg.descs.filter(g=>g.items.length);
   if(!gs.length) return '<p class="hint" style="margin:0">No hay descriptores. Créalos en «Editar botonera».</p>';
   return gs.map(g=>'<div class="dg" style="--c:'+safeColor(g.color)+'"><span class="dgn">'+esc(g.name)+'</span><span class="dchips">'+
     g.items.map(it=>{const on=ev.desc.some(o=>o.d===g.id&&o.i===it.id);
-      return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</span></div>').join('');
+      return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'"'+(off?' disabled':'')+'>'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</span></div>').join('');
 }
 function renderDescStrip(){
   const box=$('#dstrip'); if(!box) return;
   const ev=events.find(e=>e.id===selectedId);
-  if(!cfg.descs.some(g=>g.items.length)){box.hidden=true;box.innerHTML='';return;}
+  if(!cfg.descs.some(g=>g.items.length)&&!ev){box.hidden=true;box.innerHTML='';return;}
   box.hidden=false;
-  if(!ev){box.innerHTML='<p class="dhint">Pulsa una acción para calificarla con descriptores.</p>';return;}
-  const prw=roster(ev.team).length?'<div class="dg" style="--c:var(--accent)"><span class="dgn">Jugadora</span><span class="dchips"><select id="sPlayer" class="pls" aria-label="Jugadora">'+playerOpts(ev)+'</select></span></div>':'';
+  if(!ev){box.innerHTML='<div class="dh"><b>Descriptores</b><span>Pulsa una acción para calificarla</span></div>'+descChipsHTML({desc:[]},true);return;}
+  const prw='<div class="dg" style="--c:var(--accent)"><span class="dgn">Jugadora</span><span class="dchips">'+(roster(ev.team).length?'<select id="sPlayer" class="pls" aria-label="Jugadora">'+playerOpts(ev)+'</select>':'<input id="sPlayer" class="pls-in" inputmode="numeric" maxlength="3" placeholder="Dorsal" aria-label="Dorsal" value="'+esc(ev.player)+'">')+'</span></div>';
   box.innerHTML='<div class="dh"><b>Calificar</b><span>'+esc(evName(ev))+' · '+fmt(ev.t)+'</span></div>'+prw+descChipsHTML(ev);
 }
+$('#dstrip').addEventListener('input',e=>{
+  if(e.target.id!=='sPlayer'||e.target.tagName!=='INPUT') return;
+  const ev=events.find(x=>x.id===selectedId); if(!ev) return;
+  e.target.value=e.target.value.replace(/\D/g,''); ev.player=e.target.value; commit(true);
+});
+$('#dstrip').addEventListener('keydown',e=>{if(e.target.id==='sPlayer'&&e.key==='Enter') e.target.blur();});
 $('#dstrip').addEventListener('change',e=>{
-  if(e.target.id!=='sPlayer') return;
+  if(e.target.id!=='sPlayer'||e.target.tagName!=='SELECT') return;
   const ev=events.find(x=>x.id===selectedId); if(!ev) return;
   ev.player=e.target.value; e.target.blur(); commit(); renderDetail(); renderDescStrip();
 });
@@ -1130,18 +1130,16 @@ function renderPeriod(){
 function setPeriod(p){period=p;renderPeriod();}
 $('#periodSel').onchange=e=>{setPeriod(e.target.value);e.target.blur();};
 
-function renderPages(){
+function renderPages(){ return;
   const box=$('#pages');
   if(cfg.pages.length<2){box.hidden=true;box.innerHTML='';return;}
   box.hidden=false;
   box.innerHTML=cfg.pages.map(p=>'<button role="tab" data-page="'+esc(p)+'" aria-selected="'+(p===page)+'">'+esc(p)+'</button>').join('');
 }
-$('#pages').addEventListener('click',e=>{
-  const b=e.target.closest('[data-page]');if(!b) return;
-  page=b.dataset.page;lsSet('bbtag.page',page);renderPages();renderCodes();
-});
 function renderCodes(){
-  const items=cfg.buttons.filter(b=>!b.hidden&&b.page===page);
+  const vis=cfg.buttons.filter(b=>!b.hidden);
+  const mixed=g=>new Set(vis.filter(b=>b.group===g).map(b=>b.page)).size>1;   /* antiguas páginas: solo como subtítulo si la categoría las mezcla */
+  const items=vis.map(b=>Object.assign({},b,{sub:b.sub||(b.page!==cfg.pages[0]&&mixed(b.group)?b.page:'')}));
   const order=cfg.cats.slice(); items.forEach(b=>{const n=b.group||'Otros'; if(!order.includes(n)) order.push(n);});
   const groups=[];
   order.forEach(name=>{
@@ -1153,7 +1151,7 @@ function renderCodes(){
   const btnHtml=b=>'<button class="code '+b.size+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'</span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'<b></b></span></button>';
   codes.innerHTML=groups.length?groups.map(g=>'<div class="grp"><h3>'+esc(g.name)+'</h3>'+
     g.subs.map(sb=>(sb.name?'<h4>'+esc(sb.name)+'</h4>':'')+'<div class="grid">'+sb.items.map(btnHtml).join('')+'</div>').join('')+'</div>').join(''):
-    '<p class="hint">No hay botones visibles en esta página. Usa «Editar botonera» para crear o mostrar botones.</p>';
+    '<p class="hint">No hay botones visibles. Usa «Editar botonera» para crear o mostrar botones.</p>';
   updateCounts();
 }
 function updateCounts(){
@@ -1225,7 +1223,7 @@ function renderList(){
    RENDER: detalle de la etiqueta seleccionada
    ===================================================================== */
 function renderDetail(){
-  const box=$('#detail');
+  const box=$('#detail'); if(!box) return;
   const ev=events.find(e=>e.id===selectedId);
   if(!ev){box.innerHTML='<p class="hint">Selecciona un clip para editar su nombre, etiquetas, comentario, tipo, equipo, periodo, dorsal o duración.</p>';return;}
   const orphan=!btnById(ev.btnId);
@@ -1787,7 +1785,7 @@ $('#fileProject').onchange=async e=>{
 const dlg=$('#dlg');
 let cfgFilter='all';
 function dmsg(t){$('#dMsg').textContent=t||'';}
-function shownButtons(){return cfg.buttons.filter(b=>cfgFilter==='all'||b.page===cfgFilter);}
+function shownButtons(){return cfg.buttons.filter(b=>cfgFilter==='all'||b.group===cfgFilter);}
 function renderCfg(){
   $('#nameL').value=cfg.teamNames.L; $('#nameR').value=cfg.teamNames.R;
   const groups=[...new Set(['Ataque','Defensa','Resultado','Otros'].concat(cfg.buttons.map(b=>b.group)))];
@@ -1796,8 +1794,9 @@ function renderCfg(){
     '<div class="f" style="flex-direction:row;align-items:flex-end;gap:4px"><label class="f"><span>Página '+(i+1)+'</span><input data-page-i="'+i+'" value="'+esc(p)+'" maxlength="24"></label>'+
     (cfg.pages.length>1?'<button class="btn danger" data-page-del="'+i+'" aria-label="Quitar página '+esc(p)+'">Quitar</button>':'')+'</div>').join('')+
     '<button class="btn" id="pAdd">Añadir página</button>';
-  if(cfgFilter!=='all'&&!cfg.pages.includes(cfgFilter)) cfgFilter='all';
-  $('#cfgFilter').innerHTML='<option value="all">Todas las páginas ('+cfg.buttons.length+')</option>'+cfg.pages.map(p=>'<option value="'+esc(p)+'">'+esc(p)+' ('+cfg.buttons.filter(b=>b.page===p).length+')</option>').join('');
+  const fcats=[...new Set(cfg.cats.concat(cfg.buttons.map(b=>b.group)))];
+  if(cfgFilter!=='all'&&!fcats.includes(cfgFilter)) cfgFilter='all';
+  $('#cfgFilter').innerHTML='<option value="all">Todas las categorías ('+cfg.buttons.length+')</option>'+fcats.map(p=>'<option value="'+esc(p)+'">'+esc(p)+' ('+cfg.buttons.filter(b=>b.group===p).length+')</option>').join('');
   $('#cfgFilter').value=cfgFilter;
   const opt=(arr,cur)=>arr.map(([v,t])=>'<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(t)+'</option>').join('');
   $('#brows').innerHTML=shownButtons().map(b=>
@@ -1812,7 +1811,6 @@ function renderCfg(){
     '<span class="racts"><button class="btn" data-up aria-label="Subir" title="Subir">▲</button><button class="btn" data-dn aria-label="Bajar" title="Bajar">▼</button><button class="btn" data-dup aria-label="Duplicar" title="Duplicar">⧉</button><button class="btn danger" data-del aria-label="Quitar" title="Quitar">✕</button></span>'+
     '<details class="more"><summary>Más opciones</summary><div class="morein">'+
       '<label class="f" style="flex:0 1 120px"><span>Subcategoría</span><input data-k="sub" maxlength="20" value="'+esc(b.sub)+'"></label>'+
-      '<label class="f" style="flex:0 1 120px"><span>Página</span><select data-k="page">'+opt(cfg.pages.map(p=>[p,p]),b.page)+'</select></label>'+
       '<label class="f xs"><span>Puntos</span><input data-k="pts" type="number" min="0" max="3" step="1" value="'+(b.pts||0)+'"></label>'+
       '<label class="f" style="width:96px"><span>Tamaño</span><select data-k="size">'+opt([['s','Pequeño'],['m','Normal'],['l','Grande']],b.size)+'</select></label>'+
       '<label class="f xs"><span>Icono</span><select data-k="icon">'+opt(ICONS.map(i=>[i,i||'Ninguno']),b.icon)+'</select></label>'+
@@ -2049,7 +2047,7 @@ $('#prows').addEventListener('click',e=>{
   renderCfg();cfgChanged();
 });
 $('#dAdd').onclick=()=>{
-  const b={id:uid(),label:'Nuevo botón',group:'Otros',sub:'',page:(cfgFilter!=='all'?cfgFilter:page),key:'',pre:5,post:3,pts:0,color:'#8CA0B3',icon:'',size:'m',hidden:false};
+  const b={id:uid(),label:'Nuevo botón',group:(cfgFilter!=='all'?cfgFilter:'Otros'),sub:'',page:cfg.pages[0],key:'',pre:5,post:3,pts:0,color:'#8CA0B3',icon:'',size:'m',hidden:false};
   cfg.buttons.push(b); dmsg(''); renderCfg(); cfgChanged();
   const rows=$('#brows').querySelectorAll('.brow'); const last=rows[rows.length-1];
   if(last){last.scrollIntoView({block:'nearest'});const i=last.querySelector('[data-k="label"]');i.focus();i.select();}
