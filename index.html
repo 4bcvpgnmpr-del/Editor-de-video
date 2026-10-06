@@ -479,10 +479,10 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
 #pTags.editing .code,#pTags.editing .dchip,#pTags.editing .pchip{outline:2px dashed var(--accent);outline-offset:1px}
 .edit-note{background:color-mix(in srgb,var(--accent) 18%,var(--panel2));border:1px solid var(--accent);border-radius:5px;padding:6px 9px;font-size:12.5px;margin-bottom:10px}
 /* ---- clips como tabla de colores ---- */
-.ev-h{display:grid;grid-template-columns:30px minmax(70px,1fr) minmax(0,1.5fr) 48px 62px;gap:0;position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);font-weight:600}
+.ev-h{display:grid;grid-template-columns:30px minmax(70px,1fr) minmax(0,1.5fr) 48px 84px;gap:0;position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);font-weight:600}
 .ev-h>*{padding:6px 6px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .ev-h>*:hover{color:var(--text)}
-.ev{grid-template-columns:30px minmax(70px,1fr) minmax(0,1.5fr) 48px 62px!important;gap:0!important;padding:0!important;align-items:stretch!important;min-height:38px}
+.ev{grid-template-columns:30px minmax(70px,1fr) minmax(0,1.5fr) 48px 84px!important;gap:0!important;padding:0!important;align-items:stretch!important;min-height:38px}
 .ev>*{padding:6px 6px;display:flex;align-items:center;min-width:0}
 .ev .num{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
 .ev .cat{background:var(--c);color:var(--ink,#fff);font-weight:700;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block;line-height:26px}
@@ -502,6 +502,39 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
 #dlgItem .row2{display:flex;gap:8px;flex-wrap:wrap}
 #dlgItem .row2 .f{flex:1 1 90px}
 #dlgItem textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 8px;color:var(--text);font:14px var(--f-body);width:100%}
+
+/* ==== Editor de clip (otra ventana o pantalla completa) ==== */
+.ced-body{margin:0;min-height:100vh}
+.ced-ov{position:fixed;inset:0;z-index:90;background:var(--bg);overflow:auto}
+.ced{display:flex;flex-direction:column;gap:10px;padding:10px 14px 18px;max-width:1400px;margin:0 auto;box-sizing:border-box}
+.ced-h{display:flex;align-items:center;gap:10px;min-width:0}
+.ced-dot{width:14px;height:14px;border-radius:50%;flex:none}
+.ced-ttl{font:700 22px/1.1 var(--f-head);white-space:nowrap}
+.ced-meta{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ced-sp{flex:1}
+.ced-v{background:#000;border-radius:6px;overflow:hidden}
+.ced-v video{width:100%;max-height:58vh;aspect-ratio:16/9;display:block;background:#000}
+.ced-tr{display:flex;align-items:center;gap:10px}
+.ced-tr .btn{min-width:46px;display:inline-flex;justify-content:center}
+.ced-seek{flex:1;accent-color:var(--accent);min-width:60px}
+.ced-time{font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.ced-spd,.ced-tl select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 6px;color:var(--text);font-size:13.5px}
+.ced-rail{position:relative;height:16px;margin:10px 12px 6px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;cursor:pointer;touch-action:none}
+.ced-band{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--accent) 50%,transparent);pointer-events:none}
+.ced-hd{position:absolute;top:-9px;width:14px;height:32px;margin-left:-7px;border:3px solid var(--accent);border-radius:7px;background:var(--panel);cursor:ew-resize;box-sizing:border-box;z-index:2}
+.ced-ph{position:absolute;top:-7px;bottom:-7px;width:2px;margin-left:-1px;background:#F0647A;pointer-events:none;z-index:1}
+.ced-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ced-row label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);font-weight:600}
+.ced-tin,.ced-name,.ced-note{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--text);font:15px var(--f-body);box-sizing:border-box}
+.ced-tin{width:104px;font-variant-numeric:tabular-nums}
+.ced-name,.ced-note{width:100%}
+.ced-note{min-height:90px;resize:vertical}
+.ced-dur{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
+.ced-msg{color:#F0647A;font-size:13px}
+.ced-tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ced-tl li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13.5px}
+.ced-tl li b{font-variant-numeric:tabular-nums}
+.ced-tl .hint{padding:2px 0}
 </style>
 </head>
 <body>
@@ -1294,7 +1327,7 @@ function renderCatSel(){
 }
 $('#fCat').onchange=e=>{const v=e.target.value; filters.types.clear(); if(v!=='all'&&v!=='__multi') filters.types.add(v); e.target.blur(); renderFilters(); renderList(); renderTimeline();};
 function renderList(){
-  renderCatSel();
+  renderCatSel(); cedSync();
   const f=sortedFiltered();
   $('#cnt').textContent=f.length+' de '+events.length;
   const pf=$('#bPlayF');
@@ -1317,7 +1350,7 @@ function renderList(){
       '<span class="cat">'+esc(evName(e))+'</span>'+
       '<span class="dsc2">'+(d?esc(d):'<span style="color:var(--muted)">—</span>')+'</span>'+
       '<span class="t">'+fmt(e.t)+'</span>'+
-      '<span class="acts"><button data-act="pl" title="Añadir a la playlist actual" aria-label="Añadir a la playlist actual">+</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="del" title="Borrar" aria-label="Borrar clip">'+ICON.trash+'</button></span></li>';
+      '<span class="acts"><button data-act="ed" title="Editar clip en otra ventana (doble clic en la fila)" aria-label="Editar clip">✎</button><button data-act="pl" title="Añadir a la playlist actual" aria-label="Añadir a la playlist actual">+</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="del" title="Borrar" aria-label="Borrar clip">'+ICON.trash+'</button></span></li>';
   }).join('');
   const s=list.querySelector('.ev.sel');
   if(s) s.scrollIntoView({block:'nearest'});
@@ -1731,6 +1764,7 @@ $('#list').addEventListener('click',e=>{
   const li=e.target.closest('.ev'); if(!li) return;
   const act=e.target.closest('[data-act]');
   if(act&&act.dataset.act==='del'){deleteEvent(li.dataset.id);return;}
+  if(act&&act.dataset.act==='ed'){openClipEditor(li.dataset.id);return;}
   if(act&&act.dataset.act==='pl'){
     const p=curPl();
     if(!p){toast('Primero crea una playlist en la mesa de producción.',{label:'Abrir mesa',fn:openProd});return;}
@@ -1738,6 +1772,10 @@ $('#list').addEventListener('click',e=>{
     return;
   }
   playClip(li.dataset.id);
+});
+$('#list').addEventListener('dblclick',e=>{
+  if(e.target.closest('[data-act],[data-sort]')) return;
+  const li=e.target.closest('.ev'); if(li) openClipEditor(li.dataset.id);
 });
 $('#list').addEventListener('keydown',e=>{
   if(e.key==='Enter'){const li=e.target.closest('.ev'); if(li){e.preventDefault();playClip(li.dataset.id);}}
@@ -3456,6 +3494,257 @@ tlInner.addEventListener('dblclick',e=>{const k=e.target.closest('.tk');if(!k) r
 /* =====================================================================
    ATAJOS DE TECLADO
    ===================================================================== */
+
+/* =====================================================================
+   EDITOR DE CLIP: se abre en otra ventana con su propio vídeo.
+   Si el navegador bloquea la ventana, se abre a pantalla completa aquí.
+   ===================================================================== */
+let ced=null;
+const fmtC=t=>fmt(t,true);
+function parseT(str){
+  const s=String(str).trim().replace(',','.'); if(!s) return NaN;
+  const p=s.split(':').map(Number); if(p.length>3||p.some(x=>!isFinite(x)||x<0)) return NaN;
+  return p.reduce((a,x)=>a*60+x,0);
+}
+const cedEv=()=>ced&&events.find(e=>e.id===ced.id);
+const CED_HTML='<div class="ced">'+
+ '<div class="ced-h"><i class="ced-dot"></i><b class="ced-ttl"></b><span class="ced-meta"></span><span class="ced-sp"></span>'+
+  '<button class="btn" data-c="prev" title="Clip anterior">◀</button><button class="btn" data-c="next" title="Clip siguiente">▶</button><button class="btn" data-c="close">Cerrar</button></div>'+
+ '<div class="ced-v"><video playsinline preload="auto"></video></div>'+
+ '<div class="ced-tr"><button class="btn" data-c="play" aria-label="Reproducir o pausar (espacio)" title="Reproducir o pausar (espacio)"></button>'+
+  '<input type="range" class="ced-seek" min="0" max="1000" value="0" aria-label="Posición dentro del clip"><span class="ced-time"></span>'+
+  '<select class="ced-spd" aria-label="Velocidad"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></div>'+
+ '<div class="ced-rail" title="Arrastra los tiradores para recortar el clip. Haz clic para ir a ese instante."><div class="ced-band"></div><i class="ced-hd" data-h="s" title="Inicio"></i><i class="ced-hd" data-h="e" title="Fin"></i><div class="ced-ph"></div></div>'+
+ '<div class="ced-row"><label>Inicio: <input class="ced-tin" data-k="start" aria-label="Inicio del clip"></label><button class="btn" data-c="setS" title="Poner el inicio en el instante actual (tecla I)">⟸ I</button>'+
+  '<label>Fin: <input class="ced-tin" data-k="end" aria-label="Fin del clip"></label><button class="btn" data-c="setE" title="Poner el fin en el instante actual (tecla O)">O ⟹</button>'+
+  '<span class="ced-msg" role="status"></span><span class="ced-dur"></span></div>'+
+ '<div class="ced-row"><button class="btn primary" data-c="draw">✎ Dibujar en este instante</button><span class="hint">El dibujo se hace en la ventana principal y aparece aquí, con su duración y si pausa el vídeo.</span></div>'+
+ '<ul class="ced-tl" aria-label="Dibujos del clip"></ul>'+
+ '<input class="ced-name" maxlength="80" placeholder="Título del clip (se muestra en la lista y en el export)…" aria-label="Título del clip">'+
+ '<textarea class="ced-note" maxlength="300" placeholder="Nota del clip…" aria-label="Nota del clip"></textarea>'+
+ '<div class="ced-row"><span class="hint">Atajos: espacio reproduce, I y O marcan inicio y fin, flechas fotograma a fotograma (Mayús: 1 s).</span><span class="ced-sp"></span><button class="btn danger" data-c="del">Borrar clip</button></div>'+
+'</div>';
+
+function openClipEditor(id){
+  const ev0=events.find(e=>e.id===id); if(!ev0) return;
+  if(!hasVideo){toast('Abre primero un vídeo para editar el clip.');return;}
+  if(teleEd) closeTele();
+  if(clip) stopClip(true); else video.pause();
+  if(selectedId!==id) selectEv(id);
+  if(ced&&ced.w&&!ced.w.closed){cedSwitch(id);try{ced.w.focus();}catch(e){}return;}
+  if(ced) cedClose();
+  let w=null;
+  try{w=window.open('','bb_clip','popup=yes,width=1120,height=900');}catch(e){w=null;}
+  let d=document, host;
+  if(w){
+    d=w.document;
+    d.open(); d.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Editar clip · Scouting</title></head><body class="ced-body"></body></html>'); d.close();
+    document.querySelectorAll('style,link[rel="stylesheet"]').forEach(n=>d.head.appendChild(d.importNode(n,true)));
+    const th=document.documentElement.getAttribute('data-theme'); if(th) d.documentElement.setAttribute('data-theme',th);
+    host=d.body;
+  }else{
+    host=document.createElement('div'); host.className='ced-ov'; document.body.appendChild(host);
+    toast('El navegador ha bloqueado la ventana nueva: el editor se abre aquí. Permite las ventanas emergentes de este sitio para abrirlo aparte.');
+  }
+  host.innerHTML=CED_HTML;
+  const q=s=>host.querySelector(s);
+  ced={id,w,d,host,q,v:q('video'),raf:0,drag:null,seeking:false,win:[0,1],pp:null,msgT:0};
+  const v=ced.v;
+  v.src=video.currentSrc||video.src; v.muted=video.muted;
+  v.addEventListener('loadedmetadata',()=>{const e=cedEv(); if(e) v.currentTime=e.start;},{once:true});
+  cedWindow(); cedFill();
+  cedBind();
+  const W=w||window;
+  const loop=()=>{if(!ced||ced.v!==v) return; cedTick(); ced.raf=W.requestAnimationFrame(loop);};
+  ced.raf=W.requestAnimationFrame(loop);
+  if(w){ ced.poll=setInterval(()=>{try{if(!ced||ced.w!==w) return; if(w.closed) cedClose();}catch(e){cedClose();}},500); w.focus(); }
+}
+function cedClose(){
+  if(!ced) return;
+  const c=ced; ced=null;
+  try{(c.w||window).cancelAnimationFrame(c.raf);}catch(e){}
+  clearInterval(c.poll);
+  try{c.v.pause();c.v.removeAttribute('src');c.v.load();}catch(e){}
+  try{c.d.removeEventListener('keydown',c.kh,true);}catch(e){}
+  if(c.w){try{if(!c.w.closed) c.w.close();}catch(e){}}
+  else c.host.remove();
+}
+window.addEventListener('beforeunload',()=>{if(ced&&ced.w){try{ced.w.close();}catch(e){}}});
+function cedSync(){
+  if(!ced) return;
+  if(!cedEv()){cedClose();return;}
+  cedFill();
+}
+function cedSwitch(id){
+  if(!ced) return;
+  ced.id=id; ced.v.pause();
+  if(selectedId!==id) selectEv(id);
+  const e=cedEv(); cedWindow(); if(e) ced.v.currentTime=e.start; cedFill();
+}
+function cedWindow(){
+  const e=cedEv(); if(!e) return;
+  const dur=video.duration||e.end+30, pad=Math.max(4,(e.end-e.start)*0.75);
+  ced.win=[Math.max(0,e.start-pad),Math.min(dur,e.end+pad)];
+}
+function cedMsg(t){
+  if(!ced) return; const m=ced.q('.ced-msg'); m.textContent=t||'';
+  clearTimeout(ced.msgT); if(t) ced.msgT=setTimeout(()=>{if(ced) ced.q('.ced-msg').textContent='';},3500);
+}
+function cedFillTimes(){
+  const e=cedEv(); if(!e) return; const q=ced.q, act=ced.d.activeElement;
+  const si=q('.ced-tin[data-k="start"]'), ei=q('.ced-tin[data-k="end"]');
+  if(act!==si) si.value=fmtC(e.start);
+  if(act!==ei) ei.value=fmtC(e.end);
+  q('.ced-dur').textContent='('+fmtC(e.end-e.start)+')';
+}
+function cedFill(){
+  const e=cedEv(); if(!e) return;
+  const q=ced.q, inf=info(e), col=safeColor(inf.color), act=ced.d.activeElement;
+  if(e.start<ced.win[0]||e.end>ced.win[1]) cedWindow();
+  q('.ced-dot').style.background=col;
+  q('.ced-ttl').textContent=evName(e);
+  q('.ced-meta').textContent=[e.period,teamName(e.team),playerLabel(e.team,e.player),descText(e)].filter(Boolean).join(' · ');
+  if(ced.w) ced.d.title=evName(e)+' · Editar clip';
+  cedFillTimes();
+  const nm=q('.ced-name'), nt=q('.ced-note');
+  nm.placeholder='Título del clip ('+inf.label+'), se muestra en la lista y en el export…';
+  if(act!==nm) nm.value=e.name;
+  if(act!==nt) nt.value=e.note;
+  const sorted=events.slice().sort((a,b)=>a.t-b.t), i=sorted.findIndex(x=>x.id===e.id);
+  q('[data-c="prev"]').disabled=i<=0; q('[data-c="next"]').disabled=i>=sorted.length-1;
+  const tls=teles.filter(t=>t.t>=e.start&&t.t<=e.end);
+  const holds=[1,2,3,5,8,10,15,20,30];
+  q('.ced-tl').innerHTML=tls.length?tls.map(t=>{
+    const hs=holds.includes(t.hold)?holds:holds.concat([t.hold]).sort((a,b)=>a-b);
+    return '<li data-tid="'+esc(t.id)+'"><span>Dibujo en <b>'+fmtC(t.t-e.start)+'</b></span>'+
+      '<label>visible: <select data-tk="hold">'+hs.map(h=>'<option value="'+h+'"'+(h===t.hold?' selected':'')+'>'+String(h).replace('.',',')+' s</option>').join('')+'</select></label>'+
+      '<select data-tk="mode" aria-label="Pausa"><option value="freeze"'+(t.mode==='freeze'?' selected':'')+'>con pausa</option><option value="overlay"'+(t.mode==='overlay'?' selected':'')+'>sin pausa</option></select>'+
+      '<span class="ced-sp"></span><button class="btn" data-tc="go">Ir</button><button class="btn" data-tc="edit">Editar</button><button class="btn danger" data-tc="del" aria-label="Borrar dibujo">🗑</button></li>';
+  }).join(''):'<li class="hint">Este clip todavía no tiene dibujos.</li>';
+}
+function cedTick(){
+  const e=cedEv(); if(!e) return;
+  const v=ced.v, q=ced.q;
+  if(!v.paused&&!ced.drag&&v.currentTime>=e.end){v.pause();v.currentTime=e.end;}
+  const [a,b]=ced.win, span=Math.max(0.1,b-a), P=t=>clamp((t-a)/span*100,0,100);
+  const ps=P(e.start), pe=P(e.end);
+  q('.ced-band').style.left=ps+'%'; q('.ced-band').style.width=Math.max(0,pe-ps)+'%';
+  q('.ced-hd[data-h="s"]').style.left=ps+'%'; q('.ced-hd[data-h="e"]').style.left=pe+'%';
+  q('.ced-ph').style.left=P(v.currentTime)+'%';
+  const len=Math.max(0.1,e.end-e.start), rel=clamp(v.currentTime-e.start,0,len);
+  if(!ced.seeking) q('.ced-seek').value=Math.round(rel/len*1000);
+  q('.ced-time').textContent=fmtC(rel)+' / '+fmtC(len);
+  if(ced.pp!==v.paused){ced.pp=v.paused; q('[data-c="play"]').innerHTML=v.paused?ICON.play:ICON.pause;}
+}
+function cedToggle(){
+  const e=cedEv(), v=ced.v; if(!e) return;
+  if(v.paused){ if(v.currentTime>=e.end-0.05||v.currentTime<e.start-0.01) v.currentTime=e.start; v.play().catch(()=>{}); }
+  else v.pause();
+}
+function cedSet(which){
+  const e=cedEv(); if(!e) return; const t=ced.v.currentTime;
+  if(which==='s'){ if(t<e.end-0.3){e.start=t;commit();} else cedMsg('El inicio tiene que ir antes del fin.'); }
+  else{ if(t>e.start+0.3){e.end=t;commit();} else cedMsg('El fin tiene que ir después del inicio.'); }
+}
+function cedStep(dt){const v=ced.v; v.pause(); v.currentTime=clamp(v.currentTime+dt,0,video.duration||v.duration||0);}
+function cedBind(){
+  const {q,v,host,d}=ced;
+  host.addEventListener('click',ev=>{
+    const c=ev.target.closest('[data-c]');
+    if(c){
+      const a=c.dataset.c, e=cedEv(); if(!e) return;
+      if(a==='close') cedClose();
+      else if(a==='play') cedToggle();
+      else if(a==='setS') cedSet('s');
+      else if(a==='setE') cedSet('e');
+      else if(a==='prev'||a==='next'){
+        const s=events.slice().sort((x,y)=>x.t-y.t), i=s.findIndex(x=>x.id===e.id), n=s[i+(a==='next'?1:-1)];
+        if(n) cedSwitch(n.id);
+      }
+      else if(a==='del') deleteEvent(e.id);
+      else if(a==='draw'){
+        const t=clamp(v.currentTime,e.start,e.end); v.pause();
+        if(!ced.w) cedClose();
+        try{window.focus();}catch(_){}
+        userSeek(t); openTele();
+        toast('Dibuja en el vídeo de la ventana principal. Al cerrar el dibujo aparecerá en el editor del clip.');
+      }
+      return;
+    }
+    const tc=ev.target.closest('[data-tc]'); if(!tc) return;
+    const t=teles.find(x=>x.id===tc.closest('[data-tid]').dataset.tid); if(!t) return;
+    if(tc.dataset.tc==='go'){v.pause(); v.currentTime=t.t;}
+    else if(tc.dataset.tc==='edit'){ if(!ced.w) cedClose(); try{window.focus();}catch(_){} userSeek(t.t); openTele(t); }
+    else if(tc.dataset.tc==='del') deleteTele(t);
+  });
+  host.addEventListener('change',ev=>{
+    const el=ev.target, e=cedEv(); if(!e) return;
+    if(el.matches('.ced-spd')){v.playbackRate=+el.value;return;}
+    if(el.matches('.ced-tin')){
+      const val=parseT(el.value), k=el.dataset.k, dur=video.duration||Infinity;
+      if(k==='start'&&isFinite(val)&&val>=0&&val<e.end-0.3){e.start=val;v.currentTime=val;commit();}
+      else if(k==='end'&&isFinite(val)&&val>e.start+0.3&&val<=dur){e.end=val;v.currentTime=val;commit();}
+      else{cedMsg('Escribe el tiempo como 1:39:15 o 2:05.5, dentro del vídeo.'); el.value=fmtC(e[k]);}
+      el.blur(); return;
+    }
+    const tk=el.dataset.tk;
+    if(tk){
+      const t=teles.find(x=>x.id===el.closest('[data-tid]').dataset.tid); if(!t) return;
+      if(tk==='hold') t.hold=clamp(+el.value,0.5,60); else t.mode=el.value==='overlay'?'overlay':'freeze';
+      t.rev=(t.rev||0)+1; commitTeleGlobal();
+    }
+  });
+  host.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.matches('.ced-tin,.ced-name')) ev.target.blur();});
+  q('.ced-name').addEventListener('input',ev=>{const e=cedEv(); if(!e) return; e.name=ev.target.value; commit(true);});
+  q('.ced-note').addEventListener('input',ev=>{const e=cedEv(); if(!e) return; e.note=ev.target.value; record(true); renderList();});
+  const sk=q('.ced-seek');
+  sk.addEventListener('input',()=>{const e=cedEv(); if(!e) return; ced.seeking=true; v.currentTime=e.start+sk.value/1000*(e.end-e.start);});
+  sk.addEventListener('change',()=>{if(ced) ced.seeking=false;});
+  const rail=q('.ced-rail');
+  rail.addEventListener('pointerdown',pe=>{
+    const e=cedEv(); if(!e) return;
+    pe.preventDefault(); v.pause();
+    const rr=rail.getBoundingClientRect();
+    const tAt=x=>ced.win[0]+clamp((x-rr.left)/rr.width,0,1)*(ced.win[1]-ced.win[0]);
+    const h=pe.target.closest('.ced-hd');
+    ced.drag=h?h.dataset.h:'seek';
+    const apply=x=>{
+      const t=tAt(x);
+      if(ced.drag==='s'){e.start=clamp(t,0,e.end-0.3);v.currentTime=e.start;cedFillTimes();}
+      else if(ced.drag==='e'){e.end=clamp(t,e.start+0.3,video.duration||t);v.currentTime=e.end;cedFillTimes();}
+      else v.currentTime=t;
+    };
+    apply(pe.clientX);
+    try{rail.setPointerCapture(pe.pointerId);}catch(_){}
+    const mv=m=>{if(ced) apply(m.clientX);};
+    const up=()=>{
+      rail.removeEventListener('pointermove',mv); rail.removeEventListener('pointerup',up); rail.removeEventListener('pointercancel',up);
+      if(!ced) return; const was=ced.drag; ced.drag=null; if(was==='s'||was==='e') commit();
+    };
+    rail.addEventListener('pointermove',mv); rail.addEventListener('pointerup',up); rail.addEventListener('pointercancel',up);
+  });
+  ced.kh=ev=>{
+    if(!ced) return;
+    if(!ced.w&&document.querySelector('dialog[open]')) return;
+    const tg=ev.target, k=ev.key.toLowerCase(), mod=ev.ctrlKey||ev.metaKey;
+    const typing=tg&&/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)&&!(tg.type==='range');
+    let done=true;
+    if(mod&&k==='z'){ if(ev.shiftKey) redo(); else undo(); }
+    else if(mod&&k==='y') redo();
+    else if(typing||mod||ev.altKey) done=false;
+    else if(k===' ') {if(!ev.repeat) cedToggle();}
+    else if(k==='i') cedSet('s');
+    else if(k==='o') cedSet('e');
+    else if(k==='arrowleft') cedStep(ev.shiftKey?-1:-1/effFps());
+    else if(k==='arrowright') cedStep(ev.shiftKey?1:1/effFps());
+    else if(k==='escape'&&!ced.w) cedClose();
+    else done=false;
+    if(done){ev.preventDefault(); ev.stopImmediatePropagation();}
+    else if(!ced.w) ev.stopImmediatePropagation();   /* en pantalla completa, las teclas no llegan a la botonera */
+  };
+  d.addEventListener('keydown',ced.kh,true);
+}
+
 function onKey(e){
   if(document.querySelector('dialog[open]')) return;
   const tg=e.target;
