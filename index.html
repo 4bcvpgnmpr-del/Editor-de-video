@@ -444,6 +444,64 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
   .code.hit{animation:none}
   .toast{transition:none}
 }
+
+/* ==== Botonera estilo editor: categorías de color, descriptores y jugadoras ==== */
+.bb-tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.bb-tools .btn{padding:6px 10px;font-size:13.5px}
+.bb-tools .btn b{font-size:15px;margin-right:2px}
+.bb-tools #bbEdit[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.codes{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.code{justify-content:center;text-align:center;min-height:52px;border:0;border-left:0;border-radius:6px;background:var(--c);color:var(--ink,#fff);box-shadow:none;position:relative;padding:6px 8px}
+.code:hover{border:0;filter:brightness(1.08)}
+.code .cl{font:700 16px/1.1 var(--f-body);color:var(--ink,#fff)}
+.code .cm{position:absolute;right:5px;top:4px;flex-direction:row;gap:4px}
+.code .cm b{display:inline;font:700 13px var(--f-body);color:var(--ink,#fff);opacity:.9}
+.code .cm b:empty{display:none}
+.code .cm kbd{background:rgba(0,0,0,.18);border-color:transparent;color:var(--ink,#fff);font-size:10px;padding:0 4px}
+.code .cl b.x{font-weight:700;margin-left:6px;white-space:nowrap}
+.code .cl b.x:empty{display:none}
+@keyframes hit{0%{filter:brightness(1.6)}100%{filter:none}}
+.dstrip{position:static!important;margin:16px 0 0!important;padding:0!important;border:0!important;background:transparent!important}
+.bb-h{display:flex;align-items:baseline;gap:8px;margin:14px 0 8px;color:var(--muted);font:600 14px var(--f-body)}
+.bb-h:first-child{margin-top:0}
+.bb-h span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:12.5px;text-align:right}
+.bb-h span b{color:var(--text)}
+.dflat{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.dchip{justify-content:center;min-height:34px;border-left:3px solid var(--c);font-weight:600;font-size:13px;color:var(--text);padding:4px 8px}
+.dchip[aria-pressed="true"]{background:var(--c);color:var(--ink,#fff);border-color:var(--c)}
+.tband{display:flex;align-items:center;gap:8px;background:var(--tc);color:#fff;border-radius:5px 5px 0 0;padding:5px 10px;font-weight:700;font-size:14px;margin-top:8px}
+.tband span{flex:1}
+.tband button{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:4px;padding:2px 8px;font-weight:600;font-size:12.5px;cursor:pointer}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px;padding:6px;border:1px solid var(--line);border-top:0;border-radius:0 0 5px 5px}
+.pchip{background:color-mix(in srgb,var(--tc) 22%,var(--panel2));border:1px solid color-mix(in srgb,var(--tc) 45%,var(--line));border-radius:5px;color:var(--text);font-weight:600;font-size:13px;min-height:32px;padding:4px 8px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pchip[aria-pressed="true"]{background:var(--tc);color:#fff;border-color:var(--tc)}
+.pgrid .hint{grid-column:1/-1;padding:2px}
+#pTags.editing .code,#pTags.editing .dchip,#pTags.editing .pchip{outline:2px dashed var(--accent);outline-offset:1px}
+.edit-note{background:color-mix(in srgb,var(--accent) 18%,var(--panel2));border:1px solid var(--accent);border-radius:5px;padding:6px 9px;font-size:12.5px;margin-bottom:10px}
+/* ---- clips como tabla de colores ---- */
+.ev-h{display:grid;grid-template-columns:30px minmax(70px,1fr) minmax(0,1.5fr) 48px 62px;gap:0;position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);font-weight:600}
+.ev-h>*{padding:6px 6px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.ev-h>*:hover{color:var(--text)}
+.ev{grid-template-columns:30px minmax(70px,1fr) minmax(0,1.5fr) 48px 62px!important;gap:0!important;padding:0!important;align-items:stretch!important;min-height:38px}
+.ev>*{padding:6px 6px;display:flex;align-items:center;min-width:0}
+.ev .num{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.ev .cat{background:var(--c);color:var(--ink,#fff);font-weight:700;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block;line-height:26px}
+.ev .dsc2{font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block;line-height:26px}
+.ev .t{justify-content:flex-end;font-size:13px;color:var(--text)!important}
+.ev .acts{justify-content:flex-end;padding:0 2px;gap:0}
+.ev .acts button{width:20px!important;height:26px!important}
+.ev-h>*:nth-child(4){text-align:right}
+.ev .acts svg{width:14px;height:14px}
+.ev-h>button:first-child{white-space:nowrap}
+.ev:nth-child(odd){background:color-mix(in srgb,var(--panel2) 45%,var(--panel))}
+.ev.sel{background:var(--panel2)!important}
+.libbar{display:flex;gap:6px;align-items:center;padding:8px 10px 4px;flex-wrap:wrap}
+.libbar label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);font-weight:600}
+.libbar select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--text);font-size:14px;font-weight:600;max-width:170px}
+#dlgItem .dlg-b{gap:10px}
+#dlgItem .row2{display:flex;gap:8px;flex-wrap:wrap}
+#dlgItem .row2 .f{flex:1 1 90px}
+#dlgItem textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 8px;color:var(--text);font:14px var(--f-body);width:100%}
 </style>
 </head>
 <body>
@@ -561,6 +619,13 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
           <button class="pb" data-pa="max" title="Maximizar o restaurar" aria-label="Maximizar panel"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></button>
         </div>
         <div class="p-body">
+          <div class="bb-tools">
+            <button class="btn" id="bbAddCat"><b>+</b> Categoría</button>
+            <button class="btn" id="bbAddDesc"><b>+</b> Descriptor</button>
+            <button class="btn" id="bbAddPl"><b>+</b> Jugadora</button>
+            <button class="btn" id="bbEdit" aria-pressed="false" title="Al activarlo, pulsa cualquier categoría, descriptor o jugadora para cambiarle el nombre, el color o borrarlo">✎ Editar</button>
+          </div>
+          <div class="edit-note" id="bbNote" hidden>Modo edición: pulsa una categoría, un descriptor o una jugadora para cambiarlo. También funciona con clic derecho sin activar el modo.</div>
           <div class="codes" id="codes" data-team="L"></div>
           <div class="dstrip" id="dstrip"></div>
         </div>
@@ -579,9 +644,12 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
         </div>
         <div class="p-body col">
           <div class="lib-view" data-view="clips">
+            <div class="libbar">
+              <label>Categoría <select id="fCat" aria-label="Filtrar por categoría"></select></label>
+            </div>
             <div class="side-h">
               <span class="cnt" id="cnt"></span>
-              <select id="fSort" aria-label="Ordenar clips"><option value="time">Orden: tiempo</option><option value="name">Orden: nombre</option><option value="type">Orden: tipo</option><option value="cat">Orden: categoría</option></select>
+              <select id="fSort" aria-label="Ordenar clips"><option value="timeDesc">Orden: más recientes</option><option value="time">Orden: tiempo</option><option value="name">Orden: nombre</option><option value="type">Orden: tipo</option><option value="cat">Orden: categoría</option></select>
               <button class="btn primary" id="bPlayF" disabled>Ver todos</button>
             </div>
             <div class="filters">
@@ -769,6 +837,12 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
   </div>
 </dialog>
 
+<dialog id="dlgItem" class="sm" aria-labelledby="itTitle">
+  <div class="dlg-h"><h2 id="itTitle">Editar</h2><button class="btn" id="itClose">Cerrar</button></div>
+  <div class="dlg-b" id="itBody"></div>
+  <div class="dlg-f"><button class="btn primary" id="itOk">Guardar</button><button class="btn danger" id="itDel">Borrar</button><span class="msg" id="itMsg" role="alert"></span></div>
+</dialog>
+
 <dialog id="dlgLayout" class="sm" aria-labelledby="lyTitle">
   <div class="dlg-h"><h2 id="lyTitle">Paneles y diseño</h2><button class="btn" id="lyClose">Cerrar</button></div>
   <div class="dlg-b" id="lyBody"></div>
@@ -950,7 +1024,7 @@ if(!cfg.pages.includes(page)) page=cfg.pages[0];
 let selectedId=null;
 let clip=null;      /* {queue:[ids], idx, temp?} */
 let sel=null;       /* selección de la línea de tiempo {a,b} */
-const filters={team:'all',player:'',period:'all',q:'',types:new Set(),cats:new Set(),descs:new Set(),sort:'time'};
+const filters={team:'all',player:'',period:'all',q:'',types:new Set(),cats:new Set(),descs:new Set(),sort:'timeDesc'};
 let zoom=1;
 
 const video=$('#video');
@@ -1009,27 +1083,46 @@ function descChipsHTML(ev,off){
 function renderDescStrip(){
   const box=$('#dstrip'); if(!box) return;
   const ev=events.find(e=>e.id===selectedId);
-  if(!cfg.descs.some(g=>g.items.length)&&!ev){box.hidden=true;box.innerHTML='';return;}
-  box.hidden=false;
-  if(!ev){box.innerHTML='<div class="dh"><b>Descriptores</b><span>Pulsa una acción para calificarla</span></div>'+descChipsHTML({desc:[]},true);return;}
-  const prw='<div class="dg" style="--c:var(--accent)"><span class="dgn">Jugadora</span><span class="dchips">'+(roster(ev.team).length?'<select id="sPlayer" class="pls" aria-label="Jugadora">'+playerOpts(ev)+'</select>':'<input id="sPlayer" class="pls-in" inputmode="numeric" maxlength="3" placeholder="Dorsal" aria-label="Dorsal" value="'+esc(ev.player)+'">')+'</span></div>';
-  box.innerHTML='<div class="dh"><b>Calificar</b><span>'+esc(evName(ev))+' · '+fmt(ev.t)+'</span></div>'+prw+descChipsHTML(ev);
+  const cur=ev?'<span>Clip: <b>'+esc(evName(ev))+'</b> · '+fmt(ev.t)+'</span>':'<span>Pulsa una categoría para crear un clip</span>';
+  const its=[]; cfg.descs.forEach(g=>g.items.forEach(it=>its.push({g,it})));
+  let h='<div class="bb-h">Descriptores'+cur+'</div>';
+  h+=its.length?'<div class="dflat">'+its.map(({g,it})=>{const on=!!ev&&ev.desc.some(o=>o.d===g.id&&o.i===it.id);
+      return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'" aria-pressed="'+on+'" title="'+esc(g.name)+'">'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</div>'
+    :'<p class="hint">Todavía no hay descriptores. Crea uno con «+ Descriptor».</p>';
+  h+='<div class="bb-h">Jugadoras</div>';
+  ['L','R'].forEach(k=>{
+    const r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
+    h+='<div class="tband" style="--tc:var(--'+(k==='L'?'local':'rival')+')"><span>'+esc(teamName(k))+'</span><button data-team-edit="'+k+'" title="Cambiar el nombre del equipo">✎ Nombre</button><button data-pl-add="'+k+'" title="Añadir jugadora">+ Jugadora</button></div>'+
+       '<div class="pgrid" style="--tc:var(--'+(k==='L'?'local':'rival')+')">'+(r.length?r.map(p=>{const on=!!ev&&ev.team===k&&String(ev.player)===p.n;
+         return '<button class="pchip" data-pt="'+k+'" data-pn="'+esc(p.n)+'" aria-pressed="'+on+'" title="'+esc('#'+p.n+' '+p.name)+'">#'+esc(p.n)+(p.name?' '+esc(p.name):'')+'</button>';}).join('')
+         :'<p class="hint">Sin jugadoras. Pulsa «+ Jugadora».</p>')+'</div>';
+  });
+  box.hidden=false; box.innerHTML=h;
 }
-$('#dstrip').addEventListener('input',e=>{
-  if(e.target.id!=='sPlayer'||e.target.tagName!=='INPUT') return;
-  const ev=events.find(x=>x.id===selectedId); if(!ev) return;
-  e.target.value=e.target.value.replace(/\D/g,''); ev.player=e.target.value; commit(true);
-});
-$('#dstrip').addEventListener('keydown',e=>{if(e.target.id==='sPlayer'&&e.key==='Enter') e.target.blur();});
-$('#dstrip').addEventListener('change',e=>{
-  if(e.target.id!=='sPlayer'||e.target.tagName!=='SELECT') return;
-  const ev=events.find(x=>x.id===selectedId); if(!ev) return;
-  ev.player=e.target.value; e.target.blur(); commit(); renderDetail(); renderDescStrip();
-});
-$('#dstrip').addEventListener('click',e=>{
-  const c=e.target.closest('.dchip'); if(!c) return;
-  const ev=events.find(x=>x.id===selectedId); if(ev) toggleDesc(ev,c.dataset.dg,c.dataset.di);
-});
+function bbItemClick(e,forceEdit){
+  const edit=forceEdit||bbEditing;
+  const tb=e.target.closest('[data-team-edit]'); if(tb){openItem('team',tb.dataset.teamEdit);return true;}
+  const pa=e.target.closest('[data-pl-add]'); if(pa){openItem('player',null,{team:pa.dataset.plAdd});return true;}
+  const d=e.target.closest('.dchip');
+  if(d){
+    if(edit){openItem('desc',{g:d.dataset.dg,i:d.dataset.di});return true;}
+    const ev=events.find(x=>x.id===selectedId);
+    if(!ev){toast('Pulsa primero una categoría para crear el clip.');return true;}
+    toggleDesc(ev,d.dataset.dg,d.dataset.di); return true;
+  }
+  const p=e.target.closest('.pchip');
+  if(p){
+    if(edit){openItem('player',{team:p.dataset.pt,n:p.dataset.pn});return true;}
+    const ev=events.find(x=>x.id===selectedId);
+    if(!ev){toast('Pulsa primero una categoría para crear el clip.');return true;}
+    if(ev.team===p.dataset.pt&&String(ev.player)===p.dataset.pn) ev.player='';
+    else{ev.team=p.dataset.pt; ev.player=p.dataset.pn;}
+    commit(); return true;
+  }
+  return false;
+}
+$('#dstrip').addEventListener('click',e=>{bbItemClick(e,false);});
+$('#dstrip').addEventListener('contextmenu',e=>{if(e.target.closest('.dchip,.pchip')){e.preventDefault();bbItemClick(e,true);}});
 function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg));}
 function saveProject(){if(videoKey) lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,teles,playlists}));}
 function normEvent(x){
@@ -1101,7 +1194,8 @@ function filtered(){
 }
 function sortedFiltered(){
   const f=filtered().slice(), k=filters.sort;
-  if(k==='name') f.sort((a,b)=>evName(a).localeCompare(evName(b),'es')||a.t-b.t);
+  if(k==='timeDesc') f.sort((a,b)=>b.t-a.t);
+  else if(k==='name') f.sort((a,b)=>evName(a).localeCompare(evName(b),'es')||a.t-b.t);
   else if(k==='type') f.sort((a,b)=>info(a).label.localeCompare(info(b).label,'es')||a.t-b.t);
   else if(k==='cat') f.sort((a,b)=>info(a).group.localeCompare(info(b).group,'es')||a.t-b.t);
   return f;
@@ -1136,27 +1230,21 @@ function renderPages(){ return;
   box.hidden=false;
   box.innerHTML=cfg.pages.map(p=>'<button role="tab" data-page="'+esc(p)+'" aria-selected="'+(p===page)+'">'+esc(p)+'</button>').join('');
 }
+function inkOf(c){
+  const m=/^#?([0-9a-f]{6})/i.exec(String(c||'')); if(!m) return '#fff';
+  const n=parseInt(m[1],16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  return (0.299*r+0.587*g+0.114*b)/255>0.62?'#14202B':'#fff';
+}
 function renderCodes(){
-  const vis=cfg.buttons.filter(b=>!b.hidden);
-  const mixed=g=>new Set(vis.filter(b=>b.group===g).map(b=>b.page)).size>1;   /* antiguas páginas: solo como subtítulo si la categoría las mezcla */
-  const items=vis.map(b=>Object.assign({},b,{sub:b.sub||(b.page!==cfg.pages[0]&&mixed(b.group)?b.page:'')}));
-  const order=cfg.cats.slice(); items.forEach(b=>{const n=b.group||'Otros'; if(!order.includes(n)) order.push(n);});
-  const groups=[];
-  order.forEach(name=>{
-    const its=items.filter(b=>(b.group||'Otros')===name); if(!its.length) return;
-    const g={name,subs:[]};
-    its.forEach(b=>{let sb=g.subs.find(x=>x.name===(b.sub||'')); if(!sb){sb={name:b.sub||'',items:[]};g.subs.push(sb);} sb.items.push(b);});
-    groups.push(g);
-  });
-  const btnHtml=b=>'<button class="code '+b.size+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'</span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'<b></b></span></button>';
-  codes.innerHTML=groups.length?groups.map(g=>'<div class="grp"><h3>'+esc(g.name)+'</h3>'+
-    g.subs.map(sb=>(sb.name?'<h4>'+esc(sb.name)+'</h4>':'')+'<div class="grid">'+sb.items.map(btnHtml).join('')+'</div>').join('')+'</div>').join(''):
-    '<p class="hint">No hay botones visibles. Usa «Editar botonera» para crear o mostrar botones.</p>';
+  const items=cfg.buttons.filter(b=>!b.hidden);
+  const btnHtml=b=>'<button class="code" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
+  codes.innerHTML=items.length?items.map(btnHtml).join(''):
+    '<p class="hint" style="grid-column:1/-1">No hay categorías. Crea una con «+ Categoría».</p>';
   updateCounts();
 }
 function updateCounts(){
   const c={}; events.forEach(e=>{c[e.btnId]=(c[e.btnId]||0)+1;});
-  codes.querySelectorAll('.code').forEach(el=>{el.querySelector('b').textContent=c[el.dataset.id]||'';});
+  codes.querySelectorAll('.code').forEach(el=>{const n=c[el.dataset.id]; el.querySelector('.cl b.x').textContent=n?'×'+n:'';});
 }
 function flash(id){
   const el=codes.querySelector('.code[data-id="'+id+'"]');
@@ -1195,7 +1283,18 @@ function renderFilters(){
   $('#fSort').value=filters.sort;
   $('#fClear').disabled=!isFiltered();
 }
+function renderCatSel(){
+  const sel=$('#fCat'); if(!sel) return;
+  const c={}; events.forEach(e=>{c[e.btnId]=(c[e.btnId]||0)+1;});
+  const ids=cfg.buttons.filter(b=>c[b.id]).map(b=>b.id).concat(Object.keys(c).filter(id=>!btnById(id)));
+  const cur=filters.types.size===1?[...filters.types][0]:(filters.types.size?'__multi':'all');
+  sel.innerHTML='<option value="all">Todas ('+events.length+')</option>'+(cur==='__multi'?'<option value="__multi">Varias</option>':'')+
+    ids.map(id=>{const ev=events.find(e=>e.btnId===id); return '<option value="'+esc(id)+'">'+esc(info(ev).label)+' ('+c[id]+')</option>';}).join('');
+  sel.value=cur;
+}
+$('#fCat').onchange=e=>{const v=e.target.value; filters.types.clear(); if(v!=='all'&&v!=='__multi') filters.types.add(v); e.target.blur(); renderFilters(); renderList(); renderTimeline();};
 function renderList(){
+  renderCatSel();
   const f=sortedFiltered();
   $('#cnt').textContent=f.length+' de '+events.length;
   const pf=$('#bPlayF');
@@ -1206,14 +1305,19 @@ function renderList(){
     list.innerHTML='<li class="none">'+(events.length?'Ningún clip coincide con los filtros.':'Todavía no hay clips. Pulsa un botón de la botonera, o su tecla, mientras se reproduce el vídeo.')+'</li>';
     return;
   }
-  list.innerHTML=f.map(e=>{
+  const numOf=new Map(); events.slice().sort((a,b)=>a.t-b.t).forEach((e,i)=>numOf.set(e.id,i+1));
+  const arrow=k=>filters.sort===k?' ▾':(filters.sort==='time'&&k==='timeDesc'?' ▴':'');
+  list.innerHTML='<li class="ev-h" aria-hidden="true"><button data-sort="num">#'+arrow('timeDesc')+'</button><button data-sort="type">Categoría'+arrow('type')+'</button><button data-sort="desc">Descriptores</button><button data-sort="num" style="text-align:right">Inicio</button><span></span></li>'+
+  f.map(e=>{
     const inf=info(e);
-    return '<li class="ev t'+e.team+(e.id===selectedId?' sel':'')+'" data-id="'+e.id+'" tabindex="0" draggable="true" title="'+esc(inf.label+' · '+inf.group+(e.tags.length?' · '+e.tags.join(', '):''))+'" style="--c:'+safeColor(inf.color)+'">'+
+    const pl=e.player!==''?'#'+e.player+(playerName(e.team,e.player)?' '+playerName(e.team,e.player):''):'';
+    const d=[descText(e).split(' · ').join(', '),pl].concat(e.tags.map(t=>'#'+t)).filter(Boolean).join(', ');
+    return '<li class="ev t'+e.team+(e.id===selectedId?' sel':'')+'" data-id="'+e.id+'" tabindex="0" draggable="true" title="'+esc(inf.label+' · '+e.period+' · '+teamName(e.team)+(d?' · '+d:''))+'" style="--c:'+safeColor(inf.color)+';--ink:'+inkOf(inf.color)+'">'+
+      '<span class="num">'+numOf.get(e.id)+'</span>'+
+      '<span class="cat">'+esc(evName(e))+'</span>'+
+      '<span class="dsc2">'+(d?esc(d):'<span style="color:var(--muted)">—</span>')+'</span>'+
       '<span class="t">'+fmt(e.t)+'</span>'+
-      '<span class="lbl"><i></i><span>'+esc(evName(e))+'</span>'+''+'</span>'+
-      '<span class="tmn">'+esc(e.period)+' · '+esc(teamName(e.team))+'</span>'+
-      '<span class="acts"><button data-act="pl" title="Añadir a la playlist actual" aria-label="Añadir a la playlist actual">+</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="del" title="Borrar" aria-label="Borrar etiqueta">'+ICON.trash+'</button></span>'+
-      (()=>{const d=[playerLabel(e.team,e.player),descText(e)].concat(e.tags.map(t=>'#'+t)).filter(Boolean).join(' · ');return d?'<span class="dsc">'+esc(d)+'</span>':'';})()+'</li>';
+      '<span class="acts"><button data-act="pl" title="Añadir a la playlist actual" aria-label="Añadir a la playlist actual">+</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="del" title="Borrar" aria-label="Borrar clip">'+ICON.trash+'</button></span></li>';
   }).join('');
   const s=list.querySelector('.ev.sel');
   if(s) s.scrollIntoView({block:'nearest'});
@@ -1491,8 +1595,122 @@ function tagBtn(b){
 }
 codes.addEventListener('click',e=>{
   const el=e.target.closest('.code'); if(!el) return;
+  if(bbEditing){openItem('cat',el.dataset.id);return;}
   tagBtn(btnById(el.dataset.id)); el.blur();
 });
+codes.addEventListener('contextmenu',e=>{const el=e.target.closest('.code'); if(!el) return; e.preventDefault(); openItem('cat',el.dataset.id);});
+let bbEditing=false;
+$('#bbEdit').onclick=()=>{bbEditing=!bbEditing; $('#bbEdit').setAttribute('aria-pressed',bbEditing); $('#pTags').classList.toggle('editing',bbEditing); $('#bbNote').hidden=!bbEditing;};
+$('#bbAddCat').onclick=()=>openItem('cat',null);
+$('#bbAddDesc').onclick=()=>openItem('desc',null);
+$('#bbAddPl').onclick=()=>openItem('player',null,{team:team});
+
+/* ---------- editor rápido de categorías, descriptores, jugadoras y equipos ---------- */
+const PALETTE=['#E74C3C','#00B4D8','#F39C12','#2ECC71','#3498DB','#9B59B6','#E67E22','#1ABC9C','#F1C40F','#E84393','#7F8C8D','#16A085'];
+let itState=null;
+function itRefresh(){saveCfg(); renderCodes(); renderDescStrip(); renderFilters(); renderList(); renderTimeline(); renderScore(); renderSelType(); if(typeof renderRosters==='function') renderRosters();}
+function openItem(kind,ref,opt){
+  opt=opt||{}; itState={kind,ref,opt,armed:false};
+  const body=$('#itBody'); $('#itMsg').textContent=''; $('#itDel').textContent='Borrar';
+  let title='', html='';
+  if(kind==='cat'){
+    const b=ref&&btnById(ref);
+    title=b?'Editar categoría':'Nueva categoría';
+    const col=b?safeColor(b.color):PALETTE[cfg.buttons.length%PALETTE.length];
+    html='<label class="f"><span>Nombre</span><input id="itName" maxlength="30" value="'+esc(b?b.label:'')+'" placeholder="p. ej. Poste bajo"></label>'+
+      '<div class="row2"><label class="f"><span>Color</span><input id="itColor" type="color" value="'+col.slice(0,7)+'"></label>'+
+      '<label class="f"><span>Segundos antes</span><input id="itPre" type="number" min="0" max="120" value="'+(b?b.pre:5)+'"></label>'+
+      '<label class="f"><span>Segundos después</span><input id="itPost" type="number" min="0" max="120" value="'+(b?b.post:3)+'"></label></div>'+
+      '<p class="hint">El clip empieza unos segundos antes del momento en que pulsas y acaba unos segundos después.</p>';
+    $('#itDel').hidden=!b;
+  } else if(kind==='desc'){
+    const g=ref&&descGroup(ref.g), it=g&&g.items.find(x=>x.id===ref.i);
+    title=it?'Editar descriptor':'Nuevo descriptor';
+    const gsel=(g||cfg.descs[cfg.descs.length-1]||{}).id||'__new';
+    html='<label class="f"><span>Nombre</span><input id="itName" maxlength="30" value="'+esc(it?it.label:'')+'" placeholder="p. ej. 2PTS"></label>'+
+      '<div class="row2"><label class="f"><span>Grupo</span><select id="itGroup">'+cfg.descs.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===gsel?' selected':'')+'>'+esc(x.name)+'</option>').join('')+'<option value="__new"'+(gsel==='__new'?' selected':'')+'>Nuevo grupo…</option></select></label>'+
+      '<label class="f"><span>Color del grupo</span><input id="itColor" type="color" value="'+safeColor((g||descGroup(gsel)||{}).color||'#8CA0B3').slice(0,7)+'"></label></div>'+
+      '<label class="f" id="itNewG" hidden><span>Nombre del grupo nuevo</span><input id="itGName" maxlength="24" placeholder="p. ej. Tipo de tiro"></label>'+
+      '<p class="hint">En un mismo grupo, un clip solo lleva un descriptor (salvo que el grupo sea de elección múltiple en «Editar botonera»).</p>';
+    $('#itDel').hidden=!it;
+  } else if(kind==='player'){
+    const k=ref?ref.team:(opt.team||'L'), p=ref&&roster(k).find(x=>x.n===ref.n);
+    title=p?'Editar jugadora':'Nueva jugadora';
+    html='<label class="f"><span>Equipo</span><select id="itTeam"><option value="L"'+(k==='L'?' selected':'')+'>'+esc(teamName('L'))+'</option><option value="R"'+(k==='R'?' selected':'')+'>'+esc(teamName('R'))+'</option></select></label>'+
+      '<div class="row2"><label class="f" style="flex:0 0 90px"><span>Número</span><input id="itNum" inputmode="numeric" maxlength="3" value="'+esc(p?p.n:'')+'"></label>'+
+      '<label class="f" style="flex:1 1 180px"><span>Nombre</span><input id="itName" maxlength="40" value="'+esc(p?p.name:'')+'" placeholder="p. ej. Tesson Lisa"></label></div>'+
+      (p?'':'<details><summary class="hint" style="cursor:pointer">Añadir varias a la vez</summary><label class="f" style="margin-top:6px"><span>Una por línea: número y nombre</span><textarea id="itMany" rows="6" placeholder="1 Tesson Lisa&#10;2 Anne Sarah"></textarea></label></details>');
+    $('#itDel').hidden=!p;
+  } else if(kind==='team'){
+    title='Nombre del equipo';
+    html='<label class="f"><span>Nombre</span><input id="itName" maxlength="24" value="'+esc(teamName(ref))+'"></label>';
+    $('#itDel').hidden=true;
+  }
+  $('#itTitle').textContent=title; body.innerHTML=html;
+  const gs=$('#itGroup'); if(gs){const upd=()=>{$('#itNewG').hidden=gs.value!=='__new'; const g=descGroup(gs.value); if(g) $('#itColor').value=safeColor(g.color).slice(0,7);}; gs.onchange=upd; upd();}
+  const n=$('#itNum'); if(n) n.oninput=()=>{n.value=n.value.replace(/\D/g,'');};
+  $('#dlgItem').showModal();
+  setTimeout(()=>{const f=(kind==='player'&&!ref)?$('#itNum'):$('#itName'); if(f){f.focus(); f.select();}},30);
+}
+function itSave(){
+  const st=itState; if(!st) return; const msg=t=>{$('#itMsg').textContent=t;};
+  const name=($('#itName')||{value:''}).value.trim();
+  if(st.kind==='cat'){
+    if(!name){msg('Escribe un nombre.');return;}
+    let b=st.ref&&btnById(st.ref);
+    if(!b){b={id:uid(),label:name,group:'Otros',sub:'',page:cfg.pages[0],key:'',pre:5,post:3,pts:0,color:'#8CA0B3',icon:'',size:'m',hidden:false}; cfg.buttons.push(b); if(!cfg.cats.includes('Otros')) cfg.cats.push('Otros');}
+    b.label=name; b.color=safeColor($('#itColor').value);
+    b.pre=Math.max(0,Math.min(120,+$('#itPre').value||0)); b.post=Math.max(0,Math.min(120,+$('#itPost').value||0));
+    events.forEach(e=>{if(e.btnId===b.id){e.label=b.label;e.color=b.color;}});
+  } else if(st.kind==='desc'){
+    if(!name){msg('Escribe un nombre.');return;}
+    let gid=$('#itGroup').value, g=descGroup(gid);
+    if(!g){const gn=$('#itGName').value.trim()||'Descriptores'; g={id:uid(),name:gn,color:safeColor($('#itColor').value),multi:true,scope:[],items:[]}; cfg.descs.push(g);}
+    g.color=safeColor($('#itColor').value);
+    const og=st.ref&&descGroup(st.ref.g), it=og&&og.items.find(x=>x.id===st.ref.i);
+    if(it){
+      it.label=name;
+      if(og!==g){og.items=og.items.filter(x=>x!==it); g.items.push(it); events.forEach(e=>e.desc.forEach(o=>{if(o.d===og.id&&o.i===it.id){o.d=g.id;o.g=g.name;}}));}
+      events.forEach(e=>e.desc.forEach(o=>{if(o.d===g.id&&o.i===it.id) o.l=name;}));
+    } else {
+      if(g.items.some(x=>x.label.toLowerCase()===name.toLowerCase())){msg('Ese descriptor ya existe en el grupo.');return;}
+      g.items.push({id:g.id+'_'+uid(),label:name,key:''});
+    }
+  } else if(st.kind==='player'){
+    const k=$('#itTeam').value, many=$('#itMany')&&$('#itMany').value.trim();
+    if(!st.ref&&many){
+      const r=parseRoster(many); let added=0;
+      r.out.forEach(p=>{const ex=roster(k).find(x=>x.n===p.n); if(ex) ex.name=p.name||ex.name; else{cfg.rosters[k].push(p); added++;}});
+      if(r.bad.length){msg('No se han podido leer: '+r.bad.join(' · '));itRefresh();return;}
+    } else {
+      const num=$('#itNum').value.trim();
+      if(!num){msg('Escribe el número.');return;}
+      const ok=st.ref?st.ref.team:null, on=st.ref?st.ref.n:null;
+      if(roster(k).some(x=>x.n===num&&!(ok===k&&on===num))){msg('Ya hay una jugadora con el #'+num+' en '+teamName(k)+'.');return;}
+      if(st.ref){
+        cfg.rosters[ok]=roster(ok).filter(x=>x.n!==on);
+        events.forEach(e=>{if(e.team===ok&&String(e.player)===on){e.team=k;e.player=num;}});
+      }
+      cfg.rosters[k].push({n:num,name});
+    }
+  } else if(st.kind==='team'){
+    cfg.teamNames[st.ref]=name||(st.ref==='L'?'Local':'Rival'); renderTeamBar();
+  }
+  $('#dlgItem').close(); if(st.kind!=='team'||true) record(); itRefresh();
+}
+function itDelete(){
+  const st=itState; if(!st||!st.ref) return;
+  if(!st.armed){st.armed=true; $('#itDel').textContent='Pulsa otra vez para borrar'; return;}
+  if(st.kind==='cat'){cfg.buttons=cfg.buttons.filter(b=>b.id!==st.ref);}
+  else if(st.kind==='desc'){const g=descGroup(st.ref.g); if(g) g.items=g.items.filter(x=>x.id!==st.ref.i); events.forEach(e=>{e.desc=e.desc.filter(o=>!(o.d===st.ref.g&&o.i===st.ref.i));});}
+  else if(st.kind==='player'){cfg.rosters[st.ref.team]=roster(st.ref.team).filter(x=>x.n!==st.ref.n);}
+  $('#dlgItem').close(); record(); itRefresh();
+}
+$('#itOk').onclick=itSave;
+$('#itDel').onclick=itDelete;
+$('#itClose').onclick=()=>$('#dlgItem').close();
+$('#dlgItem').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();itSave();}});
+$('#dlgItem').addEventListener('click',e=>{if(e.target===$('#dlgItem')) $('#dlgItem').close();});
 function deleteEvent(id){
   const i=events.findIndex(e=>e.id===id); if(i<0) return;
   events.splice(i,1);
@@ -1508,6 +1726,8 @@ $('#teamR').onclick=()=>setTeam('R');
 
 /* lista y filtros */
 $('#list').addEventListener('click',e=>{
+  const hs=e.target.closest('[data-sort]');
+  if(hs){const k=hs.dataset.sort; filters.sort=k==='num'?(filters.sort==='timeDesc'?'time':'timeDesc'):(k==='type'?(filters.sort==='type'?'timeDesc':'type'):filters.sort); renderList(); $('#fSort').value=['time','timeDesc','name','type','cat'].includes(filters.sort)?filters.sort:'time'; return;}
   const li=e.target.closest('.ev'); if(!li) return;
   const act=e.target.closest('[data-act]');
   if(act&&act.dataset.act==='del'){deleteEvent(li.dataset.id);return;}
