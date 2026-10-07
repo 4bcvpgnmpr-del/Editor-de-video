@@ -20,32 +20,33 @@ soltarlos en el borde izquierdo, derecho o inferior los ancla; en cualquier otro
 Se pueden redimensionar, minimizar (quedan en una bandeja), maximizar (doble clic en la cabecera) y ocultar.
 Posición, tamaño y estado se recuerdan. «Paneles y diseño» ofrece diseños predefinidos y permite guardar los propios.
 
-## Botonera, cuartos y jugadoras
+## Botonera
 
-La botonera solo lleva el selector de equipo. El **cuarto** se elige en la cabecera (o con Mayús+1…5). Las **plantillas** (número y nombre de cada jugadora) se pegan en «Editar botonera → Equipos y páginas»; la jugadora se asigna al calificar el clip o desde su detalle, y se puede buscar y filtrar por ella.
+Una sola rejilla de **categorías** (botones de color: Triple +, Pick and roll, Pérdida…), y debajo siempre a la vista los
+**descriptores** (Resultado, Defensa rival, Valoración…) y las **jugadoras** de cada equipo. Pulsas una categoría para
+crear el clip (cada botón muestra cuántos lleva, ×N) y después, si quieres, sus descriptores y la jugadora (pulsar una
+jugadora asigna también su equipo). Se crean con «+ Categoría», «+ Descriptor» y «+ Jugadora» (con «Añadir varias a la
+vez» para pegar una plantilla), y se editan con el modo «Editar» o con clic derecho: nombre, color, segundos antes y
+después, grupo del descriptor, número y nombre de la jugadora (borrar pide pulsar dos veces). El equipo de las acciones
+(tecla 0) y el cuarto (Mayús+1…5) están en la cabecera. «Editar botonera» abre el editor completo (teclas, orden,
+duplicar, ocultar, grupos y descriptores con teclas propias).
 
-## Categorías y descriptores
-
-La **categoría** agrupa las acciones de la botonera (Ataque, Defensa…). El **descriptor** califica un clip una vez
-etiquetado: pulsas la acción y, en la franja «Calificar», eliges por ejemplo el resultado, la defensa rival o la
-valoración. Cada grupo de descriptores es de elección única o múltiple y puede tener teclas propias (actúan sobre el
-último clip). «Editar botonera» tiene cuatro pestañas sencillas: Botones (nombre, categoría, tecla, tiempos y color;
-lo demás está en «Más opciones»), Categorías, Descriptores y Equipos y páginas.
+**Grupos:** Ataque, Defensa… agrupan las categorías para organizarlas y filtrar clips (no confundir con las categorías).
 
 ## Biblioteca
 
-La **Biblioteca** contiene solo los clips. Una caja de búsqueda (nombre, tipo, categoría, etiquetas, descriptores,
-comentario, jugadora, `#número`…), un orden y un desplegable **Filtros** (equipo, periodo, jugadora, tipo, categoría y descriptor).
-Los clips se añaden a una playlist con «+» o arrastrándolos.
+Los clips son una **tabla de colores** (#, categoría, descriptores, inicio) con cabeceras que ordenan, un filtro de
+categoría, buscador (nombre, categoría, descriptores, jugadora, `#número`…) y un desplegable **Filtros**. Pulsar un clip lo
+reproduce; «+» lo añade a la playlist. El tiempo de un clip se ajusta arrastrando sus bordes en la línea de tiempo.
 
 ## Mesa de producción
 
 Botón superior **Mesa de producción**: se abre en **otra ventana** para trabajar con calma, con su propia lista de
-clips disponibles, con buscador y filtros desplegables (categoría, acción, jugadora y cada grupo de descriptores), y la
+clips disponibles, con buscador y filtros desplegables (grupo, categoría, jugadora y cada grupo de descriptores), y la
 secuencia de la playlist en líneas de texto (arrastra o usa ▲ ▼ para ordenar; muestra la duración total y resalta el clip
-que suena). Se añaden con «+», doble clic, arrastrando o «Añadir todos» (solo los que ves filtrados). Reproducir, exportar y el teclado funcionan
-desde esa ventana. «Volver a la ventana principal» la acopla dentro; cerrarla la hace desaparecer. Si el navegador
-bloquea las ventanas emergentes, la mesa se abre acoplada arriba y se avisa.
+que suena). Se añaden con «+», doble clic, arrastrando o «Añadir todos» (solo los que ves filtrados). «Volver a la ventana
+principal» la acopla dentro; cerrarla la hace desaparecer. Si el navegador bloquea las ventanas emergentes, la mesa se abre
+acoplada arriba y se avisa.
 
 ## Freeze frame y telestración
 
