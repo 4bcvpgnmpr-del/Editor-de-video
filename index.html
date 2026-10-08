@@ -430,11 +430,58 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
 .top-actions .sh{display:none}
 @media (max-width:1419px){.top-actions .lg{display:none}.top-actions .sh{display:inline}}
 .score .n{font-size:26px}
-/* ---- botonera: las categorías se desplazan; descriptores y jugadoras siempre a la vista ---- */
-#pTags:not(.short) .p-body{display:flex;flex-direction:column;overflow:hidden}
-#pTags:not(.short) .p-body>.bb-tools,#pTags:not(.short) .p-body>.edit-note{flex:none}
-#pTags:not(.short) .codes{flex:1 1 auto;min-height:90px;overflow:auto;align-content:start;padding-bottom:4px}
-#pTags:not(.short) .dstrip{flex:none;max-height:46%;overflow:auto;margin:8px 0 0!important;padding:8px 0 0!important;border-top:2px solid var(--line)!important}
+
+/* ==== Botonera en tres zonas: categorías | descriptores | jugadoras ==== */
+#pTags{--bbs:1}
+#pTags .p-body.bbx{display:flex;flex-direction:column;overflow:hidden;padding:8px 10px;container-type:inline-size;container-name:bbx}
+.bb-wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+.bb-cats{flex:1 1 0;min-height:110px;display:flex;flex-direction:column;container-type:inline-size;container-name:bbcats}
+.bb-low{flex:0 0 auto;max-height:58%;overflow:auto;border-top:2px solid var(--line);padding-top:8px}
+#pTags .dstrip{margin:0!important;padding:0!important;border:0!important;background:transparent!important}
+#pTags .bb-cats .codes{flex:1 1 auto;min-height:70px;overflow:auto;align-content:start;padding-bottom:2px;grid-template-columns:repeat(auto-fill,minmax(calc(59px*var(--bbs)),1fr));grid-auto-flow:row dense;gap:calc(8px*var(--bbs))}
+#pTags .code{grid-column:span 2;min-width:0;min-height:calc(52px*var(--bbs))}
+#pTags .code{padding:6px 5px}
+#pTags .code .cl{font-size:calc(15px*var(--bbs));overflow-wrap:anywhere}
+#pTags .code.s{grid-column:span 1;min-height:calc(36px*var(--bbs));padding:3px 2px}
+#pTags .code.s .cl{font-size:calc(12px*var(--bbs));line-height:1.05;overflow-wrap:anywhere}
+#pTags .code.s .cm{display:none}
+#pTags .code.l{min-height:calc(78px*var(--bbs))}
+#pTags .code.l .cl{font-size:calc(20px*var(--bbs))}
+#pTags .code.l{grid-column:1/-1}
+@container bbcats (min-width:520px){#pTags .code.l{grid-column:span 4}}
+@container bbx (min-width:720px){
+  .bb-wrap{flex-direction:row;gap:12px}
+  .bb-cats{flex:1 1 52%}
+  .bb-low{flex:1 1 48%;max-height:none;border-top:0;border-left:2px solid var(--line);padding:0 0 0 12px}
+}
+#pTags .bb-sh{display:flex;align-items:center;gap:6px;margin:0 0 6px;min-width:0}
+#pTags .bb-sh>b{font:700 12.5px var(--f-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);flex:none}
+#pTags .bb-sh>span b{color:var(--text);font-weight:700}
+#pTags .bb-sh>span:not(.sp):not(.bb-size){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:var(--muted);text-align:right}
+#pTags .bb-sh .sp{flex:1}
+.bb-ib{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);font:600 12.5px var(--f-body);padding:3px 8px;min-height:26px;cursor:pointer;white-space:nowrap}
+.bb-ib:hover:not(:disabled){border-color:var(--muted)}
+.bb-ib:disabled{opacity:.4;cursor:not-allowed}
+.bb-add{width:28px;padding:0;font-size:17px;line-height:1;background:var(--accent);color:var(--on-accent);border-color:transparent}
+#bbEdit[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.bb-size{display:inline-flex;gap:2px}
+.bb-size .bb-ib{padding:3px 7px}
+.dgrp2{margin-bottom:6px}
+.dgl{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 3px;padding-left:2px}
+.dgl::before{content:'';display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--c);margin-right:5px}
+#pTags .dflat{grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(5px*var(--bbs))}
+#pTags .dchip{min-height:calc(28px*var(--bbs));font-size:calc(12.5px*var(--bbs));padding:3px 4px;white-space:normal;line-height:1.1;text-align:center}
+.pl-tabs{display:flex;gap:4px}
+.pl-tab{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:5px 5px 0 0;padding:4px 6px;font:700 13px var(--f-body);color:var(--text);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-tab small{opacity:.75;font-weight:500}
+.pl-tab.on{background:var(--tc);color:#fff;border-color:var(--tc)}
+#pTags .pgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(5px*var(--bbs));padding:6px;border:1px solid var(--tc);border-top:2px solid var(--tc);border-radius:0 0 5px 5px}
+#pTags .pchip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-height:calc(34px*var(--bbs));padding:2px 3px;line-height:1.1;min-width:0;text-align:center}
+#pTags .pchip b{font-size:calc(14px*var(--bbs))}
+#pTags .pchip span{font-size:calc(11px*var(--bbs));font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ==== Editor: filas de categorías en una línea ==== */
+#dlg{width:min(1080px,96vw)}
+#dlg .brow{align-items:flex-end}
 
 @media (max-width:900px){
   html,body{height:auto}
@@ -633,17 +680,18 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
           <button class="pb" data-pa="min" title="Minimizar" aria-label="Minimizar panel"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M5 18h14v2H5z"/></svg></button>
           <button class="pb" data-pa="max" title="Maximizar o restaurar" aria-label="Maximizar panel"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></button>
         </div>
-        <div class="p-body">
-          <div class="bb-tools">
-            <button class="btn" id="bbAddCat"><b>+</b> Categoría</button>
-            <button class="btn" id="bbAddDesc"><b>+</b> Descriptor</button>
-            <button class="btn" id="bbAddPl"><b>+</b> Jugadora</button>
-            <button class="btn" id="bbEdit" aria-pressed="false" title="Al activarlo, pulsa cualquier categoría, descriptor o jugadora para cambiarle el nombre, el color o borrarlo">✎ Editar</button>
+        <div class="p-body bbx"><div class="bb-wrap">
+          <div class="bb-cats">
+            <div class="bb-sh"><b>Categorías</b><span class="sp"></span>
+              <span class="bb-size" role="group" aria-label="Tamaño de los botones"><button class="bb-ib" id="bbSmaller" title="Botones más pequeños" aria-label="Botones más pequeños">A−</button><button class="bb-ib" id="bbBigger" title="Botones más grandes" aria-label="Botones más grandes">A+</button></span>
+              <button class="bb-ib" id="bbEdit" aria-pressed="false" title="Al activarlo, pulsa cualquier categoría, descriptor o jugadora para cambiarle el nombre, el color, el tamaño o borrarlo">✎ Editar</button>
+              <button class="bb-ib bb-add" id="bbAddCat" title="Nueva categoría" aria-label="Nueva categoría">+</button>
+            </div>
+            <div class="edit-note" id="bbNote" hidden>Modo edición: pulsa una categoría, un descriptor o una jugadora para cambiarlo. También funciona con clic derecho sin activar el modo.</div>
+            <div class="codes" id="codes" data-team="L"></div>
           </div>
-          <div class="edit-note" id="bbNote" hidden>Modo edición: pulsa una categoría, un descriptor o una jugadora para cambiarlo. También funciona con clic derecho sin activar el modo.</div>
-          <div class="codes" id="codes" data-team="L"></div>
-          <div class="dstrip" id="dstrip"></div>
-        </div>
+          <div class="bb-low"><div class="dstrip" id="dstrip"></div></div>
+        </div></div>
         <i class="rz rz-e" data-rz="e"></i><i class="rz rz-s" data-rz="s"></i><i class="rz rz-se" data-rz="se"></i>
       </section>
 
@@ -664,7 +712,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
             </div>
             <div class="side-h">
               <span class="cnt" id="cnt"></span>
-              <select id="fSort" aria-label="Ordenar clips"><option value="timeDesc">Orden: más recientes</option><option value="time">Orden: tiempo</option><option value="name">Orden: nombre</option><option value="type">Orden: tipo</option><option value="cat">Orden: categoría</option></select>
+              <select id="fSort" aria-label="Ordenar clips"><option value="timeDesc">Orden: más recientes</option><option value="time">Orden: tiempo</option><option value="name">Orden: nombre</option><option value="type">Orden: tipo</option></select>
               <button class="btn primary" id="bPlayF" disabled>Ver todos</button>
             </div>
             <div class="filters">
@@ -803,24 +851,17 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <div class="dlg-h"><h2 id="dlgTitle">Editar botonera</h2><button class="btn" id="dClose">Cerrar</button></div>
   <div class="tabs" id="cfgTabs" role="tablist" aria-label="Secciones del editor">
-    <button role="tab" data-ctab="btn" aria-selected="true">Botones</button>
-    <button role="tab" data-ctab="cat" aria-selected="false">Grupos</button>
+    <button role="tab" data-ctab="btn" aria-selected="true">Categorías</button>
     <button role="tab" data-ctab="desc" aria-selected="false">Descriptores</button>
-    <button role="tab" data-ctab="set" aria-selected="false">Equipos y plantillas</button>
+    <button role="tab" data-ctab="set" aria-selected="false">Jugadoras</button>
   </div>
   <div class="dlg-b">
     <div data-sec="btn" style="display:flex;flex-direction:column;gap:10px">
-      <p class="hint">Cada botón marca una acción y crea un clip con los segundos indicados antes y después. Arrastra ⠿ para ordenar. Para cambiar una tecla, haz clic en su casilla y pulsa la nueva (Suprimir la borra).</p>
-      <label class="f" style="max-width:220px"><span>Mostrar</span><select id="cfgFilter"></select></label>
+      <p class="hint">Cada categoría es un botón de la botonera: al pulsarla se crea un clip que empieza unos segundos antes y acaba unos segundos después. Arrastra ⠿ para ordenar. Para cambiar la tecla, haz clic en su casilla y pulsa la nueva (Suprimir la borra). El tamaño del botón puede ser pequeño, normal o grande (ocupa toda la fila).</p>
       <div id="brows" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
-    <div data-sec="cat" hidden style="display:flex;flex-direction:column;gap:10px">
-      <p class="hint">Los grupos (Ataque, Defensa…) sirven para organizar las categorías y filtrar los clips.</p>
-      <div id="crows" style="display:flex;flex-direction:column;gap:8px"></div>
-      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><label class="f grow"><span>Nuevo grupo</span><input id="cNew" maxlength="24" placeholder="p. ej. Transición"></label><button class="btn primary" id="cAdd">Añadir grupo</button></div>
-    </div>
     <div data-sec="desc" hidden style="display:flex;flex-direction:column;gap:10px">
-      <p class="hint">Los descriptores califican un clip después de etiquetarlo (resultado, defensa rival…). Agrúpalos como quieras; un grupo puede ser de elección única o múltiple.</p>
+      <p class="hint">Los descriptores califican un clip después de crearlo (resultado, defensa rival…). Agrúpalos como quieras; un grupo puede ser de elección única o múltiple, y cada descriptor puede tener su tecla.</p>
       <div id="drows" style="display:flex;flex-direction:column;gap:10px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="dgAdd">Añadir grupo</button><button class="btn" id="dgReset">Restaurar los de fábrica</button></div>
     </div>
@@ -829,25 +870,16 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
         <label class="f grow"><span>Nombre del equipo local</span><input id="nameL" maxlength="24"></label>
         <label class="f grow"><span>Nombre del equipo rival</span><input id="nameR" maxlength="24"></label>
       </div>
-      <div>
-        <h3 class="sec-t">Plantillas</h3>
-        <p class="hint" style="margin-bottom:6px">Una jugadora por línea: número y nombre (por ejemplo «7 María García»). Después podrás asignar la jugadora a cada clip y filtrar por ella.</p>
-        <div class="teams">
-          <label class="f grow"><span>Plantilla del equipo local</span><textarea id="rosL" rows="8" placeholder="7 María García&#10;10 Ana López"></textarea></label>
-          <label class="f grow"><span>Plantilla del equipo rival</span><textarea id="rosR" rows="8" placeholder="4 Laura Pérez&#10;9 Marta Ruiz"></textarea></label>
-        </div>
-      </div>
-      <div hidden>
-        <h3 class="sec-t">Páginas de la botonera</h3>
-        <p class="hint" style="margin-bottom:6px">Cada página es una pestaña. Las teclas funcionan en todas.</p>
-        <div class="prow" id="prows"></div>
+      <p class="hint">Una jugadora por línea: número y nombre (por ejemplo «7 María García»). También puedes añadirlas una a una con «+» en la botonera.</p>
+      <div class="teams">
+        <label class="f grow"><span>Plantilla del equipo local</span><textarea id="rosL" rows="10" placeholder="7 María García&#10;10 Ana López"></textarea></label>
+        <label class="f grow"><span>Plantilla del equipo rival</span><textarea id="rosR" rows="10" placeholder="4 Laura Pérez&#10;9 Marta Ruiz"></textarea></label>
       </div>
     </div>
-    <datalist id="grpList"></datalist>
   </div>
   <div class="dlg-f">
-    <button class="btn primary" id="dAdd">Añadir botón</button>
-    <button class="btn" id="dReset">Restaurar botonera por defecto</button>
+    <button class="btn primary" id="dAdd">Añadir categoría</button>
+    <button class="btn" id="dReset">Restaurar categorías por defecto</button>
     <span class="msg" id="dMsg" role="alert"></span>
   </div>
 </dialog>
@@ -1095,27 +1127,31 @@ function descChipsHTML(ev,off){
     g.items.map(it=>{const on=ev.desc.some(o=>o.d===g.id&&o.i===it.id);
       return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'"'+(off?' disabled':'')+'>'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</span></div>').join('');
 }
+let bbPlTab=null;   /* equipo mostrado en «Jugadoras»; solo vale para el clip seleccionado en ese momento */
+function plTeam(ev){ if(bbPlTab&&bbPlTab.id===(ev?ev.id:null)) return bbPlTab.k; return ev?ev.team:team; }
 function renderDescStrip(){
   const box=$('#dstrip'); if(!box) return;
   const ev=events.find(e=>e.id===selectedId);
   const cur=ev?'<span>Clip: <b>'+esc(evName(ev))+'</b> · '+fmt(ev.t)+'</span>':'<span>Pulsa una categoría para crear un clip</span>';
-  const its=[]; cfg.descs.forEach(g=>g.items.forEach(it=>its.push({g,it})));
-  let h='<div class="bb-h">Descriptores'+cur+'</div>';
-  h+=its.length?'<div class="dflat">'+its.map(({g,it})=>{const on=!!ev&&ev.desc.some(o=>o.d===g.id&&o.i===it.id);
-      return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'" aria-pressed="'+on+'" title="'+esc(g.name)+'">'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</div>'
-    :'<p class="hint">Todavía no hay descriptores. Crea uno con «+ Descriptor».</p>';
-  h+='<div class="bb-h">Jugadoras</div>';
-  ['L','R'].forEach(k=>{
-    const r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
-    h+='<div class="tband" style="--tc:var(--'+(k==='L'?'local':'rival')+')"><span>'+esc(teamName(k))+'</span><button data-team-edit="'+k+'" title="Cambiar el nombre del equipo">✎ Nombre</button><button data-pl-add="'+k+'" title="Añadir jugadora">+ Jugadora</button></div>'+
-       '<div class="pgrid" style="--tc:var(--'+(k==='L'?'local':'rival')+')">'+(r.length?r.map(p=>{const on=!!ev&&ev.team===k&&String(ev.player)===p.n;
-         return '<button class="pchip" data-pt="'+k+'" data-pn="'+esc(p.n)+'" aria-pressed="'+on+'" title="'+esc('#'+p.n+' '+p.name)+'">#'+esc(p.n)+(p.name?' '+esc(p.name):'')+'</button>';}).join('')
-         :'<p class="hint">Sin jugadoras. Pulsa «+ Jugadora».</p>')+'</div>';
-  });
+  const gs=cfg.descs.filter(g=>g.items.length);
+  let h='<div class="bb-sh bb-h"><b>Descriptores</b>'+cur+'<button class="bb-ib bb-add" id="bbAddDesc" title="Nuevo descriptor" aria-label="Nuevo descriptor">+</button></div>';
+  h+=gs.length?gs.map(g=>'<div class="dgrp2" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'"><span class="dgl">'+esc(g.name)+'</span><div class="dflat">'+
+      g.items.map(it=>{const on=!!ev&&ev.desc.some(o=>o.d===g.id&&o.i===it.id);
+        return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'" aria-pressed="'+on+'" title="'+esc(g.name+': '+it.label)+'">'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</div></div>').join('')
+    :'<p class="hint">Todavía no hay descriptores. Crea uno con «+».</p>';
+  const k=plTeam(ev), tc='var(--'+(k==='L'?'local':'rival')+')';
+  const r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
+  h+='<div class="bb-sh" style="margin-top:10px"><b>Jugadoras</b><span class="sp"></span><button class="bb-ib" data-team-edit="'+k+'" title="Cambiar el nombre del equipo">✎ Nombre</button><button class="bb-ib bb-add" id="bbAddPl" data-pl-add="'+k+'" title="Nueva jugadora" aria-label="Nueva jugadora">+</button></div>';
+  h+='<div class="pl-tabs">'+['L','R'].map(t=>'<button class="pl-tab'+(t===k?' on':'')+'" data-pl-tab="'+t+'" style="--tc:var(--'+(t==='L'?'local':'rival')+')" aria-pressed="'+(t===k)+'">'+esc(teamName(t))+' <small>'+roster(t).length+'</small></button>').join('')+'</div>';
+  h+='<div class="pgrid" style="--tc:'+tc+'">'+(r.length?r.map(p=>{const on=!!ev&&ev.team===k&&String(ev.player)===p.n;
+      return '<button class="pchip" data-pt="'+k+'" data-pn="'+esc(p.n)+'" aria-pressed="'+on+'" title="'+esc('#'+p.n+' '+p.name)+'"><b>'+esc(p.n)+'</b><span>'+esc(p.name)+'</span></button>';}).join('')
+    :'<p class="hint">Sin jugadoras. Pulsa «+».</p>')+'</div>';
   box.hidden=false; box.innerHTML=h;
 }
 function bbItemClick(e,forceEdit){
   const edit=forceEdit||bbEditing;
+  if(e.target.closest('#bbAddDesc')){openItem('desc',null);return true;}
+  const ptab=e.target.closest('[data-pl-tab]'); if(ptab){bbPlTab={id:selectedId||null,k:ptab.dataset.plTab}; renderDescStrip(); return true;}
   const tb=e.target.closest('[data-team-edit]'); if(tb){openItem('team',tb.dataset.teamEdit);return true;}
   const pa=e.target.closest('[data-pl-add]'); if(pa){openItem('player',null,{team:pa.dataset.plAdd});return true;}
   const d=e.target.closest('.dchip');
@@ -1252,7 +1288,7 @@ function inkOf(c){
 }
 function renderCodes(){
   const items=cfg.buttons.filter(b=>!b.hidden);
-  const btnHtml=b=>'<button class="code" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
+  const btnHtml=b=>'<button class="code '+(b.size||'m')+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
   codes.innerHTML=items.length?items.map(btnHtml).join(''):
     '<p class="hint" style="grid-column:1/-1">No hay categorías. Crea una con «+ Categoría».</p>';
   updateCounts();
@@ -1285,8 +1321,7 @@ function renderFilters(){
   }).join('');
   /* facetas: categorías y descriptores */
   const cc={}; events.forEach(e=>{const g=info(e).group; cc[g]=(cc[g]||0)+1;});
-  const cats=cfg.cats.concat(Object.keys(cc).filter(x=>!cfg.cats.includes(x))).filter(x=>cc[x]||filters.cats.has(x));
-  let fx=cats.length?'<div class="cg"><span class="cgl">Grupo</span>'+cats.map(cn=>'<button class="chip '+(filters.cats.has(cn)?'on':'')+'" data-fx="c:'+esc(cn)+'" aria-pressed="'+filters.cats.has(cn)+'"><i style="background:var(--accent)"></i>'+esc(cn)+' <b>'+(cc[cn]||0)+'</b></button>').join('')+'</div>':'';
+  let fx='';
   cfg.descs.forEach(g=>{
     const its=g.items.map(it=>({it,n:events.filter(e=>e.desc.some(o=>o.d===g.id&&o.i===it.id)).length})).filter(x=>x.n||filters.descs.has(g.id+'|'+x.it.id));
     if(its.length) fx+='<div class="cg"><span class="cgl">'+esc(g.name)+'</span>'+its.map(x=>{const k=g.id+'|'+x.it.id,on=filters.descs.has(k);
@@ -1617,8 +1652,16 @@ codes.addEventListener('contextmenu',e=>{const el=e.target.closest('.code'); if(
 let bbEditing=false;
 $('#bbEdit').onclick=()=>{bbEditing=!bbEditing; $('#bbEdit').setAttribute('aria-pressed',bbEditing); $('#pTags').classList.toggle('editing',bbEditing); $('#bbNote').hidden=!bbEditing;};
 $('#bbAddCat').onclick=()=>openItem('cat',null);
-$('#bbAddDesc').onclick=()=>openItem('desc',null);
-$('#bbAddPl').onclick=()=>openItem('player',null,{team:team});
+const BB_SCALES=[0.8,0.9,1,1.15,1.3];
+let bbScale=parseFloat(lsGet('bbtag.bbscale'))||1; if(!BB_SCALES.includes(bbScale)) bbScale=1;
+function applyBbScale(){
+  $('#pTags').style.setProperty('--bbs',bbScale);
+  $('#bbSmaller').disabled=bbScale<=BB_SCALES[0]; $('#bbBigger').disabled=bbScale>=BB_SCALES[BB_SCALES.length-1];
+  lsSet('bbtag.bbscale',String(bbScale));
+}
+$('#bbSmaller').onclick=()=>{bbScale=BB_SCALES[Math.max(0,BB_SCALES.indexOf(bbScale)-1)];applyBbScale();};
+$('#bbBigger').onclick=()=>{bbScale=BB_SCALES[Math.min(BB_SCALES.length-1,BB_SCALES.indexOf(bbScale)+1)];applyBbScale();};
+applyBbScale();
 
 /* ---------- editor rápido de categorías, descriptores, jugadoras y equipos ---------- */
 const PALETTE=['#E74C3C','#00B4D8','#F39C12','#2ECC71','#3498DB','#9B59B6','#E67E22','#1ABC9C','#F1C40F','#E84393','#7F8C8D','#16A085'];
@@ -1636,6 +1679,7 @@ function openItem(kind,ref,opt){
       '<div class="row2"><label class="f"><span>Color</span><input id="itColor" type="color" value="'+col.slice(0,7)+'"></label>'+
       '<label class="f"><span>Segundos antes</span><input id="itPre" type="number" min="0" max="120" value="'+(b?b.pre:5)+'"></label>'+
       '<label class="f"><span>Segundos después</span><input id="itPost" type="number" min="0" max="120" value="'+(b?b.post:3)+'"></label></div>'+
+      '<label class="f"><span>Tamaño del botón</span><select id="itSize">'+[['s','Pequeño'],['m','Normal'],['l','Grande (ocupa toda la fila)']].map(o=>'<option value="'+o[0]+'"'+((b?b.size:'m')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label>'+
       '<p class="hint">El clip empieza unos segundos antes del momento en que pulsas y acaba unos segundos después.</p>';
     $('#itDel').hidden=!b;
   } else if(kind==='desc'){
@@ -1674,7 +1718,7 @@ function itSave(){
     if(!name){msg('Escribe un nombre.');return;}
     let b=st.ref&&btnById(st.ref);
     if(!b){b={id:uid(),label:name,group:'Otros',sub:'',page:cfg.pages[0],key:'',pre:5,post:3,pts:0,color:'#8CA0B3',icon:'',size:'m',hidden:false}; cfg.buttons.push(b); if(!cfg.cats.includes('Otros')) cfg.cats.push('Otros');}
-    b.label=name; b.color=safeColor($('#itColor').value);
+    b.label=name; b.color=safeColor($('#itColor').value); b.size=$('#itSize').value||'m';
     b.pre=Math.max(0,Math.min(120,+$('#itPre').value||0)); b.post=Math.max(0,Math.min(120,+$('#itPost').value||0));
     events.forEach(e=>{if(e.btnId===b.id){e.label=b.label;e.color=b.color;}});
   } else if(st.kind==='desc'){
@@ -1735,7 +1779,7 @@ function deleteEvent(id){
   commit(); renderDetail();
   toast('Clip borrado',{label:'Deshacer',fn:undo});
 }
-function setTeam(k){team=k;renderTeamBar();}
+function setTeam(k){team=k;bbPlTab=null;renderTeamBar();renderDescStrip();}
 $('#teamL').onclick=()=>setTeam('L');
 $('#teamR').onclick=()=>setTeam('R');
 
@@ -1981,10 +2025,10 @@ const num=n=>n.toFixed(1).replace('.',',');
 $('#bCsv').onclick=()=>{
   if(!events.length){toast('No hay etiquetas que exportar.');return;}
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
-  const rows=[['Tiempo','Segundo','Inicio clip (s)','Fin clip (s)','Nombre','Categoría','Grupo','Equipo','Periodo','Dorsal','Jugadora','Puntos','Etiquetas','Descriptores','Vídeo','Comentario'].map(q).join(';')];
+  const rows=[['Tiempo','Segundo','Inicio clip (s)','Fin clip (s)','Nombre','Categoría','Equipo','Periodo','Dorsal','Jugadora','Puntos','Etiquetas','Descriptores','Vídeo','Comentario'].map(q).join(';')];
   events.forEach(e=>{
     const inf=info(e);
-    rows.push([q(fmt(e.t)),num(e.t),num(e.start),num(e.end),q(evName(e)),q(inf.label),q(inf.group),q(teamName(e.team)),q(e.period),q(e.player),q(playerName(e.team,e.player)),inf.pts||0,q(e.tags.join(', ')),q(descText(e)),q(e.video||videoName),q(e.note)].join(';'));
+    rows.push([q(fmt(e.t)),num(e.t),num(e.start),num(e.end),q(evName(e)),q(inf.label),q(teamName(e.team)),q(e.period),q(e.player),q(playerName(e.team,e.player)),inf.pts||0,q(e.tags.join(', ')),q(descText(e)),q(e.video||videoName),q(e.note)].join(';'));
   });
   saveFile('etiquetas-'+baseName()+'.csv','\ufeff'+rows.join('\r\n'));
 };
@@ -2018,43 +2062,27 @@ $('#fileProject').onchange=async e=>{
    EDITOR DE BOTONERA
    ===================================================================== */
 const dlg=$('#dlg');
-let cfgFilter='all';
 function dmsg(t){$('#dMsg').textContent=t||'';}
-function shownButtons(){return cfg.buttons.filter(b=>cfgFilter==='all'||b.group===cfgFilter);}
+function shownButtons(){return cfg.buttons;}
 function renderCfg(){
   $('#nameL').value=cfg.teamNames.L; $('#nameR').value=cfg.teamNames.R;
-  const groups=[...new Set(['Ataque','Defensa','Resultado','Otros'].concat(cfg.buttons.map(b=>b.group)))];
-  $('#grpList').innerHTML=groups.map(g=>'<option value="'+esc(g)+'">').join('');
-  $('#prows').innerHTML=cfg.pages.map((p,i)=>
-    '<div class="f" style="flex-direction:row;align-items:flex-end;gap:4px"><label class="f"><span>Página '+(i+1)+'</span><input data-page-i="'+i+'" value="'+esc(p)+'" maxlength="24"></label>'+
-    (cfg.pages.length>1?'<button class="btn danger" data-page-del="'+i+'" aria-label="Quitar página '+esc(p)+'">Quitar</button>':'')+'</div>').join('')+
-    '<button class="btn" id="pAdd">Añadir página</button>';
-  const fcats=[...new Set(cfg.cats.concat(cfg.buttons.map(b=>b.group)))];
-  if(cfgFilter!=='all'&&!fcats.includes(cfgFilter)) cfgFilter='all';
-  $('#cfgFilter').innerHTML='<option value="all">Todos los grupos ('+cfg.buttons.length+')</option>'+fcats.map(p=>'<option value="'+esc(p)+'">'+esc(p)+' ('+cfg.buttons.filter(b=>b.group===p).length+')</option>').join('');
-  $('#cfgFilter').value=cfgFilter;
   const opt=(arr,cur)=>arr.map(([v,t])=>'<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(t)+'</option>').join('');
-  $('#brows').innerHTML=shownButtons().map(b=>
+  $('#brows').innerHTML=cfg.buttons.map(b=>
    '<div class="brow'+(b.hidden?' hid':'')+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+'">'+
     '<span class="grab" title="Arrastrar para ordenar" aria-hidden="true">⠿</span>'+
     '<label class="f grow"><span>Nombre</span><input data-k="label" maxlength="30" value="'+esc(b.label)+'"></label>'+
-    '<label class="f" style="flex:0 1 120px"><span>Grupo</span><select data-k="group">'+opt((cfg.cats.includes(b.group)?cfg.cats:cfg.cats.concat([b.group])).map(c=>[c,c]),b.group)+'</select></label>'+
     '<label class="f xs"><span>Tecla</span><input data-k="key" class="keyin" readonly value="'+esc((b.key||'').toUpperCase())+'" aria-label="Tecla de '+esc(b.label)+'"></label>'+
     '<label class="f xs"><span>Antes (s)</span><input data-k="pre" type="number" min="0" max="120" step="1" value="'+b.pre+'"></label>'+
     '<label class="f xs"><span>Después (s)</span><input data-k="post" type="number" min="0" max="120" step="1" value="'+b.post+'"></label>'+
+    '<label class="f xs"><span>Puntos</span><input data-k="pts" type="number" min="0" max="3" step="1" value="'+(b.pts||0)+'"></label>'+
+    '<label class="f" style="width:104px"><span>Tamaño</span><select data-k="size">'+opt([['s','Pequeño'],['m','Normal'],['l','Grande']],b.size||'m')+'</select></label>'+
     '<label class="f xs"><span>Color</span><input data-k="color" type="color" value="'+safeColor(b.color).slice(0,7)+'"></label>'+
-    '<span class="racts"><button class="btn" data-up aria-label="Subir" title="Subir">▲</button><button class="btn" data-dn aria-label="Bajar" title="Bajar">▼</button><button class="btn" data-dup aria-label="Duplicar" title="Duplicar">⧉</button><button class="btn danger" data-del aria-label="Quitar" title="Quitar">✕</button></span>'+
-    '<details class="more"><summary>Más opciones</summary><div class="morein">'+
-      '<label class="f" style="flex:0 1 120px"><span>Subgrupo</span><input data-k="sub" maxlength="20" value="'+esc(b.sub)+'"></label>'+
-      '<label class="f xs"><span>Puntos</span><input data-k="pts" type="number" min="0" max="3" step="1" value="'+(b.pts||0)+'"></label>'+
-      '<label class="f" style="width:96px"><span>Tamaño</span><select data-k="size">'+opt([['s','Pequeño'],['m','Normal'],['l','Grande']],b.size)+'</select></label>'+
-      '<label class="f xs"><span>Icono</span><select data-k="icon">'+opt(ICONS.map(i=>[i,i||'Ninguno']),b.icon)+'</select></label>'+
-      '<label class="f" style="width:64px"><span>Visible</span><input data-k="hidden" type="checkbox"'+(b.hidden?'':' checked')+'></label>'+
-    '</div></details></div>').join('');
-  renderCfgCats(); renderCfgDescs(); renderCfgTabs();
+    '<label class="f" style="width:56px"><span>Visible</span><input data-k="hidden" type="checkbox"'+(b.hidden?'':' checked')+'></label>'+
+    '<span class="racts"><button class="btn" data-up aria-label="Subir" title="Subir">▲</button><button class="btn" data-dn aria-label="Bajar" title="Bajar">▼</button><button class="btn" data-dup aria-label="Duplicar" title="Duplicar">⧉</button><button class="btn danger" data-del aria-label="Quitar" title="Quitar">✕</button></span></div>').join('');
+  renderCfgDescs(); renderCfgTabs();
 }
 function cfgChanged(){
-  saveCfg();renderPages();renderCodes();renderFilters();renderScore();renderList();renderSelType();renderTimeline();renderDetail();renderDescStrip();
+  saveCfg();renderCodes();renderFilters();renderScore();renderList();renderSelType();renderTimeline();renderDetail();renderDescStrip();
 }
 /* ---------- pestañas del editor ---------- */
 let cfgTab='btn';
@@ -2064,49 +2092,6 @@ function renderCfgTabs(){
   $('#dAdd').hidden=cfgTab!=='btn'; $('#dReset').hidden=cfgTab!=='btn';
 }
 $('#cfgTabs').addEventListener('click',e=>{const b=e.target.closest('[data-ctab]');if(b){cfgTab=b.dataset.ctab;dmsg('');renderCfgTabs();}});
-
-/* ---------- categorías ---------- */
-function renderCfgCats(){
-  $('#crows').innerHTML=cfg.cats.map((c,i)=>'<div class="brow" data-cat="'+esc(c)+'" style="--c:var(--accent)">'+
-    '<label class="f grow"><span>Grupo</span><input data-ck maxlength="24" value="'+esc(c)+'"></label>'+
-    '<span class="hint" style="align-self:center;min-width:80px">'+cfg.buttons.filter(b=>b.group===c).length+' botones</span>'+
-    '<button class="btn" data-cup aria-label="Subir grupo">▲</button><button class="btn" data-cdn aria-label="Bajar grupo">▼</button>'+
-    (cfg.cats.length>1?'<button class="btn danger" data-cdel>Quitar</button>':'')+'</div>').join('');
-}
-function renameCat(old,nw){
-  cfg.cats[cfg.cats.indexOf(old)]=nw;
-  cfg.buttons.forEach(b=>{if(b.group===old) b.group=nw;});
-  cfg.descs.forEach(g=>{g.scope=g.scope.map(x=>x===old?nw:x);});
-  events.forEach(e=>{if(e.cat===old) e.cat=nw;});
-  saveProject();
-}
-$('#crows').addEventListener('change',e=>{
-  const inp=e.target.closest('[data-ck]'); if(!inp) return;
-  const old=inp.closest('[data-cat]').dataset.cat, nw=inp.value.trim();
-  if(!nw||(cfg.cats.includes(nw)&&nw!==old)){dmsg(nw?'Ya existe un grupo con ese nombre.':'El nombre no puede estar vacío.');inp.value=old;return;}
-  if(nw===old) return;
-  renameCat(old,nw); dmsg(''); renderCfg(); cfgChanged();
-});
-$('#crows').addEventListener('click',e=>{
-  const row=e.target.closest('[data-cat]'); if(!row) return;
-  const c=row.dataset.cat, i=cfg.cats.indexOf(c);
-  if(e.target.closest('[data-cup]')&&i>0){[cfg.cats[i-1],cfg.cats[i]]=[cfg.cats[i],cfg.cats[i-1]];renderCfg();cfgChanged();return;}
-  if(e.target.closest('[data-cdn]')&&i<cfg.cats.length-1){[cfg.cats[i+1],cfg.cats[i]]=[cfg.cats[i],cfg.cats[i+1]];renderCfg();cfgChanged();return;}
-  if(e.target.closest('[data-cdel]')){
-    const dest=cfg.cats.find(x=>x!==c);
-    cfg.cats.splice(i,1); cfg.buttons.forEach(b=>{if(b.group===c) b.group=dest;});
-    cfg.descs.forEach(g=>{g.scope=g.scope.filter(x=>x!==c);});
-    dmsg('Grupo quitado. Sus categorías pasaron a «'+dest+'».'); renderCfg(); cfgChanged();
-  }
-});
-function addCat(){
-  const n=$('#cNew').value.trim();
-  if(!n){dmsg('Escribe el nombre del grupo.');return;}
-  if(cfg.cats.includes(n)){dmsg('Ya existe un grupo con ese nombre.');return;}
-  cfg.cats.push(n); $('#cNew').value=''; dmsg(''); renderCfg(); cfgChanged();
-}
-$('#cAdd').onclick=addCat;
-$('#cNew').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addCat();}});
 
 /* ---------- descriptores ---------- */
 const GCOLORS=['#3FBF7F','#9AA7FF','#FF9F45','#F5C542','#4DA3FF','#B58CFF'];
@@ -2173,7 +2158,6 @@ $('#dgAdd').onclick=()=>{
   const inp=$('#drows').querySelector('[data-g="'+g.id+'"] [data-dk="name"]'); if(inp){inp.focus();inp.select();}
 };
 $('#dgReset').onclick=()=>{cfg.descs=JSON.parse(JSON.stringify(DESC_DEFAULTS));dmsg('Descriptores restaurados.');renderCfgDescs();descChanged();};
-$('#cfgFilter').onchange=e=>{cfgFilter=e.target.value;renderCfg();};
 $('#brows').addEventListener('input',e=>{
   const inp=e.target.closest('[data-k]'); if(!inp) return;
   const row=inp.closest('.brow'), b=btnById(row.dataset.id); if(!b) return;
@@ -2259,35 +2243,13 @@ $('#brows').addEventListener('dragend',()=>{
   document.querySelectorAll('.brow').forEach(r=>{r.draggable=false;r.classList.remove('over');});
 });
 /* páginas */
-$('#prows').addEventListener('change',e=>{
-  const inp=e.target.closest('[data-page-i]'); if(!inp) return;
-  const i=+inp.dataset.pageI, old=cfg.pages[i], name=inp.value.trim();
-  if(!name||(cfg.pages.includes(name)&&name!==old)){dmsg(name?'Ya existe una página con ese nombre.':'El nombre no puede estar vacío.');inp.value=old;return;}
-  cfg.pages[i]=name; cfg.buttons.forEach(b=>{if(b.page===old) b.page=name;});
-  if(page===old){page=name;lsSet('bbtag.page',page);}
-  if(cfgFilter===old) cfgFilter=name;
-  dmsg('');renderCfg();cfgChanged();
-});
-$('#prows').addEventListener('click',e=>{
-  if(e.target.closest('#pAdd')){
-    let n=cfg.pages.length+1,name='Página '+n; while(cfg.pages.includes(name)) name='Página '+(++n);
-    cfg.pages.push(name);dmsg('');renderCfg();cfgChanged();return;
-  }
-  const d=e.target.closest('[data-page-del]'); if(!d) return;
-  const i=+d.dataset.pageDel, old=cfg.pages[i];
-  cfg.pages.splice(i,1); const dest=cfg.pages[0];
-  cfg.buttons.forEach(b=>{if(b.page===old) b.page=dest;});
-  if(page===old){page=dest;lsSet('bbtag.page',page);}
-  dmsg('Página quitada. Sus botones pasaron a «'+dest+'».');
-  renderCfg();cfgChanged();
-});
 $('#dAdd').onclick=()=>{
-  const b={id:uid(),label:'Nuevo botón',group:(cfgFilter!=='all'?cfgFilter:'Otros'),sub:'',page:cfg.pages[0],key:'',pre:5,post:3,pts:0,color:'#8CA0B3',icon:'',size:'m',hidden:false};
+  const b={id:uid(),label:'Nuevo botón',group:'Otros',sub:'',page:cfg.pages[0],key:'',pre:5,post:3,pts:0,color:'#8CA0B3',icon:'',size:'m',hidden:false};
   cfg.buttons.push(b); dmsg(''); renderCfg(); cfgChanged();
   const rows=$('#brows').querySelectorAll('.brow'); const last=rows[rows.length-1];
   if(last){last.scrollIntoView({block:'nearest'});const i=last.querySelector('[data-k="label"]');i.focus();i.select();}
 };
-$('#dReset').onclick=()=>{const d=defaultCfg();cfg.buttons=d.buttons;cfg.pages=d.pages;cfg.cats=d.cats;page=cfg.pages[0];lsSet('bbtag.page',page);cfgFilter='all';dmsg('Botonera restaurada.');renderCfg();cfgChanged();};
+$('#dReset').onclick=()=>{const d=defaultCfg();cfg.buttons=d.buttons;cfg.pages=d.pages;cfg.cats=d.cats;page=cfg.pages[0];lsSet('bbtag.page',page);dmsg('Categorías restauradas.');renderCfg();cfgChanged();};
 $('#nameL').oninput=e=>{cfg.teamNames.L=e.target.value.trim()||'Local';saveCfg();renderScore();renderTeamBar();renderFilters();renderList();renderDetail();};
 $('#nameR').oninput=e=>{cfg.teamNames.R=e.target.value.trim()||'Rival';saveCfg();renderScore();renderTeamBar();renderFilters();renderList();renderDetail();};
 function renderRosters(){
@@ -2768,7 +2730,7 @@ function renderMesaFilters(){
   const sig=JSON.stringify([cats,types,players,descs.map(g=>[g.id,g.name,g.items.map(i=>[i.id,i.label])]),mf,act]);
   if(sig===mfSig) return; mfSig=sig;
   const sel=(id,label,opts,val)=>'<select data-mf="'+esc(id)+'" aria-label="'+esc(label)+'"'+(val?' class="on"':'')+'><option value="">'+esc(label)+'</option>'+opts.map(o=>'<option value="'+esc(o[0])+'"'+(o[0]===val?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
-  box.innerHTML=sel('cat','Grupo',cats.map(c=>[c,c]),mf.cat)+sel('type','Categoría',types,mf.type)+
+  box.innerHTML=sel('type','Categoría',types,mf.type)+
     (players.length?sel('player','Jugadora',players,mf.player):'')+
     descs.map(g=>sel('d:'+g.id,g.name,g.items.map(i=>[i.id,i.label]),mf.desc[g.id]||'')).join('')+
     (act?'<button class="mini" id="mfClear">Quitar filtros</button>':'');

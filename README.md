@@ -22,16 +22,20 @@ Posición, tamaño y estado se recuerdan. «Paneles y diseño» ofrece diseños 
 
 ## Botonera
 
-Una sola rejilla de **categorías** (botones de color: Triple +, Pick and roll, Pérdida…), y debajo siempre a la vista los
-**descriptores** (Resultado, Defensa rival, Valoración…) y las **jugadoras** de cada equipo. Pulsas una categoría para
-crear el clip (cada botón muestra cuántos lleva, ×N) y después, si quieres, sus descriptores y la jugadora (pulsar una
-jugadora asigna también su equipo). Se crean con «+ Categoría», «+ Descriptor» y «+ Jugadora» (con «Añadir varias a la
-vez» para pegar una plantilla), y se editan con el modo «Editar» o con clic derecho: nombre, color, segundos antes y
-después, grupo del descriptor, número y nombre de la jugadora (borrar pide pulsar dos veces). El equipo de las acciones
-(tecla 0) y el cuarto (Mayús+1…5) están en la cabecera. «Editar botonera» abre el editor completo (teclas, orden,
-duplicar, ocultar, grupos y descriptores con teclas propias).
+Tres zonas ordenadas: **Categorías** (botones de color; cada uno muestra cuántos clips lleva, ×N), **Descriptores**
+(agrupados por rótulo: Resultado, Defensa rival, Valoración…) y **Jugadoras** (una pestaña por equipo, con número y nombre).
+Las categorías se desplazan dentro de su zona y los descriptores y las jugadoras quedan siempre a la vista. Anclada abajo
+(panel ancho), las categorías pasan a un lado y los descriptores y jugadoras al otro.
 
-**Grupos:** Ataque, Defensa… agrupan las categorías para organizarlas y filtrar clips (no confundir con las categorías).
+Pulsas una categoría para crear el clip y después, si quieres, sus descriptores y la jugadora (pulsar una jugadora asigna
+también su equipo). Cada zona tiene su «+» para crear categorías, descriptores y jugadoras (con «Añadir varias a la vez» para
+pegar una plantilla). **Editar** (o clic derecho) abre un editor rápido: nombre, color, segundos antes y después y **tamaño**
+del botón (pequeño: media columna, normal: una, grande: toda la fila); borrar pide pulsar dos veces. **A− / A+** cambia el
+tamaño de toda la botonera (se recuerda). El equipo de las acciones (tecla 0) y el cuarto (Mayús+1…5) están en la cabecera.
+
+«Editar botonera» abre el editor completo, con tres pestañas: **Categorías** (nombre, tecla, segundos antes y después, puntos,
+tamaño, color, visible, orden), **Descriptores** (grupos de elección única o múltiple y teclas propias) y **Jugadoras**
+(nombres de los equipos y plantillas).
 
 ## Biblioteca
 
@@ -42,7 +46,7 @@ reproduce; «+» lo añade a la playlist. El tiempo de un clip se ajusta arrastr
 ## Mesa de producción
 
 Botón superior **Mesa de producción**: se abre en **otra ventana** para trabajar con calma, con su propia lista de
-clips disponibles, con buscador y filtros desplegables (grupo, categoría, jugadora y cada grupo de descriptores), y la
+clips disponibles, con buscador y filtros desplegables (categoría, jugadora y cada grupo de descriptores), y la
 secuencia de la playlist en líneas de texto (arrastra o usa ▲ ▼ para ordenar; muestra la duración total y resalta el clip
 que suena). Se añaden con «+», doble clic, arrastrando o «Añadir todos» (solo los que ves filtrados). «Volver a la ventana
 principal» la acopla dentro; cerrarla la hace desaparecer. Si el navegador bloquea las ventanas emergentes, la mesa se abre
