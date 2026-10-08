@@ -37,6 +37,19 @@ tamaño de toda la botonera (se recuerda). El equipo de las acciones (tecla 0) y
 tamaño, color, visible, orden), **Descriptores** (grupos de elección única o múltiple y teclas propias) y **Jugadoras**
 (nombres de los equipos y plantillas).
 
+## Editar clip
+
+En la tabla de clips, **✎** (o doble clic) abre el editor del clip en **otra ventana**: el vídeo del clip con su título encima,
+**recorte** con dos asas sobre la línea del partido (inicio y fin, flechas del teclado para afinar 0,1 s), campos **Inicio** y
+**Fin** (acepta `1:39:15`, `1:39.5`…), botones **⟸ I** y **O ⟹** (o las teclas I y O) para fijarlos en el instante que ves,
+reproducción, bucle y pantalla completa. «Ver más» muestra más partido alrededor del clip.
+
+**Anotaciones:** «Nueva anotación» abre el editor de dibujo (freeze frame) de la ventana principal en ese instante; al
+terminar aparece en la lista del clip, donde puedes elegir si es una **pausa** o un dibujo **visible** sobre el vídeo, su
+duración, **moverla** al instante actual, editar el dibujo o borrarla. La vista previa del clip las reproduce igual que el
+partido (pausa incluida). El **título** se muestra sobre el vídeo (aquí y al reproducir el clip en la ventana principal) y la
+**nota** se guarda con el clip. Si el navegador bloquea las ventanas emergentes, el editor se abre dentro de la aplicación.
+
 ## Biblioteca
 
 Los clips son una **tabla de colores** (#, categoría, descriptores, inicio) con cabeceras que ordenan, un filtro de
