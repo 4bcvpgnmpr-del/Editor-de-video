@@ -921,6 +921,22 @@ body.ipad #pTags .bb-sh b{display:none}
 body.ipad #pTags .edit-note{display:none}
 #ipLow{min-height:44px;min-width:44px;border-radius:12px;border:1px solid #333;background:#1c1c1c;color:#fff;font-size:15px;padding:0 12px}
 body.ipad.lowOn #ipLow{background:var(--accent);color:#111}
+
+/* iPad: botonera estilo lista oscura con punto de color */
+body.ipad #pTags{background:#0c0c0c}
+body.ipad #pTags .p-title{display:none}
+body.ipad #pTags .p-head{background:transparent;border:0;justify-content:flex-end}
+body.ipad #pTags .p-grip{display:none}
+body.ipad #pTags .bb-sh{padding:0 6px 6px;gap:8px}
+body.ipad #pTags #ipSetSel{min-height:46px;border-radius:12px;background:#1a1a1a;border:1px solid #3a2a12;color:#fff;font-size:17px;font-weight:700;padding:0 14px;max-width:220px}
+body.ipad #pTags #phSeg,body.ipad #pTags #bbAddCat{display:none!important}
+body.ipad #pTags #ipLow{margin-left:auto;font-size:0;width:46px;padding:0}
+body.ipad #pTags #ipLow::before{content:"🏷";font-size:18px}
+body.ipad .codes{gap:6px}
+body.ipad #pTags .code{background:#151515!important;color:#fff!important;border:0!important;box-shadow:none!important;min-height:54px;padding:0 16px 0 44px;position:relative;border-radius:12px}
+body.ipad #pTags .code::before{content:"";position:absolute;left:16px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:var(--c)}
+body.ipad #pTags .code .cl{font-size:17px;font-weight:600;color:#fff}
+body.ipad #pTags .code:active{background:#262626!important}
 </style>
 </head>
 <body>
