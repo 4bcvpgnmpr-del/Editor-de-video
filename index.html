@@ -219,6 +219,8 @@ body.dragging{user-select:none}
 .ev .lbl em{font:500 13px var(--f-body);color:var(--muted);font-style:normal}
 .ev .tmn{font-size:12px;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev .acts{display:flex;gap:2px}
+.ev .acts .stb.on{color:#FFB020}
+#phSeg .bb-ib.on{background:var(--accent);color:#000;border-color:var(--accent)}
 .ev .acts button{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;border-radius:4px;color:var(--muted);cursor:pointer}
 .ev .acts button:hover{color:var(--text);background:var(--panel)}
 .list .none{padding:18px 14px;color:var(--muted);font-size:14px}
@@ -789,6 +791,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
         <div class="p-body bbx"><div class="bb-wrap">
           <div class="bb-cats">
             <div class="bb-sh"><b>Categorías</b><span class="sp"></span>
+              <span class="bb-size" id="phSeg" role="group" aria-label="Fase de juego"><button class="bb-ib" data-ph="A" aria-pressed="false" title="Las jugadas nuevas se marcan como ataque">⚔ Ataque</button><button class="bb-ib" data-ph="D" aria-pressed="false" title="Las jugadas nuevas se marcan como defensa">🛡 Defensa</button></span>
               <span class="bb-size" role="group" aria-label="Tamaño de los botones"><button class="bb-ib" id="bbSmaller" title="Botones más pequeños" aria-label="Botones más pequeños">A−</button><button class="bb-ib" id="bbBigger" title="Botones más grandes" aria-label="Botones más grandes">A+</button></span>
               <button class="bb-ib" id="bbEdit" aria-pressed="false" title="Al activarlo, pulsa cualquier categoría, descriptor o jugadora para cambiarle el nombre, el color, el tamaño o borrarlo">✎ Editar</button>
               <button class="bb-ib bb-add" id="bbAddCat" title="Nueva categoría" aria-label="Nueva categoría">+</button>
@@ -831,6 +834,8 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
                   <label class="f"><span>Equipo</span><select id="fTeam"></select></label>
                   <label class="f"><span>Periodo</span><select id="fPeriod"></select></label>
                   <label class="f"><span>Jugadora</span><select id="fPlayer"></select></label>
+                  <label class="f"><span>Fase</span><select id="fPhase"><option value="">Todas</option><option value="A">Ataque</option><option value="D">Defensa</option></select></label>
+                  <label class="f"><span>Destacados</span><select id="fStar"><option value="">Todos</option><option value="1">★ Solo destacados</option></select></label>
                 </div>
                 <div class="chips" id="chips"></div>
                 <div class="chips" id="chipsX"></div>
@@ -3157,7 +3162,7 @@ if(!cfg.pages.includes(page)) page=cfg.pages[0];
 let selectedId=null;
 let clip=null;      /* {queue:[ids], idx, temp?} */
 let sel=null;       /* selección de la línea de tiempo {a,b} */
-const filters={team:'all',player:'',period:'all',q:'',types:new Set(),cats:new Set(),descs:new Set(),sort:'timeDesc'};
+const filters={team:'all',player:'',period:'all',q:'',types:new Set(),cats:new Set(),descs:new Set(),sort:'timeDesc',star:false,phase:''};
 let zoom=1;
 
 const video=$('#video');
@@ -3266,7 +3271,7 @@ function normEvent(x){
   return {id:x.id||uid(),btnId:String(x.btnId||''),label:String(x.label||''),color:safeColor(x.color),pts:+x.pts||0,
     t:+x.t,start:+x.start,end:+x.end,team:x.team==='R'?'R':'L',player:String(x.player==null?'':x.player),
     period:PERIODS.includes(x.period)?x.period:'1C',video:String(x.video||''),note:String(x.note||''),
-    name:String(x.name||''),tags:Array.isArray(x.tags)?x.tags.map(String):[],cat:String(x.cat||''),
+    name:String(x.name||''),tags:Array.isArray(x.tags)?x.tags.map(String):[],cat:String(x.cat||''),star:!!x.star,phase:x.phase==='A'||x.phase==='D'?x.phase:'',
     desc:Array.isArray(x.desc)?x.desc.filter(o=>o&&o.i).map(o=>({d:String(o.d||''),i:String(o.i),g:String(o.g||''),l:String(o.l||'')})):[]};
 }
 
@@ -3313,7 +3318,7 @@ function toast(msg,action){
 /* =====================================================================
    FILTROS
    ===================================================================== */
-function isFiltered(){return filters.team!=='all'||filters.period!=='all'||filters.player!==''||filters.q.trim()!==''||filters.types.size>0||filters.cats.size>0||filters.descs.size>0;}
+function isFiltered(){return filters.team!=='all'||filters.period!=='all'||filters.player!==''||filters.q.trim()!==''||filters.types.size>0||filters.cats.size>0||filters.descs.size>0||filters.star||filters.phase!=='';}
 function descMatch(e){
   if(!filters.descs.size) return true;
   const by={}; filters.descs.forEach(k=>{const [d,i]=k.split('|');(by[d]=by[d]||[]).push(i);});
@@ -3324,6 +3329,7 @@ function filtered(){
   const toks=filters.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return events.filter(e=>
     (filters.team==='all'||e.team===filters.team)&&
+    (!filters.star||e.star)&&(!filters.phase||e.phase===filters.phase)&&
     (filters.period==='all'||e.period===filters.period)&&
     (!filters.player||filters.player===e.team+'|'+e.player)&&
     (!filters.types.size||filters.types.has(e.btnId))&&
@@ -3397,7 +3403,7 @@ function flash(id){
 function renderFilters(){
   const ft=$('#fTeam');
   ft.innerHTML='<option value="all">Todos</option><option value="L">'+esc(teamName('L'))+'</option><option value="R">'+esc(teamName('R'))+'</option>';
-  ft.value=filters.team;
+  ft.value=filters.team; { const a=document.getElementById('fPhase'), b2=document.getElementById('fStar'); if(a) a.value=filters.phase; if(b2) b2.value=filters.star?'1':''; }
   const fpl=$('#fPlayer'); fpl.innerHTML='<option value="">Todas</option>'+playerOptions().map(o=>'<option value="'+esc(o.v)+'">'+esc(o.label)+'</option>').join(''); fpl.value=filters.player;
   $('#fPeriod').value=filters.period;
   const c={}; events.forEach(e=>{c[e.btnId]=(c[e.btnId]||0)+1;});
@@ -3416,7 +3422,7 @@ function renderFilters(){
       return '<button class="chip '+(on?'on':'')+'" data-fx="d:'+esc(k)+'" style="--c:'+safeColor(g.color)+'" aria-pressed="'+on+'"><i></i>'+esc(x.it.label)+' <b>'+x.n+'</b></button>';}).join('')+'</div>';
   });
   $('#chipsX').innerHTML=fx||'<p class="hint" style="margin:6px 2px">Cuando califiques clips con descriptores podrás filtrar por ellos aquí.</p>';
-  const nf=(filters.team!=='all'?1:0)+(filters.period!=='all'?1:0)+(filters.player?1:0)+filters.types.size+filters.cats.size+filters.descs.size;
+  const nf=(filters.team!=='all'?1:0)+(filters.period!=='all'?1:0)+(filters.player?1:0)+filters.types.size+filters.cats.size+filters.descs.size+(filters.star?1:0)+(filters.phase?1:0);
   $('#fxSum').textContent='Filtros'+(nf?' ('+nf+' activos)':'');
   $('#fSort').value=filters.sort;
   $('#fClear').disabled=!isFiltered();
@@ -3449,13 +3455,13 @@ function renderList(){
   f.map(e=>{
     const inf=info(e);
     const pl=e.player!==''?'#'+e.player+(playerName(e.team,e.player)?' '+playerName(e.team,e.player):''):'';
-    const d=[descText(e).split(' · ').join(', '),pl].concat(e.tags.map(t=>'#'+t)).filter(Boolean).join(', ');
+    const d=[descText(e).split(' · ').join(', '),pl,e.phase==='A'?'Ataque':e.phase==='D'?'Defensa':''].concat(e.tags.map(t=>'#'+t)).filter(Boolean).join(', ');
     return '<li class="ev t'+e.team+(e.id===selectedId?' sel':'')+'" data-id="'+e.id+'" tabindex="0" draggable="true" title="'+esc(inf.label+' · '+e.period+' · '+teamName(e.team)+(d?' · '+d:''))+'" style="--c:'+safeColor(inf.color)+';--ink:'+inkOf(inf.color)+'">'+
       '<span class="num">'+numOf.get(e.id)+'</span>'+
       '<span class="cat">'+esc(evName(e))+'</span>'+
       '<span class="dsc2">'+(d?esc(d):'<span style="color:var(--muted)">—</span>')+'</span>'+
       '<span class="t">'+fmt(e.t)+'</span>'+
-      '<span class="acts"><button data-act="pl" title="Añadir a la playlist actual" aria-label="Añadir a la playlist actual">+</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="edit" title="Editar clip: recorte, anotaciones, título y nota (también con doble clic)" aria-label="Editar clip">✎</button><button data-act="del" title="Borrar" aria-label="Borrar clip">'+ICON.trash+'</button></span></li>';
+      '<span class="acts"><button data-act="star" class="stb'+(e.star?' on':'')+'" title="Destacar" aria-label="Destacar">'+(e.star?'★':'☆')+'</button><button data-act="pl" title="Añadir a la playlist actual" aria-label="Añadir a la playlist actual">+</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="edit" title="Editar clip: recorte, anotaciones, título y nota (también con doble clic)" aria-label="Editar clip">✎</button><button data-act="del" title="Borrar" aria-label="Borrar clip">'+ICON.trash+'</button></span></li>';
   }).join('');
   const s=list.querySelector('.ev.sel');
   if(s) s.scrollIntoView({block:'nearest'});
@@ -3727,7 +3733,7 @@ function tagBtn(b){
   const start=Math.max(0,t-(b.pre||0));
   let end=Math.min(dur,t+(b.post||0));
   if(end-start<0.5) end=Math.min(dur,start+0.5);
-  const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team,player,period,video:videoName,note:'',cat:b.group});
+  const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team,player,period,video:videoName,note:'',cat:b.group,phase:PH.cur});
   events.push(ev); sortEvents();
   selectedId=ev.id;
   commit(); renderDetail(); flash(b.id);
@@ -3878,6 +3884,7 @@ $('#list').addEventListener('click',e=>{
   if(hs){const k=hs.dataset.sort; filters.sort=k==='num'?(filters.sort==='timeDesc'?'time':'timeDesc'):(k==='type'?(filters.sort==='type'?'timeDesc':'type'):filters.sort); renderList(); $('#fSort').value=['time','timeDesc','name','type','cat'].includes(filters.sort)?filters.sort:'time'; return;}
   const li=e.target.closest('.ev'); if(!li) return;
   const act=e.target.closest('[data-act]');
+  if(act&&act.dataset.act==='star'){const ev=events.find(x=>x.id===li.dataset.id); if(ev){ev.star=!ev.star; commit(); renderList();} return;}
   if(act&&act.dataset.act==='del'){deleteEvent(li.dataset.id);return;}
   if(act&&act.dataset.act==='edit'){openClipEditor(li.dataset.id);return;}
   if(act&&act.dataset.act==='pl'){
@@ -3898,10 +3905,15 @@ $('#chips').addEventListener('click',e=>{
   if(filters.types.has(id)) filters.types.delete(id); else filters.types.add(id);
   renderFilters(); renderList(); renderTimeline();
 });
+const PH={cur:''};
+function phRender(){ document.querySelectorAll('#phSeg [data-ph]').forEach(b=>{const on=b.dataset.ph===PH.cur; b.setAttribute('aria-pressed',on); b.classList.toggle('on',on);}); }
+document.getElementById('phSeg').addEventListener('click',e=>{const b=e.target.closest('[data-ph]'); if(!b) return; PH.cur=PH.cur===b.dataset.ph?'':b.dataset.ph; phRender();});
+$('#fPhase').onchange=e=>{filters.phase=e.target.value;e.target.blur();renderFilters();renderList();renderTimeline();};
+$('#fStar').onchange=e=>{filters.star=e.target.value==='1';e.target.blur();renderFilters();renderList();renderTimeline();};
 $('#fTeam').onchange=e=>{filters.team=e.target.value;e.target.blur();renderFilters();renderList();renderTimeline();};
 $('#fPeriod').onchange=e=>{filters.period=e.target.value;e.target.blur();renderFilters();renderList();renderTimeline();};
 $('#fPlayer').onchange=e=>{filters.player=e.target.value;e.target.blur();renderFilters();renderList();renderTimeline();};
-$('#fClear').onclick=()=>{filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();$('#fQ').value='';renderFilters();renderList();renderTimeline();};
+$('#fClear').onclick=()=>{filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';renderFilters();renderList();renderTimeline();};
 
 /* =====================================================================
    REPRODUCCIÓN Y CLIPS
@@ -4092,7 +4104,7 @@ video.addEventListener('loadedmetadata',()=>{
     restored=events.length;
   }catch(e){events=[];markers=[];teles=[];playlists=[];covers=[];externals=[];}
   selectedId=null; sel=null; zoom=1; teleEd=null; freeze=null; plCur=null; $('#fbadge').hidden=true; teleKey='';
-  filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();$('#fQ').value='';
+  filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';
   fpsAuto=25; renderFps(); lastT=-1;
   sortEvents(); renderAll(); histInit(); lastW=tlScroll.clientWidth;
   if(restored) toast('Se recuperaron '+restored+' etiquetas de este vídeo.');
@@ -4266,7 +4278,7 @@ const expSeek=(t)=>new Promise(res=>{
 /* ===== TABLA DE JUGADAS (filtros encadenados, como una hoja de análisis) ===== */
 const TB={f:{},sort:{k:'n',d:1},sel:new Set()};
 function tbCols(){
-  const cols=[{k:'n',l:'#',w:46},{k:'period',l:'Cuarto',w:64},{k:'team',l:'Equipo',w:90},{k:'player',l:'Jugador/a',w:150},{k:'action',l:'Acción',w:150}];
+  const cols=[{k:'n',l:'#',w:46},{k:'period',l:'Cuarto',w:64},{k:'team',l:'Equipo',w:90},{k:'player',l:'Jugador/a',w:150},{k:'phase',l:'Fase',w:80},{k:'star',l:'★',w:50},{k:'action',l:'Acción',w:150}];
   cfg.descs.forEach(g=>{ if(g.items.some(it=>events.some(e=>e.desc.some(o=>o.d===g.id&&o.i===it.id)))) cols.push({k:'d:'+g.id,l:g.name,w:150}); });
   if(events.some(e=>e.tags&&e.tags.length)) cols.push({k:'tags',l:'Etiquetas',w:120});
   cols.push({k:'note',l:'Notas',w:200});
@@ -4278,6 +4290,8 @@ function tbVal(e,k,idx){
   if(k==='team') return teamName(e.team);
   if(k==='player') return e.player===''?'':playerLabel(e.team,e.player);
   if(k==='action') return info(e).label;
+  if(k==='phase') return e.phase==='A'?'Ataque':e.phase==='D'?'Defensa':'';
+  if(k==='star') return e.star?'★':'';
   if(k==='note') return e.note||'';
   if(k==='tags') return (e.tags||[]).join(', ');
   if(k.indexOf('d:')===0){ const gid=k.slice(2), g=cfg.descs.find(x=>x.id===gid); if(!g) return ''; return e.desc.filter(o=>o.d===gid).map(o=>{const it=g.items.find(x=>x.id===o.i); return it?it.label:(o.l||o.i);}).join(', '); }
@@ -4632,7 +4646,7 @@ function openPerf(){
       const dur=video.duration||0, t=video.currentTime; let n=0;
       pl.forEach(p=>{ [...PF.perfs].forEach(r=>{
         const start=Math.max(0,t-5); let end=Math.min(dur,t+3); if(end-start<0.5) end=Math.min(dur,start+0.5);
-        events.push(normEvent({id:uid(),btnId:'',label:r,color:PF.cal==='Mal'?'#E5484D':PF.cal==='Bien'?'#2EA36B':'#9AA7FF',pts:0,t,start,end,team:PF.team,player:p,period,video:videoName,note:'',cat:'Rendimiento individual',tags:PF.cal?[PF.cal]:[]})); n++; }); });
+        events.push(normEvent({id:uid(),btnId:'',label:r,color:PF.cal==='Mal'?'#E5484D':PF.cal==='Bien'?'#2EA36B':'#9AA7FF',pts:0,t,start,end,team:PF.team,player:p,period,video:videoName,note:'',cat:'Rendimiento individual',phase:PH.cur,tags:PF.cal?[PF.cal]:[]})); n++; }); });
       sortEvents(); commit(); toast(n+(n===1?' registro añadido':' registros añadidos')+'.');
       PF.players.clear(); PF.perfs.clear(); PF.cal='';
       if(close) closePerf(); else render();
@@ -5076,7 +5090,7 @@ function stBuild(){
   return {rk,ck,rl,cl,cell,rt,ct,tot,n:ev.length};
 }
 function stApply(rk,ck){
-  filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();$('#fQ').value='';
+  filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';
   if(ST.team!=='all') filters.team=ST.team;
   [[ST.rows,rk],[ST.cols,ck]].forEach(([d,k])=>{
     if(k==null) return;
