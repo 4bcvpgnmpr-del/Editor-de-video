@@ -1088,7 +1088,7 @@ body.ipad.vfull.fz #vfX{display:block}
         </div>
 
         <div class="ipfz ip-only" id="ipFz" hidden>
-          <div class="fz-top"><b>Freeze frame</b><span id="fzT"></span><button class="ib" id="fzDel">Borrar todo</button><button class="ib big" id="fzOk">✓ Listo</button></div>
+          <div class="fz-top"><b>Freeze frame</b><span id="fzT"></span><button class="ib" id="fzDel">Borrar todo</button><button class="ib" id="fzPlay" aria-label="Reanudar">▶ Reanudar</button><button class="ib big" id="fzOk">✓ Listo</button></div>
           <div class="fz-row"><div class="fz-tools" id="fzTools"></div><div class="fz-cols" id="fzCols"></div><button class="ib" id="fzUndo" aria-label="Quitar figura">⌫</button></div>
           <div class="fz-row"><label class="fz-hold">Pausa <input type="range" id="fzHold" min="0.5" max="10" step="0.5"> <b id="fzHv"></b></label><label class="fz-hold"><input type="checkbox" id="fzOver"> Sobre el vídeo (sin pausa)</label></div>
         </div>
@@ -6325,6 +6325,7 @@ function ipFzSync(){
   $$('fzHold').oninput=e=>{const ed=teleEd; if(!ed) return; ed.tele.hold=+e.target.value; $$('fzHv').textContent=String(ed.tele.hold).replace('.',',')+' s'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele();};
   $$('fzOver').onchange=e=>{const ed=teleEd; if(!ed) return; ed.tele.mode=e.target.checked?'overlay':'freeze'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele();};
   $$('fzOk').onclick=()=>closeTele();
+  $$('fzPlay').onclick=()=>{ if(teleEd){ const tl=teleEd.tele; if(tl.items.length){ ensureTele(tl); if(!playTele){playTele=true;const c=document.getElementById('chkTele'); if(c) c.checked=true;} } closeTele(); } video.play().catch(()=>{}); };
   $$('fzDel').onclick=()=>{if(teleEd) deleteTele(teleEd.tele);};
   $$('fzUndo').onclick=()=>{const ed=teleEd; if(!ed||!ed.tele.items.length) return; if(ed.sel!=null) ed.tele.items.splice(ed.sel,1); else ed.tele.items.pop(); ed.sel=null; commitTele();};
 })();
