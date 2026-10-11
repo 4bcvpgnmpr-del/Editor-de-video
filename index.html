@@ -610,6 +610,46 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
 #coverShow[hidden]{display:none}
 #extShow{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:6}
 #extShow[hidden]{display:none}
+
+/* ===== ASPECTO PRO (oscuro, naranja) ===== */
+:root:not([data-theme="light"]){--bg:#141414;--panel:#1d1d1d;--panel2:#272727;--line:#383838;--text:#ececec;--muted:#9a9a9a;--accent:#FF7A00;--on-accent:#111;--local:#4DA3FF;--rival:#FF5C6C;--danger:#FF5C6C;--mark:#35C6D9;color-scheme:dark}
+.top{background:#0f0f0f;border-bottom:1px solid var(--line)}
+.brand h1{color:var(--accent);letter-spacing:.04em;text-transform:uppercase;font-size:20px}
+.p-head{background:#141414}
+.p-title{color:var(--accent);text-transform:uppercase;font-size:14px;letter-spacing:.09em}
+.bb-sh b,.sec-t{color:var(--accent);text-transform:uppercase;letter-spacing:.07em;font-size:13px}
+.btn{border-radius:3px;background:#222;letter-spacing:.01em}
+.btn:hover:not(:disabled){border-color:var(--accent);color:#fff}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.mini{border-radius:3px;background:#222}
+.mini:hover{border-color:var(--accent)}
+.tabs button[aria-selected="true"]{color:var(--accent)}
+.ev.sel{box-shadow:inset 0 0 0 1px var(--accent)}
+.prow.playing{box-shadow:inset 0 0 0 1px var(--accent)}
+input,select,textarea{border-radius:3px}
+/* tabla de jugadas */
+#tblSheet{position:fixed;left:0;right:0;bottom:0;height:min(48vh,480px);z-index:800;background:var(--panel);border-top:2px solid var(--accent);display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.45)}
+.tb-bar{display:flex;gap:8px;align-items:center;padding:6px 10px;background:#141414;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tb-bar b{color:var(--accent);text-transform:uppercase;letter-spacing:.08em;font:700 15px var(--f-head)}
+.tb-bar .sp{flex:1}
+.tb-cnt{color:var(--muted);font-size:13px}
+.tb-main{display:flex;min-height:0;flex:1}
+.tb-filters{width:190px;flex:none;overflow:auto;border-right:1px solid var(--line);padding:6px 8px;background:#181818}
+.tb-fh{color:var(--accent);font:700 12px var(--f-head);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.tb-f{display:block;margin-bottom:6px;font-size:11.5px;color:var(--muted)}
+.tb-f select{width:100%;margin-top:2px;padding:4px;background:#222;border:1px solid var(--line);color:var(--text);font-size:12.5px}
+.tb-f select.on{border-color:var(--accent);color:var(--accent)}
+.tb-scroll{flex:1;overflow:auto;min-width:0}
+.tb-t{border-collapse:collapse;width:100%;font-size:12.5px}
+.tb-t th{position:sticky;top:0;background:#141414;color:var(--accent);text-align:left;padding:6px 8px;border-bottom:2px solid var(--accent);cursor:pointer;white-space:nowrap;font:700 12px var(--f-head);text-transform:uppercase;letter-spacing:.06em}
+.tb-t td{padding:5px 8px;border-bottom:1px solid #2c2c2c;border-right:1px solid #262626;vertical-align:top}
+.tb-t tbody tr{cursor:pointer;border-left:4px solid var(--tc)}
+.tb-t tbody tr:hover{background:#262626}
+.tb-t tbody tr.cur{background:#3a3a3a}
+.tb-n{color:var(--accent);font-weight:700;text-align:center}
+.tb-ck{width:30px;text-align:center}
+body.tbl-open .app{padding-bottom:min(48vh,480px)}
+@media (max-width:700px){.tb-filters{display:none}}
 </style>
 </head>
 <body>
@@ -783,6 +823,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
           </div>
           <div class="foot">
+            <button class="btn" id="bTable">📋 Tabla</button>
             <button class="btn" id="bStats">📊 Estadísticas</button>
             <button class="btn" id="bCsv">Exportar CSV</button>
             <button class="btn" id="bJson">Guardar proyecto</button>
@@ -4202,6 +4243,78 @@ const expSeek=(t)=>new Promise(res=>{
   let done=false; const fin=()=>{if(done)return;done=true;video.removeEventListener('seeked',fin);setTimeout(res,40);};
   video.addEventListener('seeked',fin); video.currentTime=t; setTimeout(fin,2500);
 });
+/* ===== TABLA DE JUGADAS (filtros encadenados, como una hoja de análisis) ===== */
+const TB={f:{},sort:{k:'n',d:1},sel:new Set()};
+function tbCols(){
+  const cols=[{k:'n',l:'#',w:46},{k:'period',l:'Cuarto',w:64},{k:'team',l:'Equipo',w:90},{k:'player',l:'Jugador/a',w:150},{k:'action',l:'Acción',w:150}];
+  cfg.descs.forEach(g=>{ if(g.items.some(it=>events.some(e=>e.desc.some(o=>o.d===g.id&&o.i===it.id)))) cols.push({k:'d:'+g.id,l:g.name,w:150}); });
+  cols.push({k:'note',l:'Notas',w:200});
+  return cols;
+}
+function tbVal(e,k,idx){
+  if(k==='n') return String(idx+1);
+  if(k==='period') return e.period;
+  if(k==='team') return teamName(e.team);
+  if(k==='player') return e.player===''?'':playerLabel(e.team,e.player);
+  if(k==='action') return info(e).label;
+  if(k==='note') return e.note||'';
+  if(k.indexOf('d:')===0){ const gid=k.slice(2), g=cfg.descs.find(x=>x.id===gid); if(!g) return ''; return e.desc.filter(o=>o.d===gid).map(o=>{const it=g.items.find(x=>x.id===o.i); return it?it.label:(o.l||o.i);}).join(', '); }
+  return '';
+}
+function tbRows(){
+  const sorted=events.slice().sort((a,b)=>a.t-b.t);
+  return sorted.map((e,i)=>({e,i}));
+}
+function closeTable(){ const s=document.getElementById('tblSheet'); if(s) s.remove(); document.body.classList.remove('tbl-open'); }
+function openTable(){
+  if(document.getElementById('tblSheet')){closeTable();return;}
+  if(!events.length){toast('Todavía no hay etiquetas.');return;}
+  const sh=document.createElement('div'); sh.id='tblSheet';
+  document.body.appendChild(sh); document.body.classList.add('tbl-open');
+  const esc_=esc;
+  function render(){
+    const cols=tbCols(), all=tbRows();
+    const vals=new Map(); all.forEach(r=>{ const m={}; cols.forEach(c=>m[c.k]=tbVal(r.e,c.k,r.i)); vals.set(r.e.id,m); });
+    cols.forEach(c=>{ if(c.k==='n'||c.k==='note') return; });
+    const match=(r,skip)=>cols.every(c=>{ if(c.k===skip) return true; const f=TB.f[c.k]; if(!f) return true; const v=vals.get(r.e.id)[c.k]; return c.k.indexOf('d:')===0?v.split(', ').indexOf(f)>=0:v===f; });
+    let rows=all.filter(r=>match(r,null));
+    const sk=TB.sort.k, sd=TB.sort.d;
+    rows.sort((a,b)=>{ const x=vals.get(a.e.id)[sk], y=vals.get(b.e.id)[sk]; const r=sk==='n'?(+x-+y):String(x).localeCompare(String(y),'es',{numeric:true}); return (r||(a.i-b.i))*sd; });
+    TB.sel=new Set([...TB.sel].filter(id=>events.some(e=>e.id===id)));
+    const fcols=cols.filter(c=>c.k!=='n'&&c.k!=='note');
+    const fHtml=fcols.map(c=>{
+      const cnt={}; all.filter(r=>match(r,c.k)).forEach(r=>{ const v=vals.get(r.e.id)[c.k]; (c.k.indexOf('d:')===0?v.split(', '):[v]).forEach(x=>{ if(x) cnt[x]=(cnt[x]||0)+1; }); });
+      const keys=Object.keys(cnt).sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
+      const cur=TB.f[c.k]||'';
+      if(cur&&!cnt[cur]) { delete TB.f[c.k]; }
+      return '<label class="tb-f"><span>'+esc_(c.l)+'</span><select data-fk="'+esc_(c.k)+'"'+(TB.f[c.k]?' class="on"':'')+'><option value="">Todos</option>'+keys.map(k=>'<option value="'+esc_(k)+'"'+(k===TB.f[c.k]?' selected':'')+'>'+esc_(k)+' ('+cnt[k]+')</option>').join('')+'</select></label>';
+    }).join('');
+    const nsel=[...TB.sel].filter(id=>rows.some(r=>r.e.id===id)).length;
+    const head='<th class="tb-ck"><input type="checkbox" id="tbAll"'+(rows.length&&nsel===rows.length?' checked':'')+' aria-label="Marcar todas"></th>'+cols.map(c=>'<th data-sk="'+esc_(c.k)+'" style="min-width:'+c.w+'px">'+esc_(c.l)+(TB.sort.k===c.k?(TB.sort.d>0?' ▲':' ▼'):'')+'</th>').join('');
+    const body=rows.map(r=>{ const m=vals.get(r.e.id), inf=info(r.e), on=TB.sel.has(r.e.id), sl=selectedId===r.e.id;
+      return '<tr data-id="'+esc_(r.e.id)+'" class="'+(sl?'cur':'')+'" style="--tc:'+safeColor(inf.color)+'"><td class="tb-ck"><input type="checkbox" data-ck="'+esc_(r.e.id)+'"'+(on?' checked':'')+'></td>'+cols.map(c=>'<td class="'+(c.k==='n'?'tb-n':'')+'">'+esc_(m[c.k])+'</td>').join('')+'</tr>'; }).join('');
+    const prevScroll=(sh.querySelector('.tb-scroll')||{}).scrollTop||0;
+    sh.innerHTML='<div class="tb-bar"><b>Tabla de jugadas</b><span class="tb-cnt">'+rows.length+' de '+all.length+(nsel?' · '+nsel+' marcadas':'')+'</span><span class="sp"></span>'+
+      '<button class="btn" id="tbPlay">▶ Reproducir'+(nsel?' marcadas':' filtradas')+'</button><button class="btn" id="tbPl">＋ A la playlist</button><button class="btn" id="tbExp">🎞 Vídeo</button><button class="btn" id="tbClr">Limpiar filtros</button><button class="btn" id="tbX" aria-label="Cerrar">✕</button></div>'+
+      '<div class="tb-main"><div class="tb-filters"><div class="tb-fh">Filtros</div>'+fHtml+'</div><div class="tb-scroll"><table class="tb-t"><thead><tr>'+head+'</tr></thead><tbody>'+(body||'<tr><td colspan="'+(cols.length+1)+'" style="padding:14px;color:var(--muted)">Ninguna jugada coincide con los filtros.</td></tr>')+'</tbody></table></div></div>';
+    sh.querySelector('.tb-scroll').scrollTop=prevScroll;
+    const ids=()=>{ const m=rows.filter(r=>TB.sel.has(r.e.id)); return (m.length?m:rows).map(r=>r.e); };
+    sh.querySelectorAll('[data-fk]').forEach(s=>s.onchange=()=>{ if(s.value) TB.f[s.dataset.fk]=s.value; else delete TB.f[s.dataset.fk]; render(); });
+    sh.querySelectorAll('[data-sk]').forEach(th=>th.onclick=()=>{ const k=th.dataset.sk; if(TB.sort.k===k) TB.sort.d*=-1; else TB.sort={k,d:1}; render(); });
+    sh.querySelector('#tbAll').onchange=e=>{ rows.forEach(r=>{ if(e.target.checked) TB.sel.add(r.e.id); else TB.sel.delete(r.e.id); }); render(); };
+    sh.querySelectorAll('[data-ck]').forEach(cb=>cb.onchange=()=>{ if(cb.checked) TB.sel.add(cb.dataset.ck); else TB.sel.delete(cb.dataset.ck); render(); });
+    sh.querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=ev=>{ if(ev.target.closest('.tb-ck')) return; const id=tr.dataset.id; selectEv(id); playClip(id); sh.querySelectorAll('tbody tr.cur').forEach(x=>x.classList.remove('cur')); tr.classList.add('cur'); });
+    sh.querySelector('#tbClr').onclick=()=>{ TB.f={}; TB.sel.clear(); render(); };
+    sh.querySelector('#tbX').onclick=closeTable;
+    sh.querySelector('#tbPlay').onclick=()=>{ const l=ids(); if(!l.length) return; playClip(l[0].id,l.map(e=>e.id),'Tabla'); };
+    sh.querySelector('#tbPl').onclick=()=>{ const p=curPl(); if(!p){toast('Primero crea una playlist en Producción con «Nueva».');return;} let n=0; ids().forEach(e=>{ if(!p.items.includes(e.id)){p.items.push(e.id);n++;} }); commit(); toast(n?n+' clips añadidos a «'+p.name+'».':'Ya estaban en la playlist.'); };
+    sh.querySelector('#tbExp').onclick=()=>{ DLGDOC=null; openExport(ids(),'tabla'); };
+  }
+  render();
+  sh._render=render;
+}
+$('#bTable').onclick=openTable;
+
 let DLGDOC=null; /* documento donde se abren los diálogos (la mesa puede estar en otra ventana) */
 /* ===== PORTADAS (diapositivas de título para el montaje) ===== */
 const COVER_FONTS=['Barlow','Arial','Arial Black','Impact','Georgia','Times New Roman','Courier New','Trebuchet MS','Verdana','Chalkduster','Comic Sans MS','Helvetica Neue','Futura','Avenir'];
