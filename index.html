@@ -777,6 +777,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
           </div>
           <div class="foot">
+            <button class="btn" id="bStats">📊 Estadísticas</button>
             <button class="btn" id="bCsv">Exportar CSV</button>
             <button class="btn" id="bJson">Guardar proyecto</button>
             <button class="btn" id="bLoad">Cargar proyecto</button>
@@ -4489,6 +4490,83 @@ function showExported(out){
 $('#plExp').onclick=()=>{ const p=curPl(); if(!p) return; openExport(p.items.map(id=>events.find(x=>x.id===id)).filter(Boolean),p.name); };
 function baseName(){return (videoName||'partido').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_').slice(0,60)||'partido';}
 const num=n=>n.toFixed(1).replace('.',',');
+
+/* ===== ESTADÍSTICAS (tabla cruzada de etiquetas) ===== */
+const ST={rows:'action',cols:'period',val:'n',team:'all'};
+const ST_DIM={action:'Acción',player:'Jugador/a',team:'Equipo',period:'Periodo'};
+function stKey(e,d){
+  if(d==='action') return e.btnId||('x:'+e.label);
+  if(d==='player') return e.player===''?'':e.team+'|'+e.player;
+  if(d==='team') return e.team;
+  return e.period;
+}
+function stLabel(d,k,e){
+  if(d==='action') return e?info(e).label:k;
+  if(d==='player') return k===''?'Sin jugador/a':teamName(k.split('|')[0])+' · '+playerLabel(k.split('|')[0],k.split('|').slice(1).join('|'));
+  if(d==='team') return teamName(k);
+  return k;
+}
+function stBuild(){
+  const ev=events.filter(e=>ST.team==='all'||e.team===ST.team);
+  const rk=[],ck=[],rl={},cl={},cell={},rt={},ct={}; let tot=0;
+  ev.forEach(e=>{
+    const r=stKey(e,ST.rows), c=stKey(e,ST.cols), v=ST.val==='p'?(info(e).pts||0):1;
+    if(!(r in rl)){rl[r]=stLabel(ST.rows,r,e);rk.push(r);} if(!(c in cl)){cl[c]=stLabel(ST.cols,c,e);ck.push(c);}
+    const k=r+'\u0001'+c; cell[k]=(cell[k]||0)+v; rt[r]=(rt[r]||0)+v; ct[c]=(ct[c]||0)+v; tot+=v;
+  });
+  const ord=(d,keys,t)=>{ if(d==='period') keys.sort((a,b)=>PERIODS.indexOf(a)-PERIODS.indexOf(b)); else if(d==='team') keys.sort(); else keys.sort((a,b)=>(t[b]||0)-(t[a]||0)); };
+  ord(ST.rows,rk,rt); ord(ST.cols,ck,ct);
+  return {rk,ck,rl,cl,cell,rt,ct,tot,n:ev.length};
+}
+function stApply(rk,ck){
+  filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();$('#fQ').value='';
+  if(ST.team!=='all') filters.team=ST.team;
+  [[ST.rows,rk],[ST.cols,ck]].forEach(([d,k])=>{
+    if(k==null) return;
+    if(d==='action'){ if(k.indexOf('x:')!==0) filters.types.add(k); }
+    else if(d==='player'){ if(k!==''){ filters.team=k.split('|')[0]; filters.player=k; } }
+    else if(d==='team') filters.team=k;
+    else filters.period=k;
+  });
+  renderFilters(); renderList(); renderTimeline();
+}
+function openStats(){
+  if(!events.length){toast('Todavía no hay etiquetas.');return;}
+  const sel=(id,cur,opts)=>'<select id="'+id+'" style="padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text)">'+opts.map(o=>'<option value="'+o[0]+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
+  const dims=Object.keys(ST_DIM).map(k=>[k,ST_DIM[k]]);
+  const D=stBuild();
+  const sc={L:0,R:0}; events.forEach(e=>{sc[e.team]+=info(e).pts||0;});
+  const th='padding:6px 8px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;font-size:12.5px;';
+  let tbl='<table style="border-collapse:collapse;width:100%"><thead><tr><th style="'+th+'text-align:left">'+esc(ST_DIM[ST.rows])+' \\ '+esc(ST_DIM[ST.cols])+'</th>'+D.ck.map(c=>'<th style="'+th+'">'+esc(D.cl[c])+'</th>').join('')+'<th style="'+th+'">Total</th></tr></thead><tbody>';
+  const mx=Math.max(1,...Object.values(D.cell));
+  D.rk.forEach(r=>{
+    tbl+='<tr><td style="'+th+'text-align:left;font-weight:600"><button class="mini" data-r="'+esc(r)+'" style="all:unset;cursor:pointer;text-decoration:underline dotted">'+esc(D.rl[r])+'</button></td>';
+    D.ck.forEach(c=>{const v=D.cell[r+'\u0001'+c]||0; tbl+='<td style="'+th+(v?'cursor:pointer;background:color-mix(in srgb,var(--accent) '+Math.round(8+60*v/mx)+'%,transparent)':'color:var(--muted)')+'" '+(v?'data-r="'+esc(r)+'" data-c="'+esc(c)+'"':'')+'>'+(v||'·')+'</td>';});
+    tbl+='<td style="'+th+'font-weight:700">'+D.rt[r]+'</td></tr>';
+  });
+  tbl+='<tr><td style="'+th+'text-align:left;font-weight:700">Total</td>'+D.ck.map(c=>'<td style="'+th+'font-weight:700">'+D.ct[c]+'</td>').join('')+'<td style="'+th+'font-weight:700">'+D.tot+'</td></tr></tbody></table>';
+  const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Estadísticas</h3>'+
+    '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">'+events.length+' etiquetas · '+esc(teamName('L'))+' '+sc.L+' – '+sc.R+' '+esc(teamName('R'))+'. Toca un número para ver esos clips.</p>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
+    '<label style="font-size:12.5px">Filas '+sel('stR',ST.rows,dims)+'</label><label style="font-size:12.5px">Columnas '+sel('stC',ST.cols,dims)+'</label>'+
+    '<label style="font-size:12.5px">Equipo '+sel('stT',ST.team,[['all','Todos'],['L',teamName('L')],['R',teamName('R')]])+'</label>'+
+    '<label style="font-size:12.5px">Valor '+sel('stV',ST.val,[['n','Nº de clips'],['p','Puntos']])+'</label></div>'+
+    '<div style="overflow:auto;max-height:55vh;border:1px solid var(--line);border-radius:10px">'+(D.n?tbl:'<p style="padding:12px;color:var(--muted)">Sin datos para ese equipo.</p>')+'</div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" id="stCsv">Descargar CSV</button><button class="btn" id="stNo">Cerrar</button></div>');
+  d.firstElementChild.style.width='min(980px,100%)';
+  const re=()=>{ST.rows=d.querySelector('#stR').value;ST.cols=d.querySelector('#stC').value;ST.team=d.querySelector('#stT').value;ST.val=d.querySelector('#stV').value;openStats();};
+  ['#stR','#stC','#stT','#stV'].forEach(i=>d.querySelector(i).onchange=re);
+  d.querySelector('#stNo').onclick=expClose;
+  d.querySelectorAll('[data-r]').forEach(el=>el.onclick=()=>{ expClose(); stApply(el.dataset.r,el.dataset.c!==undefined?el.dataset.c:null); });
+  d.querySelector('#stCsv').onclick=()=>{
+    const q=x=>'"'+String(x).replace(/"/g,'""')+'"';
+    const rows=[[ST_DIM[ST.rows]+' \\ '+ST_DIM[ST.cols]].concat(D.ck.map(c=>D.cl[c]),['Total']).map(q).join(';')];
+    D.rk.forEach(r=>rows.push([q(D.rl[r])].concat(D.ck.map(c=>D.cell[r+'\u0001'+c]||0),[D.rt[r]]).join(';')));
+    rows.push([q('Total')].concat(D.ck.map(c=>D.ct[c]),[D.tot]).join(';'));
+    saveFile('estadisticas-'+baseName()+'.csv','﻿'+rows.join('\r\n'));
+  };
+}
+$('#bStats').onclick=openStats;
 $('#bCsv').onclick=()=>{
   if(!events.length){toast('No hay etiquetas que exportar.');return;}
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
