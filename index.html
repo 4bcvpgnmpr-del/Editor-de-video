@@ -971,6 +971,24 @@ body.ipad .transport .ib{min-width:46px;min-height:50px}
 body.ipad .transport .ib.big{min-width:64px;min-height:56px}
 body.ipad .transport .tsel select{min-height:46px}
 body.ipad #ipPen{margin-right:0}
+
+/* iPad: biblioteca solo con clips */
+body.ipad:not(.libMore) #pEvents .foot .fg{display:none}
+body.ipad #pEvents .foot{padding:8px}
+body.ipad #pEvents .foot #ipLibMore{min-height:48px;border-radius:12px}
+body.ipad #pEvents .list .ev{min-height:60px}
+body.ipad #pEvents .list .ev .acts button{min-width:42px;min-height:42px}
+/* iPad: editor de clip con el vídeo grande */
+body.ipad #pClip .p-body.ce{display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"ti ri" "vi ri" "ct ri" "tr ri";gap:8px 14px;flex:1 1 auto;min-height:0;height:calc(100vh - 100px);overflow:hidden;padding:10px 14px}
+body.ipad #pClip .ce-title{grid-area:ti}
+body.ipad #pClip .ce-vwrap{grid-area:vi;aspect-ratio:auto;max-height:none;height:100%;min-height:0}
+body.ipad #pClip .ce-ctl{grid-area:ct}
+body.ipad #pClip .ce-trim{grid-area:tr}
+body.ipad #pClip .ce-times,body.ipad #pClip .ce-ann,body.ipad #pClip .ce-name,body.ipad #pClip .ce-note{grid-column:2}
+body.ipad #pClip .p-body.ce>.ce-times{grid-row:1;grid-area:auto}
+body.ipad #pClip .ce-side{grid-area:ri;overflow:auto;display:flex;flex-direction:column;gap:10px}
+body.ipad.port #pClip .p-body.ce{display:flex;flex-direction:column;overflow:auto}
+body.ipad.port #pClip .ce-vwrap{height:auto;aspect-ratio:16/9;max-height:55vh}
 </style>
 </head>
 <body>
@@ -1159,6 +1177,7 @@ body.ipad #ipPen{margin-right:0}
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
           </div>
           <div class="foot">
+            <button class="btn ip-only" id="ipLibMore" style="width:100%">⋯ Herramientas y exportar</button>
             <div class="fg"><span class="fl">Análisis</span><div class="fb"><button class="btn" id="bPerf">👤 Rendimiento</button><button class="btn" id="bQt">🏀 Quinteto</button><button class="btn" id="bTable">📋 Tabla</button><button class="btn" id="bStats">📊 Estadísticas</button></div></div>
             <div class="fg"><span class="fl">Vídeos</span><div class="fb"><button class="btn" id="bInd">🎞 Individual</button><button class="btn" id="bCol">🎞 Colectivo</button></div></div>
             <div class="fg"><span class="fl">Proyecto</span><div class="fb"><button class="btn" id="bCsv">CSV</button><button class="btn" id="bJson">💾 Guardar</button><button class="btn" id="bLoad">📂 Cargar</button></div></div>
@@ -1243,6 +1262,7 @@ body.ipad #ipPen{margin-right:0}
               <div class="ce-h e" id="ceH2" tabindex="0" role="slider" aria-label="Fin del clip (flechas: 0,1 s)"></div></div>
             <div class="ce-ctx"><span class="hint" id="ceCtx" style="margin:0 auto 0 12px"></span><button class="mini" id="ceWiden" title="Mostrar más partido alrededor del clip">Ver más</button><button class="mini" id="ceFit" title="Volver a la vista cercana al clip">Ajustar</button></div>
           </div>
+          <div class="ce-side">
           <div class="ce-times">
             <label>Inicio <input id="ceStart" inputmode="decimal" aria-label="Inicio del clip"></label>
             <button class="btn" id="ceSetStart" title="Usar el instante actual como inicio (tecla I)">⟸ I</button>
@@ -1263,6 +1283,7 @@ body.ipad #ipPen{margin-right:0}
           </div>
           <input class="ce-name" id="ceName" maxlength="80" placeholder="Título del clip (se muestra sobre el vídeo)…" aria-label="Título del clip">
           <textarea class="ce-note" id="ceNote" rows="3" maxlength="400" placeholder="Nota del clip…" aria-label="Nota del clip"></textarea>
+          </div>
         </div>
         <i class="rz rz-e" data-rz="e"></i><i class="rz rz-s" data-rz="s"></i><i class="rz rz-se" data-rz="se"></i>
       </section>
@@ -4238,6 +4259,7 @@ $('#list').addEventListener('click',e=>{
     if(addToPlaylist(p.id,li.dataset.id)){commit();toastPl('Añadido a «'+p.name+'».');}
     return;
   }
+  if(document.body.classList.contains('ipad')&&!(act&&act.dataset.act==='play')){ stopClip(true); openClipEditor(li.dataset.id); return; }
   playClip(li.dataset.id);
 });
 $('#list').addEventListener('dblclick',e=>{const li=e.target.closest('.ev'); if(!li||e.target.closest('[data-act]')) return; stopClip(true); openClipEditor(li.dataset.id);});
@@ -6160,6 +6182,8 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   b.onclick=()=>document.body.classList.toggle('lowOn');
   document.addEventListener('pointerdown',e=>{ if(document.body.classList.contains('lowOn')&&!e.target.closest('.bb-low,#ipLow')) document.body.classList.remove('lowOn'); },true);
 })();
+
+document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle('libMore');
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
