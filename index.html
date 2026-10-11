@@ -841,6 +841,20 @@ body.ipad .bb-cats .bb-sh select#ipSetSel{margin-left:0;max-width:none;flex:1;fo
 body.ipad .bb-size[aria-label="Tamaño de los botones"],body.ipad #bbEdit{display:none!important}
 body.ipad #pTags .p-head [data-pa="edit"]{min-width:44px;min-height:40px}
 body.ipad .bb-cats .bb-sh{flex-wrap:wrap;gap:8px}
+
+body.ipad #pDraw{display:none!important}
+body.ipad.fz #pTags,body.ipad.fz .transport,body.ipad.fz #ipScrub{display:none!important}
+.ipfz{background:#101010;border-top:2px solid var(--accent);padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.ipfz[hidden]{display:none}
+.ipfz .fz-top{display:flex;align-items:center;gap:10px}.ipfz .fz-top b{font-size:17px}.ipfz .fz-top span{flex:1;opacity:.6;font-size:13px}
+.ipfz .ib{min-height:48px;padding:0 16px;border-radius:12px;font-size:15px}.ipfz .ib.big{background:var(--accent);color:#111;font-weight:700}
+.ipfz .fz-row{display:flex;align-items:center;gap:12px}
+.ipfz .fz-tools{display:flex;gap:6px;overflow-x:auto;flex:1;padding-bottom:2px}
+.ipfz .fz-tools button{min-width:52px;min-height:52px;border-radius:12px;border:1px solid #333;background:#1c1c1c;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.ipfz .fz-tools button[aria-pressed=true]{background:var(--accent);color:#111;border-color:var(--accent)}
+.ipfz .fz-cols{display:flex;gap:8px}.ipfz .fz-cols button{width:40px;height:40px;border-radius:50%;border:3px solid #333}
+.ipfz .fz-cols button[aria-pressed=true]{border-color:#fff}
+.ipfz .fz-hold{display:flex;align-items:center;gap:8px;font-size:14px;flex:1}.ipfz .fz-hold input[type=range]{flex:1;min-height:36px}
 </style>
 </head>
 <body>
@@ -896,6 +910,11 @@ body.ipad .bb-cats .bb-sh{flex-wrap:wrap;gap:8px}
           </div>
         </div>
 
+        <div class="ipfz ip-only" id="ipFz" hidden>
+          <div class="fz-top"><b>Freeze frame</b><span id="fzT"></span><button class="ib" id="fzDel">Borrar todo</button><button class="ib big" id="fzOk">✓ Listo</button></div>
+          <div class="fz-row"><div class="fz-tools" id="fzTools"></div><div class="fz-cols" id="fzCols"></div><button class="ib" id="fzUndo" aria-label="Quitar figura">⌫</button></div>
+          <div class="fz-row"><label class="fz-hold">Pausa <input type="range" id="fzHold" min="0.5" max="10" step="0.5"> <b id="fzHv"></b></label><label class="fz-hold"><input type="checkbox" id="fzOver"> Sobre el vídeo (sin pausa)</label></div>
+        </div>
         <div class="ip-scrub ip-only" id="ipScrub"><input type="range" id="ipSeek" min="0" max="1000" value="0" aria-label="Posición del vídeo"><div class="ip-marks" id="ipMarks"></div></div>
         <div class="transport">
           <button class="ib ip-only" id="ipPen" title="Dibujar sobre la imagen (congela el fotograma)" aria-label="Dibujar">✏️</button>
@@ -5834,6 +5853,37 @@ function ipMarks(){
   };
 }
 
+
+/* ===== iPad: barra de freeze frame ===== */
+function ipFzSync(){
+  const bar=document.getElementById('ipFz'); if(!bar) return;
+  const on=!!teleEd&&document.body.classList.contains('ipad');
+  bar.hidden=!on; document.body.classList.toggle('fz',on);
+  if(!on) return;
+  const ed=teleEd, tl=ed.tele, s=ed.sel!=null?tl.items[ed.sel]:null;
+  const tb=document.getElementById('fzTools');
+  if(!tb.firstChild) tb.innerHTML=TOOLS.map(t=>'<button data-tool="'+t[0]+'" aria-label="'+esc(t[1])+'" title="'+esc(t[1])+'" aria-pressed="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg></button>').join('');
+  tb.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===ed.tool));
+  const cb=document.getElementById('fzCols');
+  if(!cb.firstChild) cb.innerHTML=COLORS.slice(0,5).map(c=>'<button data-color="'+c+'" style="background:'+c+'" aria-label="Color" aria-pressed="false"></button>').join('');
+  const col=(s?s.color:ed.color).toLowerCase();
+  cb.querySelectorAll('[data-color]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.color.toLowerCase()===col));
+  document.getElementById('fzT').textContent=fmt(tl.t,true)+' · '+tl.items.length+' figura'+(tl.items.length===1?'':'s');
+  const h=document.getElementById('fzHold'); if(document.activeElement!==h) h.value=tl.hold;
+  document.getElementById('fzHv').textContent=String(tl.hold).replace('.',',')+' s';
+  document.getElementById('fzOver').checked=tl.mode==='overlay';
+  h.disabled=tl.mode==='overlay';
+}
+(function(){
+  const $$=id=>document.getElementById(id);
+  $$('fzTools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]');if(b) setTool(b.dataset.tool);});
+  $$('fzCols').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b) applyProp('color',b.dataset.color);});
+  $$('fzHold').oninput=e=>{const ed=teleEd; if(!ed) return; ed.tele.hold=+e.target.value; $$('fzHv').textContent=String(ed.tele.hold).replace('.',',')+' s'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele();};
+  $$('fzOver').onchange=e=>{const ed=teleEd; if(!ed) return; ed.tele.mode=e.target.checked?'overlay':'freeze'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele();};
+  $$('fzOk').onclick=()=>closeTele();
+  $$('fzDel').onclick=()=>{if(teleEd) deleteTele(teleEd.tele);};
+  $$('fzUndo').onclick=()=>{const ed=teleEd; if(!ed||!ed.tele.items.length) return; if(ed.sel!=null) ed.tele.items.splice(ed.sel,1); else ed.tele.items.pop(); ed.sel=null; commitTele();};
+})();
 /* ===== iPad: editor de botonera (lista + ficha, como DrawSports) ===== */
 var IPS={set:lsGet('bbtag.ipset')||'*',sel:null};
 const ipSetOf=b=>b.page||cfg.pages[0];
@@ -6983,7 +7033,7 @@ function buildDrawPanel(){
   $('#dwHold').innerHTML=HOLDS.map(h=>'<option value="'+h+'">'+h+' s</option>').join('')+'<option value="custom">Personalizado…</option>';
 }
 function renderDrawPanel(){
-  const on=!!teleEd;
+  const on=!!teleEd; if(typeof ipFzSync==='function') ipFzSync();
   $('#dwOff').hidden=on; $('#dwOn').hidden=!on;
   if(!on) return;
   const ed=teleEd, tl=ed.tele, s=ed.sel!=null?tl.items[ed.sel]:null;
