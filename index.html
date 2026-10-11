@@ -650,7 +650,13 @@ input,select,textarea{border-radius:3px}
 .tb-t tbody tr.cur{background:#3a3a3a}
 .tb-n{color:var(--accent);font-weight:700;text-align:center}
 .tb-ck{width:30px;text-align:center}
-#perfPanel{position:fixed;right:12px;bottom:12px;width:min(400px,calc(100vw - 24px));max-height:78vh;z-index:850;background:var(--panel);border:1px solid var(--accent);border-radius:8px;display:flex;flex-direction:column;box-shadow:0 10px 36px rgba(0,0,0,.5)}
+#perfPanel,#qtPanel{position:fixed;right:12px;bottom:12px;width:min(400px,calc(100vw - 24px));max-height:78vh;z-index:850;background:var(--panel);border:1px solid var(--accent);border-radius:8px;display:flex;flex-direction:column;box-shadow:0 10px 36px rgba(0,0,0,.5)}
+.qt-t{display:flex;flex-direction:column;gap:3px}
+.qt-r{display:grid;grid-template-columns:1fr 62px 54px 44px auto;gap:6px;align-items:center;background:#1a1a1a;border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:12.5px}
+.qt-r.pl{grid-template-columns:1fr 62px 54px 44px}
+.qt-n{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}.qt-n b{color:var(--text)}
+.qt-n.pos b{color:#2EA36B}.qt-n.neg b{color:#E5484D}
+.qt-a{display:flex;gap:3px}
 .pf-h{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#141414;border-bottom:1px solid var(--line);border-radius:8px 8px 0 0}
 .pf-h b{color:var(--accent);text-transform:uppercase;letter-spacing:.08em;font:700 14px var(--f-head)}
 .pf-h .sp,.pf-f .sp{flex:1}
@@ -871,7 +877,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
           </div>
           <div class="foot">
-            <div class="fg"><span class="fl">Análisis</span><div class="fb"><button class="btn" id="bPerf">👤 Rendimiento</button><button class="btn" id="bTable">📋 Tabla</button><button class="btn" id="bStats">📊 Estadísticas</button></div></div>
+            <div class="fg"><span class="fl">Análisis</span><div class="fb"><button class="btn" id="bPerf">👤 Rendimiento</button><button class="btn" id="bQt">🏀 Quinteto</button><button class="btn" id="bTable">📋 Tabla</button><button class="btn" id="bStats">📊 Estadísticas</button></div></div>
             <div class="fg"><span class="fl">Vídeos</span><div class="fb"><button class="btn" id="bInd">🎞 Individual</button><button class="btn" id="bCol">🎞 Colectivo</button></div></div>
             <div class="fg"><span class="fl">Proyecto</span><div class="fb"><button class="btn" id="bCsv">CSV</button><button class="btn" id="bJson">💾 Guardar</button><button class="btn" id="bLoad">📂 Cargar</button></div></div>
           </div>
@@ -3168,6 +3174,7 @@ function loadCfg(){
 
 let cfg=loadCfg();
 let events=[];      /* etiquetas / clips */
+let stints=[];       /* quintetos en pista: {id,team,players[],from,to|null} */
 let markers=[];     /* marcadores puntuales */
 let teles=[];       /* dibujos y freeze frames, ligados a un instante del vídeo */
 let playlists=[];   /* listas de reproducción: ids de clips en orden */
@@ -3288,7 +3295,8 @@ function bbItemClick(e,forceEdit){
 $('#dstrip').addEventListener('click',e=>{bbItemClick(e,false);});
 $('#dstrip').addEventListener('contextmenu',e=>{if(e.target.closest('.dchip,.pchip')){e.preventDefault();bbItemClick(e,true);}});
 function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg));}
-function saveProject(){if(videoKey) lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,teles,playlists,covers,externals}));}
+function normStint(x){ if(!x||!Array.isArray(x.players)||!isFinite(x.from)) return null; return {id:x.id||uid(),team:x.team==='R'?'R':'L',players:x.players.map(String),from:+x.from,to:(x.to==null||!isFinite(x.to))?null:+x.to}; }
+function saveProject(){if(videoKey) lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals}));}
 function normEvent(x){
   return {id:x.id||uid(),btnId:String(x.btnId||''),label:String(x.label||''),color:safeColor(x.color),pts:+x.pts||0,
     t:+x.t,start:+x.start,end:+x.end,team:x.team==='R'?'R':'L',player:String(x.player==null?'':x.player),
@@ -3301,7 +3309,7 @@ function normEvent(x){
    HISTORIAL (deshacer / rehacer)
    ===================================================================== */
 const H={undo:[],redo:[],cur:'',last:0};
-const snap=()=>JSON.stringify({events,markers,teles,playlists,covers,externals});
+const snap=()=>JSON.stringify({events,markers,stints,teles,playlists,covers,externals});
 function histInit(){H.undo=[];H.redo=[];H.cur=snap();H.last=0;updateUndoBtns();}
 function updateUndoBtns(){$('#bUndo').disabled=!H.undo.length;$('#bRedo').disabled=!H.redo.length;}
 function record(co){
@@ -3315,7 +3323,7 @@ function record(co){
 }
 function restoreSnap(str){
   const o=JSON.parse(str);
-  events=o.events;markers=o.markers||[];teles=o.teles||[];playlists=o.playlists||[];covers=o.covers||[];externals=o.externals||[];
+  events=o.events;markers=o.markers||[];stints=o.stints||[];teles=o.teles||[];playlists=o.playlists||[];covers=o.covers||[];externals=o.externals||[];
   if(selectedId&&!events.some(e=>e.id===selectedId)) selectedId=null;
   saveProject();teleAfterRestore();renderAll();updateUndoBtns();
   if(ce) ceRender();
@@ -4119,12 +4127,13 @@ video.addEventListener('loadedmetadata',()=>{
     const o=JSON.parse(lsGet('bbtag.project.'+videoKey)||'null');
     events=(o&&Array.isArray(o.events))?o.events.filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(normEvent):[];
     markers=(o&&Array.isArray(o.markers))?o.markers.filter(m=>m&&isFinite(m.t)).map(m=>({id:m.id||uid(),t:+m.t,text:String(m.text||'Marcador')})):[];
+    stints=(o&&Array.isArray(o.stints))?o.stints.map(normStint).filter(Boolean):[];
     teles=(o&&Array.isArray(o.teles))?o.teles.map(normTele).filter(Boolean):[];
     playlists=(o&&Array.isArray(o.playlists))?o.playlists.map(normPl):[];
     covers=(o&&Array.isArray(o.covers))?o.covers.map(normCover):[];
     externals=(o&&Array.isArray(o.externals))?o.externals.map(normExt):[];
     restored=events.length;
-  }catch(e){events=[];markers=[];teles=[];playlists=[];covers=[];externals=[];}
+  }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];}
   selectedId=null; sel=null; zoom=1; teleEd=null; freeze=null; plCur=null; $('#fbadge').hidden=true; teleKey='';
   filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';
   fpsAuto=25; renderFps(); lastT=-1;
@@ -4729,6 +4738,80 @@ function openAuto(kind){
 }
 $('#bInd').onclick=()=>openAuto('ind'); $('#bCol').onclick=()=>openAuto('col');
 
+/* ===== QUINTETO (quintetos en pista, minutos y +/-) ===== */
+const QT={team:null,sel:new Set(),tab:'pista'};
+const qtEnd=s=>s.to!=null?s.to:Math.max(s.from,(video&&video.duration)||video.currentTime||s.from);
+const qtOpen=k=>stints.find(s=>s.team===k&&s.to==null);
+const qtKey=a=>a.slice().sort((x,y)=>(parseInt(x,10)||0)-(parseInt(y,10)||0)||String(x).localeCompare(String(y))).join(',');
+const qtMin=sec=>{sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');};
+function qtStats(k){
+  const lu={}, pl={};
+  stints.filter(s=>s.team===k).forEach(s=>{
+    const a=s.from,b=qtEnd(s); if(b<=a) return;
+    let pf=0,pc=0; events.forEach(e=>{ if(e.t>=a&&e.t<b){ const p=info(e).pts||0; if(e.team===k) pf+=p; else pc+=p; } });
+    const key=qtKey(s.players); const L=lu[key]||(lu[key]={key,players:s.players.slice(),sec:0,pf:0,pc:0,spans:[]});
+    L.sec+=b-a; L.pf+=pf; L.pc+=pc; L.spans.push([a,b]);
+    s.players.forEach(p=>{ const P=pl[p]||(pl[p]={n:p,sec:0,pf:0,pc:0}); P.sec+=b-a; P.pf+=pf; P.pc+=pc; });
+  });
+  return {lu:Object.values(lu).sort((a,b)=>b.sec-a.sec), pl:Object.values(pl).sort((a,b)=>b.sec-a.sec)};
+}
+function qtApply(k,players,t){
+  const o=qtOpen(k);
+  if(o){ if(qtKey(o.players)===qtKey(players)) return false; if(t-o.from<0.3){ stints=stints.filter(x=>x!==o); } else o.to=t; }
+  if(players.length) stints.push({id:uid(),team:k,players:players.slice(),from:t,to:null});
+  stints.sort((a,b)=>a.from-b.from); return true;
+}
+function qtLabel(k,n){ const nm=playerName(k,n); return '#'+n+(nm?' '+nm:''); }
+function closeQt(){ const p=document.getElementById('qtPanel'); if(p) p.remove(); }
+function openQt(){
+  if(document.getElementById('qtPanel')){closeQt();return;}
+  if(!hasVideo){toast('Abre primero un vídeo.');return;}
+  const el=document.createElement('div'); el.id='qtPanel'; document.body.appendChild(el);
+  if(!QT.team) QT.team=team;
+  const sync=()=>{ const o=qtOpen(QT.team); QT.sel=new Set(o?o.players:[]); };
+  sync();
+  function render(){
+    const k=QT.team, o=qtOpen(k), ros=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
+    const head='<div class="pf-h"><b>Quinteto</b><span class="sp"></span><button class="mini" id="qtX" aria-label="Cerrar">✕</button></div>'+
+      '<div class="pf-b"><div class="pf-t"><button class="mini'+(k==='L'?' on':'')+'" data-tm="L">'+esc(teamName('L'))+'</button><button class="mini'+(k==='R'?' on':'')+'" data-tm="R">'+esc(teamName('R'))+'</button><span class="sp"></span><button class="mini'+(QT.tab==='pista'?' on':'')+'" data-tab="pista">En pista</button><button class="mini'+(QT.tab==='datos'?' on':'')+'" data-tab="datos">Datos</button></div>';
+    let body='', foot='';
+    if(QT.tab==='pista'){
+      const inCourt=ros.filter(p=>QT.sel.has(p.n)), bench=ros.filter(p=>!QT.sel.has(p.n));
+      const extra=[...QT.sel].filter(n=>!ros.some(p=>p.n===n));
+      body='<div class="pf-s">En pista ('+QT.sel.size+')'+(o?' · desde '+fmt(o.from):'')+'</div><div class="pf-c">'+
+        inCourt.concat(extra.map(n=>({n,name:''}))).map(p=>'<button class="chip2 on" data-q="'+esc(p.n)+'">#'+esc(p.n)+' '+esc(p.name||'')+'</button>').join('')+(QT.sel.size?'':'<span class="hint">Toca jugadoras del banquillo para meterlas.</span>')+'</div>'+
+        '<div class="pf-s">Banquillo</div><div class="pf-c">'+(bench.map(p=>'<button class="chip2" data-q="'+esc(p.n)+'">#'+esc(p.n)+' '+esc(p.name||'')+'</button>').join('')||(ros.length?'<span class="hint">—</span>':'<span class="hint">Sin plantilla: escribe un dorsal <input id="qtNum" style="width:60px"> <button class="mini" id="qtNumAdd">＋</button></span>'))+'</div>'+
+        '<p class="hint" style="margin:8px 0 0">Para un cambio: toca a quien sale y a quien entra, y pulsa «Aplicar» en el momento exacto del vídeo ('+fmt(video.currentTime)+').</p>';
+      foot='<div class="pf-f"><button class="btn" id="qtEnd"'+(o?'':' disabled')+'>Cerrar tramo</button><span class="sp"></span><button class="btn primary" id="qtGo">Aplicar ('+QT.sel.size+')</button></div>';
+    } else {
+      const S=qtStats(k);
+      const nm=a=>a.map(n=>'#'+n).join(' ');
+      body=(S.lu.length?'<div class="pf-s">Quintetos</div><div class="qt-t">'+S.lu.map((L,i)=>{const d=L.pf-L.pc; return '<div class="qt-r"><div class="qt-p">'+esc(L.players.map(n=>playerName(k,n)?'#'+n+' '+playerName(k,n).split(' ')[0]:'#'+n).join(' · '))+'</div><div class="qt-n"><b>'+qtMin(L.sec)+'</b> min</div><div class="qt-n">'+L.pf+'–'+L.pc+'</div><div class="qt-n '+(d>0?'pos':d<0?'neg':'')+'"><b>'+(d>0?'+':'')+d+'</b></div><div class="qt-a"><button class="mini" data-qpl="'+i+'" title="Crear playlist con sus jugadas">＋</button><button class="mini" data-qex="'+i+'" title="Exportar vídeo">🎞</button></div></div>';}).join('')+'</div>':'<p class="hint">Todavía no hay quintetos. Ve a «En pista» y pulsa Aplicar.</p>')+
+        (S.pl.length?'<div class="pf-s">Jugadoras</div><div class="qt-t">'+S.pl.map(P=>{const d=P.pf-P.pc; return '<div class="qt-r pl"><div class="qt-p">'+esc(qtLabel(k,P.n))+'</div><div class="qt-n"><b>'+qtMin(P.sec)+'</b> min</div><div class="qt-n">'+P.pf+'–'+P.pc+'</div><div class="qt-n '+(d>0?'pos':d<0?'neg':'')+'"><b>'+(d>0?'+':'')+d+'</b></div></div>';}).join('')+'</div>':'')+
+        '<p class="hint" style="margin:8px 0 0">Los minutos son tiempo de vídeo. El +/- cuenta los puntos etiquetados mientras está en pista.</p>';
+      foot='<div class="pf-f"><button class="btn" id="qtClr">Borrar quintetos de este equipo</button></div>';
+    }
+    el.innerHTML=head+body+'</div>'+foot;
+    el.querySelector('#qtX').onclick=closeQt;
+    el.querySelectorAll('[data-tm]').forEach(b=>b.onclick=()=>{QT.team=b.dataset.tm;sync();render();});
+    el.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{QT.tab=b.dataset.tab;render();});
+    el.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const n=b.dataset.q; if(QT.sel.has(n)) QT.sel.delete(n); else{ if(QT.sel.size>=5){toast('Ya hay 5 en pista: toca antes a quien sale.');return;} QT.sel.add(n);} render();});
+    const na=el.querySelector('#qtNumAdd'); if(na) na.onclick=()=>{const v=el.querySelector('#qtNum').value.trim(); if(!v) return; if(QT.sel.size>=5){toast('Ya hay 5 en pista.');return;} QT.sel.add(v); render();};
+    const go=el.querySelector('#qtGo'); if(go) go.onclick=()=>{
+      if(!QT.sel.size){toast('Elige quién está en pista.');return;}
+      if(QT.sel.size!==5&&!confirm('Hay '+QT.sel.size+' jugadoras en pista (no 5). ¿Aplicar igualmente?')) return;
+      const ok=qtApply(k,[...QT.sel],video.currentTime); if(ok){commit();toast('Quinteto aplicado en '+fmt(video.currentTime)+'.');} else toast('Es el mismo quinteto.'); render();
+    };
+    const en=el.querySelector('#qtEnd'); if(en) en.onclick=()=>{ qtApply(k,[],video.currentTime); commit(); sync(); render(); };
+    const cl=el.querySelector('#qtClr'); if(cl) cl.onclick=()=>{ if(!confirm('¿Borrar todos los quintetos de '+teamName(k)+'?')) return; stints=stints.filter(s=>s.team!==k); commit(); sync(); render(); };
+    const listOf=i=>{ const L=qtStats(k).lu[i]; if(!L) return null; return {L,list:events.filter(e=>L.spans.some(([a,b])=>e.t>=a&&e.t<b)).sort((a,b)=>a.t-b.t)}; };
+    el.querySelectorAll('[data-qpl]').forEach(b=>b.onclick=()=>{ const r=listOf(+b.dataset.qpl); if(!r||!r.list.length){toast('Ese quinteto no tiene jugadas etiquetadas.');return;} const p={id:uid(),name:'Quinteto '+r.L.players.map(n=>'#'+n).join(' '),items:r.list.map(e=>e.id)}; playlists.push(p); plCur=p.id; commit(); toast('Playlist creada ('+r.list.length+' jugadas).',{label:'Abrir mesa',fn:openProd}); });
+    el.querySelectorAll('[data-qex]').forEach(b=>b.onclick=()=>{ const r=listOf(+b.dataset.qex); if(!r||!r.list.length){toast('Ese quinteto no tiene jugadas etiquetadas.');return;} DLGDOC=null; openExport(r.list.slice(),expClean('quinteto_'+r.L.players.join('-'))); });
+  }
+  render();
+}
+document.getElementById('bQt').onclick=openQt;
+
 /* ===== EXPORTACIÓN RÁPIDA (WebCodecs + MP4) ===== */
 const FX={err:''};
 const fxSleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -5172,7 +5255,7 @@ $('#bCsv').onclick=()=>{
 };
 $('#bJson').onclick=()=>{
   if(!hasVideo){toast('Abre un vídeo para guardar su proyecto.');return;}
-  saveFile('proyecto-'+baseName()+'.json',JSON.stringify({app:'scouting-baloncesto',version:4,videoName,videoKey,exportedAt:new Date().toISOString(),teamNames:cfg.teamNames,rosters:cfg.rosters,pages:cfg.pages,cats:cfg.cats,descs:cfg.descs,buttons:cfg.buttons,events,markers,teles,playlists,covers,externals},null,2));
+  saveFile('proyecto-'+baseName()+'.json',JSON.stringify({app:'scouting-baloncesto',version:4,videoName,videoKey,exportedAt:new Date().toISOString(),teamNames:cfg.teamNames,rosters:cfg.rosters,pages:cfg.pages,cats:cfg.cats,descs:cfg.descs,buttons:cfg.buttons,events,markers,stints,teles,playlists,covers,externals},null,2));
 };
 $('#bLoad').onclick=()=>$('#fileProject').click();
 $('#fileProject').onchange=async e=>{
@@ -5180,7 +5263,7 @@ $('#fileProject').onchange=async e=>{
   try{
     const o=JSON.parse(await f.text());
     if(!o||!Array.isArray(o.events)) throw new Error('formato');
-    const prev={events:events.slice(),markers:markers.slice(),teles:teles.slice(),playlists:playlists.slice(),covers:covers.slice(),externals:externals.slice(),cfg:JSON.parse(JSON.stringify(cfg))};
+    const prev={stints:stints.slice(),events:events.slice(),markers:markers.slice(),teles:teles.slice(),playlists:playlists.slice(),covers:covers.slice(),externals:externals.slice(),cfg:JSON.parse(JSON.stringify(cfg))};
     if(Array.isArray(o.buttons)&&o.buttons.length){
       cfg=migrateCfg({v:o.version>=4?3:(o.version>=2?2:1),pages:o.pages,cats:o.cats,descs:o.descs,rosters:o.rosters,teamNames:o.teamNames||cfg.teamNames,buttons:o.buttons.filter(b=>b&&b.id&&b.label).map(b=>Object.assign({},b,{id:String(b.id),label:String(b.label),key:String(b.key||'').toLowerCase().slice(0,1)}))});
     } else if(o.teamNames) cfg.teamNames=Object.assign({L:'Local',R:'Rival'},o.teamNames);
@@ -5188,13 +5271,14 @@ $('#fileProject').onchange=async e=>{
     const idMap={};
     events=o.events.filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(x=>{const id=uid();idMap[x.id]=id;return normEvent(Object.assign({},x,{id}));});
     markers=Array.isArray(o.markers)?o.markers.filter(m=>m&&isFinite(m.t)).map(m=>({id:uid(),t:+m.t,text:String(m.text||'Marcador')})):[];
+    stints=(Array.isArray(o.stints)?o.stints:[]).map(normStint).filter(Boolean);
     teles=(Array.isArray(o.teles)?o.teles:[]).map(x=>normTele(Object.assign({},x,{id:uid(),clipId:idMap[x.clipId]||''}))).filter(Boolean);
     playlists=(Array.isArray(o.playlists)?o.playlists:[]).map(p=>normPl({id:uid(),name:p&&p.name,items:((p&&p.items)||[]).map(i=>idMap[i]||(isCoverId(i)&&(Array.isArray(o.covers)?o.covers:[]).some(c=>c&&'c:'+c.id===i)?i:(isExtId(i)&&(Array.isArray(o.externals)?o.externals:[]).some(c=>c&&'x:'+c.id===i)?i:null))).filter(Boolean)}));
     externals=(Array.isArray(o.externals)?o.externals:[]).map(normExt);
     covers=(Array.isArray(o.covers)?o.covers:[]).map(normCover);
     if(teleEd) closeTele(true);
     plCur=null; sortEvents(); selectedId=null; saveCfg(); saveProject(); teleKey=''; renderAll(); histInit();
-    toast('Proyecto cargado: '+events.length+' clips, '+teles.length+' dibujos, '+playlists.length+' playlists.',{label:'Deshacer',fn:()=>{events=prev.events;markers=prev.markers;teles=prev.teles;playlists=prev.playlists;covers=prev.covers;externals=prev.externals;cfg=prev.cfg;saveCfg();saveProject();teleKey='';renderAll();histInit();}});
+    toast('Proyecto cargado: '+events.length+' clips, '+teles.length+' dibujos, '+playlists.length+' playlists.',{label:'Deshacer',fn:()=>{events=prev.events;stints=prev.stints;markers=prev.markers;teles=prev.teles;playlists=prev.playlists;covers=prev.covers;externals=prev.externals;cfg=prev.cfg;saveCfg();saveProject();teleKey='';renderAll();histInit();}});
   }catch(err){toast('No se pudo leer ese archivo de proyecto.');}
 };
 
