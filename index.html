@@ -648,6 +648,22 @@ input,select,textarea{border-radius:3px}
 .tb-t tbody tr.cur{background:#3a3a3a}
 .tb-n{color:var(--accent);font-weight:700;text-align:center}
 .tb-ck{width:30px;text-align:center}
+#perfPanel{position:fixed;right:12px;bottom:12px;width:min(400px,calc(100vw - 24px));max-height:78vh;z-index:850;background:var(--panel);border:1px solid var(--accent);border-radius:8px;display:flex;flex-direction:column;box-shadow:0 10px 36px rgba(0,0,0,.5)}
+.pf-h{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#141414;border-bottom:1px solid var(--line);border-radius:8px 8px 0 0}
+.pf-h b{color:var(--accent);text-transform:uppercase;letter-spacing:.08em;font:700 14px var(--f-head)}
+.pf-h .sp,.pf-f .sp{flex:1}
+.pf-b{padding:8px 10px;overflow:auto}
+.pf-t{display:flex;gap:6px;align-items:center;margin-bottom:4px}
+.pf-t .mini.on{background:var(--accent);color:#111;border-color:var(--accent)}
+.pf-s{color:var(--accent);font:700 11.5px var(--f-head);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 4px;display:flex;align-items:center;gap:8px}
+.pf-c{display:flex;flex-wrap:wrap;gap:5px}
+.chip2{background:#222;border:1px solid var(--line);border-radius:3px;padding:5px 9px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text)}
+.chip2.on{background:var(--accent);color:#111;border-color:var(--accent)}
+.chip2.ok.on{background:#2EA36B;border-color:#2EA36B;color:#fff}
+.chip2.bad.on{background:#E5484D;border-color:#E5484D;color:#fff}
+.pf-add{display:inline-flex;gap:4px}
+.pf-add input{width:150px;padding:4px}
+.pf-f{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
 body.tbl-open .app{padding-bottom:min(48vh,480px)}
 @media (max-width:700px){.tb-filters{display:none}}
 </style>
@@ -823,6 +839,9 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
           </div>
           <div class="foot">
+            <button class="btn" id="bPerf">👤 Rendimiento</button>
+            <button class="btn" id="bInd">🎞 Vídeo individual</button>
+            <button class="btn" id="bCol">🎞 Vídeo colectivo</button>
             <button class="btn" id="bTable">📋 Tabla</button>
             <button class="btn" id="bStats">📊 Estadísticas</button>
             <button class="btn" id="bCsv">Exportar CSV</button>
@@ -4249,6 +4268,7 @@ const TB={f:{},sort:{k:'n',d:1},sel:new Set()};
 function tbCols(){
   const cols=[{k:'n',l:'#',w:46},{k:'period',l:'Cuarto',w:64},{k:'team',l:'Equipo',w:90},{k:'player',l:'Jugador/a',w:150},{k:'action',l:'Acción',w:150}];
   cfg.descs.forEach(g=>{ if(g.items.some(it=>events.some(e=>e.desc.some(o=>o.d===g.id&&o.i===it.id)))) cols.push({k:'d:'+g.id,l:g.name,w:150}); });
+  if(events.some(e=>e.tags&&e.tags.length)) cols.push({k:'tags',l:'Etiquetas',w:120});
   cols.push({k:'note',l:'Notas',w:200});
   return cols;
 }
@@ -4259,6 +4279,7 @@ function tbVal(e,k,idx){
   if(k==='player') return e.player===''?'':playerLabel(e.team,e.player);
   if(k==='action') return info(e).label;
   if(k==='note') return e.note||'';
+  if(k==='tags') return (e.tags||[]).join(', ');
   if(k.indexOf('d:')===0){ const gid=k.slice(2), g=cfg.descs.find(x=>x.id===gid); if(!g) return ''; return e.desc.filter(o=>o.d===gid).map(o=>{const it=g.items.find(x=>x.id===o.i); return it?it.label:(o.l||o.i);}).join(', '); }
   return '';
 }
@@ -4277,14 +4298,14 @@ function openTable(){
     const cols=tbCols(), all=tbRows();
     const vals=new Map(); all.forEach(r=>{ const m={}; cols.forEach(c=>m[c.k]=tbVal(r.e,c.k,r.i)); vals.set(r.e.id,m); });
     cols.forEach(c=>{ if(c.k==='n'||c.k==='note') return; });
-    const match=(r,skip)=>cols.every(c=>{ if(c.k===skip) return true; const f=TB.f[c.k]; if(!f) return true; const v=vals.get(r.e.id)[c.k]; return c.k.indexOf('d:')===0?v.split(', ').indexOf(f)>=0:v===f; });
+    const match=(r,skip)=>cols.every(c=>{ if(c.k===skip) return true; const f=TB.f[c.k]; if(!f) return true; const v=vals.get(r.e.id)[c.k]; return (c.k.indexOf('d:')===0||c.k==='tags')?v.split(', ').indexOf(f)>=0:v===f; });
     let rows=all.filter(r=>match(r,null));
     const sk=TB.sort.k, sd=TB.sort.d;
     rows.sort((a,b)=>{ const x=vals.get(a.e.id)[sk], y=vals.get(b.e.id)[sk]; const r=sk==='n'?(+x-+y):String(x).localeCompare(String(y),'es',{numeric:true}); return (r||(a.i-b.i))*sd; });
     TB.sel=new Set([...TB.sel].filter(id=>events.some(e=>e.id===id)));
     const fcols=cols.filter(c=>c.k!=='n'&&c.k!=='note');
     const fHtml=fcols.map(c=>{
-      const cnt={}; all.filter(r=>match(r,c.k)).forEach(r=>{ const v=vals.get(r.e.id)[c.k]; (c.k.indexOf('d:')===0?v.split(', '):[v]).forEach(x=>{ if(x) cnt[x]=(cnt[x]||0)+1; }); });
+      const cnt={}; all.filter(r=>match(r,c.k)).forEach(r=>{ const v=vals.get(r.e.id)[c.k]; ((c.k.indexOf('d:')===0||c.k==='tags')?v.split(', '):[v]).forEach(x=>{ if(x) cnt[x]=(cnt[x]||0)+1; }); });
       const keys=Object.keys(cnt).sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
       const cur=TB.f[c.k]||'';
       if(cur&&!cnt[cur]) { delete TB.f[c.k]; }
@@ -4389,7 +4410,7 @@ function openCoverEditor(coverId,addToPl){
       '<label style="font-size:12.5px;flex:1;min-width:120px">Nombre <input id="cvName" maxlength="60" value="'+esc(W.name)+'" style="'+inp+'"></label></div></div>'+
     '<div id="cvProps"></div></div>'+
     '<input type="file" id="cvFile" accept="image/*" hidden>'+
-    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" id="cvNo">Cancelar</button><button class="btn primary" id="cvOk">Guardar portada</button></div>');
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap"><button class="btn" id="cvLoad">📂 Cargar de la biblioteca</button><button class="btn" id="cvSaveLib">💾 Guardar en la biblioteca</button><span style="flex:1"></span><button class="btn" id="cvNo">Cancelar</button><button class="btn primary" id="cvOk">Guardar portada</button></div>');
   d.firstElementChild.style.width='min(1100px,100%)';
   const g=s=>d.querySelector(s), cvEl=g('#cvPrev'), ctx=cvEl.getContext('2d');
   const cur=()=>W.layers.find(l=>l.id===sel);
@@ -4459,6 +4480,23 @@ function openCoverEditor(coverId,addToPl){
     const bx=d.querySelector('[data-k="x"]'), by=d.querySelector('[data-k="y"]'); if(bx) bx.value=l.x; if(by) by.value=l.y; draw();
   });
   ['pointerup','pointercancel'].forEach(n=>cvEl.addEventListener(n,()=>{drag=null;}));
+  g('#cvSaveLib').onclick=async()=>{
+    W.dur=clamp(+g('#cvDur').value||3,0.5,30); W.name=(g('#cvName').value||'Portada').trim().slice(0,60)||'Portada';
+    cvDraw(ctx,W.bg,W.layers,null); W.img=cvEl.toDataURL('image/jpeg',.9); draw();
+    try{ await clibPut(Object.assign(normCover(W),{id:'lib:'+W.name.toLowerCase()})); toast('Portada «'+W.name+'» guardada en la biblioteca.'); }catch(e){ toast('No se pudo guardar en la biblioteca.'); }
+  };
+  g('#cvLoad').onclick=async()=>{
+    let items=[]; try{ items=await clibList(); }catch(e){}
+    const ov=doc.createElement('div'); ov.style.cssText='position:absolute;inset:0;background:var(--panel);z-index:5;padding:14px;display:flex;flex-direction:column;border-radius:14px';
+    ov.innerHTML='<h3 style="margin:0 0 8px;font:700 18px var(--f-head)">Portadas guardadas</h3><input id="clq" placeholder="Buscar…" style="'+inp+'margin-bottom:8px"><div id="cll" style="flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" id="clNo">Cancelar</button></div>';
+    d.firstElementChild.style.position='relative'; d.firstElementChild.appendChild(ov);
+    const lst=()=>{ const q=ov.querySelector('#clq').value.trim().toLowerCase(); const f=items.filter(c=>c.name.toLowerCase().includes(q));
+      ov.querySelector('#cll').innerHTML=f.length?f.map(c=>'<div data-i="'+esc(c.id)+'" style="display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line)"><img src="'+c.img+'" style="width:96px;height:54px;object-fit:cover;border-radius:4px"><b style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.name)+'</b><button class="mini" data-ld="'+esc(c.id)+'">Cargar</button><button class="mini" data-dl="'+esc(c.id)+'" style="color:var(--danger)">Borrar</button></div>').join(''):'<div style="padding:12px;color:var(--muted)">No hay portadas guardadas.</div>';
+      ov.querySelectorAll('[data-ld]').forEach(b=>b.onclick=async()=>{ const c=items.find(x=>x.id===b.dataset.ld); if(!c) return; W.bg=c.bg; W.dur=c.dur; W.name=c.name; W.layers=c.layers.map(l=>normLayer(Object.assign({},l,{id:uid()}))); await Promise.all(W.layers.filter(l=>l.type==='img').map(l=>cvImg(l.src))); g('#cvBg').value=W.bg; g('#cvDur').value=W.dur; g('#cvName').value=W.name; sel=W.layers.length?W.layers[W.layers.length-1].id:null; ov.remove(); layersUI(); propsUI(); draw(); });
+      ov.querySelectorAll('[data-dl]').forEach(b=>b.onclick=async()=>{ if(!confirm('¿Borrar esta portada de la biblioteca?')) return; try{await clibDel(b.dataset.dl);}catch(e){} items=items.filter(x=>x.id!==b.dataset.dl); lst(); });
+    };
+    ov.querySelector('#clq').oninput=lst; ov.querySelector('#clNo').onclick=()=>ov.remove(); lst();
+  };
   g('#cvNo').onclick=expClose;
   g('#cvOk').onclick=async()=>{
     W.dur=clamp(+g('#cvDur').value||3,0.5,30); W.name=(g('#cvName').value||'Portada').trim().slice(0,60)||'Portada';
@@ -4541,6 +4579,119 @@ function openExtEditor(extId,addToPl){
     try{vid.pause();}catch(e){} if(url) URL.revokeObjectURL(url); expClose(); commit(); toast('Vídeo externo guardado.');
   };
 }
+
+/* ===== BIBLIOTECA DE PORTADAS (en este dispositivo, entre proyectos) ===== */
+function clibOpen(){
+  return new Promise((res,rej)=>{
+    if(CV.db) return res(CV.db);
+    if(!window.indexedDB) return rej(new Error('Este navegador no permite guardar portadas.'));
+    const r=indexedDB.open('bbtag-lib',1);
+    r.onupgradeneeded=()=>{r.result.createObjectStore('covers',{keyPath:'id'});};
+    r.onsuccess=()=>{CV.db=r.result;res(CV.db);}; r.onerror=()=>rej(r.error);
+  });
+}
+async function clibTx(mode,fn){
+  const db=await clibOpen();
+  return new Promise((res,rej)=>{ const tx=db.transaction('covers',mode), st=tx.objectStore('covers'); let out; const rq=fn(st); if(rq) rq.onsuccess=()=>{out=rq.result;}; tx.oncomplete=()=>res(out); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error); });
+}
+const clibList=()=>clibTx('readonly',st=>st.getAll()).then(a=>(a||[]).sort((x,y)=>(y.saved||0)-(x.saved||0)));
+const clibPut=c=>clibTx('readwrite',st=>st.put(Object.assign({},c,{saved:Date.now()})));
+const clibDel=id=>clibTx('readwrite',st=>st.delete(id));
+
+/* ===== RENDIMIENTO INDIVIDUAL (panel flotante) ===== */
+const PERF_DEF=['Presión balón','Línea de pase','Close-out','Tiros punteados de 2','Tiros punteados de 3','Deflections','Recuperación / Tapón','Falta de ataque recibida','Falta táctica / Varios','24"/5"','Hustle','Box-out'];
+const PF={team:null,players:new Set(),perfs:new Set(),q:'',edit:false};
+function pfList(){ try{ const a=JSON.parse(lsGet('bbtag.perfs')||'null'); if(Array.isArray(a)&&a.length) return a.map(String); }catch(e){} return PERF_DEF.slice(); }
+function pfSave(a){ lsSet('bbtag.perfs',JSON.stringify(a)); }
+function closePerf(){ const p=document.getElementById('perfPanel'); if(p) p.remove(); }
+function openPerf(){
+  if(document.getElementById('perfPanel')){closePerf();return;}
+  if(!hasVideo){toast('Abre primero un vídeo.');return;}
+  const el=document.createElement('div'); el.id='perfPanel'; document.body.appendChild(el);
+  if(!PF.team) PF.team=team;
+  function render(){
+    const list=pfList(), ros=roster(PF.team).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
+    el.innerHTML='<div class="pf-h"><b>Rendimiento individual</b><span class="sp"></span><button class="mini" id="pfX" aria-label="Cerrar">✕</button></div>'+
+      '<div class="pf-b"><div class="pf-t"><button class="mini'+(PF.team==='L'?' on':'')+'" data-tm="L">'+esc(teamName('L'))+'</button><button class="mini'+(PF.team==='R'?' on':'')+'" data-tm="R">'+esc(teamName('R'))+'</button><span class="hint" style="margin:0 0 0 auto">Se guarda en el momento actual del vídeo</span></div>'+
+      '<div class="pf-s">Jugadoras</div><div class="pf-c">'+(ros.length?ros.map(p=>'<button class="chip2'+(PF.players.has(p.n)?' on':'')+'" data-pl="'+esc(p.n)+'">#'+esc(p.n)+' '+esc(p.name||'')+'</button>').join(''):'<span class="hint">Sin plantilla: escribe un dorsal <input id="pfNum" style="width:60px"></span>')+'</div>'+
+      '<div class="pf-s">Rendimientos <button class="mini" id="pfEd">'+(PF.edit?'Listo':'Editar lista')+'</button></div><div class="pf-c">'+list.map((x,i)=>'<button class="chip2'+(PF.perfs.has(x)?' on':'')+'" data-pf="'+esc(x)+'">'+esc(x)+(PF.edit?' <span data-del="'+i+'" style="color:var(--danger)">✕</span>':'')+'</button>').join('')+
+      (PF.edit?'<span class="pf-add"><input id="pfNew" maxlength="30" placeholder="Nuevo rendimiento"><button class="mini" id="pfAdd">＋</button></span>':'')+'</div>'+
+      '<div class="pf-s">Calificación</div><div class="pf-c"><button class="chip2 ok'+(PF.cal==='Bien'?' on':'')+'" data-cal="Bien">✓ Bien</button><button class="chip2 bad'+(PF.cal==='Mal'?' on':'')+'" data-cal="Mal">✗ Mal</button></div></div>'+
+      '<div class="pf-f"><button class="btn" id="pfClr">Limpiar</button><span class="sp"></span><button class="btn" id="pfAddB">Añadir</button><button class="btn primary" id="pfAddC">Añadir y cerrar</button></div>';
+    el.querySelector('#pfX').onclick=closePerf;
+    el.querySelectorAll('[data-tm]').forEach(b=>b.onclick=()=>{PF.team=b.dataset.tm;PF.players.clear();render();});
+    el.querySelectorAll('[data-pl]').forEach(b=>b.onclick=()=>{const k=b.dataset.pl; if(PF.players.has(k)) PF.players.delete(k); else PF.players.add(k); render();});
+    el.querySelectorAll('[data-pf]').forEach(b=>b.onclick=e=>{ const d=e.target.closest('[data-del]'); if(d){ const a=pfList(); a.splice(+d.dataset.del,1); pfSave(a); PF.perfs.delete(b.dataset.pf); render(); return; } if(PF.edit) return; const k=b.dataset.pf; if(PF.perfs.has(k)) PF.perfs.delete(k); else PF.perfs.add(k); render(); });
+    el.querySelectorAll('[data-cal]').forEach(b=>b.onclick=()=>{PF.cal=PF.cal===b.dataset.cal?'':b.dataset.cal;render();});
+    el.querySelector('#pfEd').onclick=()=>{PF.edit=!PF.edit;render();};
+    const ad=el.querySelector('#pfAdd'); if(ad) ad.onclick=()=>{const v=el.querySelector('#pfNew').value.trim(); if(!v) return; const a=pfList(); if(!a.includes(v)){a.push(v);pfSave(a);} render();};
+    el.querySelector('#pfClr').onclick=()=>{PF.players.clear();PF.perfs.clear();PF.cal='';render();};
+    const go=close=>{
+      let pl=[...PF.players]; const nm=el.querySelector('#pfNum'); if(!pl.length&&nm&&nm.value.trim()) pl=[nm.value.trim()];
+      if(!pl.length||!PF.perfs.size){toast('Elige al menos una jugadora y un rendimiento.');return;}
+      const dur=video.duration||0, t=video.currentTime; let n=0;
+      pl.forEach(p=>{ [...PF.perfs].forEach(r=>{
+        const start=Math.max(0,t-5); let end=Math.min(dur,t+3); if(end-start<0.5) end=Math.min(dur,start+0.5);
+        events.push(normEvent({id:uid(),btnId:'',label:r,color:PF.cal==='Mal'?'#E5484D':PF.cal==='Bien'?'#2EA36B':'#9AA7FF',pts:0,t,start,end,team:PF.team,player:p,period,video:videoName,note:'',cat:'Rendimiento individual',tags:PF.cal?[PF.cal]:[]})); n++; }); });
+      sortEvents(); commit(); toast(n+(n===1?' registro añadido':' registros añadidos')+'.');
+      PF.players.clear(); PF.perfs.clear(); PF.cal='';
+      if(close) closePerf(); else render();
+    };
+    el.querySelector('#pfAddB').onclick=()=>go(false);
+    el.querySelector('#pfAddC').onclick=()=>go(true);
+  }
+  render();
+}
+$('#bPerf').onclick=openPerf;
+
+/* ===== VÍDEO INDIVIDUAL Y VÍDEO COLECTIVO ===== */
+function autoCover(title,sub){
+  const c=document.createElement('canvas'); c.width=CVW; c.height=CVH; const x=c.getContext('2d');
+  const layers=[normLayer({type:'text',text:title,x:640,y:250,size:96,bold:true,center:true,font:'Barlow'}),normLayer({type:'text',text:sub,x:640,y:410,size:44,center:true,font:'Barlow',op:.9})];
+  cvDraw(x,'#EB8300',layers,null);
+  return c.toDataURL('image/jpeg',.9);
+}
+function openAuto(kind){
+  DLGDOC=null;
+  if(!events.length){toast('Todavía no hay etiquetas.');return;}
+  const players={}; events.forEach(e=>{ if(e.player==='') return; const k=e.team+'|'+e.player; players[k]=(players[k]||0)+1; });
+  const pk=Object.keys(players).sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
+  if(kind==='ind'&&!pk.length){toast('Ninguna etiqueta tiene jugadora asignada.');return;}
+  const sel_='padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);width:100%;box-sizing:border-box;';
+  const d=expDlgShell('<h3 style="margin:0 0 8px;font:700 20px var(--f-head)">'+(kind==='ind'?'Vídeo individual':'Vídeo colectivo')+'</h3>'+
+    (kind==='ind'?'<label style="font-size:12.5px;display:block">Jugadora<select id="auWho" style="'+sel_+'">'+pk.map(k=>{const t=k.split('|')[0], n=k.split('|').slice(1).join('|'); return '<option value="'+esc(k)+'">'+esc(teamName(t)+' · '+playerLabel(t,n))+' ('+players[k]+' jugadas)</option>';}).join('')+'</select></label>'
+      :'<label style="font-size:12.5px;display:block">Equipo<select id="auWho" style="'+sel_+'"><option value="L">'+esc(teamName('L'))+' ('+events.filter(e=>e.team==='L').length+' jugadas)</option><option value="R">'+esc(teamName('R'))+' ('+events.filter(e=>e.team==='R').length+' jugadas)</option></select></label>')+
+    '<label style="font-size:12.5px;display:block;margin-top:8px">Orden<select id="auOrd" style="'+sel_+'"><option value="t">Por tiempo</option><option value="a">Agrupadas por acción</option></select></label>'+
+    '<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="auCov" checked> Empezar con una portada con el nombre</label>'+
+    '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="auFil"> Solo las jugadas que cumplen los filtros actuales</label>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn" id="auNo">Cancelar</button><button class="btn" id="auPl">Crear playlist</button><button class="btn primary" id="auGo">🎞 Exportar vídeo</button></div>');
+  const g=s=>d.querySelector(s);
+  function build(){
+    const who=g('#auWho').value;
+    let list=events.filter(e=>kind==='ind'?(e.team+'|'+e.player===who):e.team===who);
+    if(g('#auFil').checked){ const ok=new Set(filtered().map(e=>e.id)); list=list.filter(e=>ok.has(e.id)); }
+    list.sort((a,b)=>g('#auOrd').value==='a'?(info(a).label.localeCompare(info(b).label,'es')||a.t-b.t):a.t-b.t);
+    let title, sub;
+    if(kind==='ind'){ const t=who.split('|')[0], n=who.split('|').slice(1).join('|'); title=(playerName(t,n)||('#'+n)); sub=teamName(t)+' · '+list.length+' jugadas'; }
+    else { title=teamName(who); sub='Vídeo colectivo · '+list.length+' jugadas'; }
+    return {list,title,sub};
+  }
+  g('#auNo').onclick=expClose;
+  g('#auGo').onclick=()=>{
+    const b=build(); if(!b.list.length){toast('No hay jugadas con esa selección.');return;}
+    const items=b.list.slice();
+    if(g('#auCov').checked) items.unshift({cover:true,id:'c:auto',img:autoCover(b.title,b.sub),dur:3,name:b.title,label:b.title,color:'#EB8300',pts:0,start:0,end:3,tags:[],desc:[],btnId:'',team:'L',player:'',period:'1C',note:''});
+    expClose(); openExport(items,expClean(b.title));
+  };
+  g('#auPl').onclick=()=>{
+    const b=build(); if(!b.list.length){toast('No hay jugadas con esa selección.');return;}
+    const p={id:uid(),name:b.title,items:[]};
+    if(g('#auCov').checked){ const c=normCover({name:'Portada '+b.title,dur:3,bg:'#EB8300',layers:[{type:'text',text:b.title,x:640,y:250,size:96,bold:true,center:true},{type:'text',text:b.sub,x:640,y:410,size:44,center:true}],img:autoCover(b.title,b.sub)}); covers.push(c); p.items.push('c:'+c.id); }
+    b.list.forEach(e=>p.items.push(e.id));
+    playlists.push(p); plCur=p.id; expClose(); commit(); toast('Playlist «'+p.name+'» creada ('+b.list.length+' jugadas).',{label:'Abrir mesa',fn:openProd});
+  };
+}
+$('#bInd').onclick=()=>openAuto('ind'); $('#bCol').onclick=()=>openAuto('col');
 
 /* ===== EXPORTACIÓN RÁPIDA (WebCodecs + MP4) ===== */
 const FX={err:''};
