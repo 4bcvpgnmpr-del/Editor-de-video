@@ -2062,7 +2062,7 @@ requestAnimationFrame(loop);
    ===================================================================== */
 function loadFile(file,fromLib){
   if(!file) return;
-  if(file.type&&!file.type.startsWith('video/')){toast('Ese archivo no es un vídeo.');return;}
+  if(file.type&&!file.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm|mkv|avi|mts|m2ts|3gp)$/i.test(file.name)){toast('Ese archivo no es un vídeo ('+file.type+').');return;}
   if(objectURL) URL.revokeObjectURL(objectURL);
   stopClip(false);
   hasVideo=false;
@@ -2093,7 +2093,7 @@ video.addEventListener('loadedmetadata',()=>{
 video.addEventListener('error',()=>{
   if(!video.getAttribute('src')) return;
   hasVideo=false; $('#empty').hidden=false;
-  toast('Este navegador no puede reproducir ese formato. Prueba con MP4 (H.264) o WebM.');
+  {const c=video.error?video.error.code:'?'; toast('No se puede reproducir ese archivo (error '+c+', '+(videoName||'?').split('.').pop()+'). Prueba con MP4 (H.264) o WebM.');}
 });
 const openPicker=()=>$('#fileVideo').click();
 $('#bOpen').onclick=openPicker; $('#bOpen2').onclick=openPicker;
