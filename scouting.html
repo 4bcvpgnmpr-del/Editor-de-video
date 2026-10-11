@@ -620,6 +620,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
     <label class="hdr-per" title="Cuarto en el que se etiquetan las acciones (atajo: Mayús+1 a 5)"><span>Cuarto</span><select id="periodSel" aria-label="Cuarto actual"></select></label>
     <div class="top-actions">
       <button class="btn primary" id="bOpen">Abrir vídeo</button>
+      <button class="btn" id="bLib" title="Vídeos guardados en este dispositivo">📚 Mis vídeos</button>
       <button class="btn" id="bUndo" title="Deshacer (Ctrl/Cmd+Z)" disabled>Deshacer</button>
       <button class="btn" id="bRedo" title="Rehacer (Ctrl/Cmd+Mayús+Z)" disabled>Rehacer</button>
       <button class="btn" id="bCfg" title="Editar botonera"><span class="lg">Editar botonera</span><span class="sh">Botonera</span></button>
@@ -644,7 +645,7 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
           <div class="empty" id="empty">
             <h2>Abre un partido para empezar a etiquetar</h2>
             <p>Arrastra aquí un vídeo o elígelo desde tu equipo. Se reproduce en tu navegador y no se sube a ningún sitio. Formatos: MP4 (H.264) y WebM.</p>
-            <button class="btn primary" id="bOpen2">Elegir vídeo</button>
+            <button class="btn primary" id="bOpen2">Elegir vídeo</button> <button class="btn" id="bLib2">📚 Mis vídeos</button>
             <p>Las etiquetas se guardan en este navegador, asociadas al archivo de vídeo.</p>
           </div>
           <div class="badge" id="badge" hidden>
@@ -2059,7 +2060,7 @@ requestAnimationFrame(loop);
 /* =====================================================================
    ABRIR VÍDEO  (sistema existente, sin cambios de comportamiento)
    ===================================================================== */
-function loadFile(file){
+function loadFile(file,fromLib){
   if(!file) return;
   if(file.type&&!file.type.startsWith('video/')){toast('Ese archivo no es un vídeo.');return;}
   if(objectURL) URL.revokeObjectURL(objectURL);
@@ -2069,6 +2070,7 @@ function loadFile(file){
   videoName=file.name; videoKey=file.name+'|'+file.size;
   video.src=objectURL;
   $('#videoName').textContent=file.name;
+  if(!fromLib) vidSave(file);
 }
 video.addEventListener('loadedmetadata',()=>{
   hasVideo=true;
@@ -2096,6 +2098,80 @@ video.addEventListener('error',()=>{
 const openPicker=()=>$('#fileVideo').click();
 $('#bOpen').onclick=openPicker; $('#bOpen2').onclick=openPicker;
 $('#fileVideo').onchange=e=>{loadFile(e.target.files[0]);e.target.value='';};
+/* ===== VÍDEOS GUARDADOS EN EL DISPOSITIVO (IndexedDB) ===== */
+const VDB={db:null};
+function vdbOpen(){
+  return new Promise((res,rej)=>{
+    if(VDB.db) return res(VDB.db);
+    if(!window.indexedDB) return rej(new Error('Este navegador no permite guardar vídeos.'));
+    const r=indexedDB.open('bbtag-videos',1);
+    r.onupgradeneeded=()=>{r.result.createObjectStore('v',{keyPath:'key'});};
+    r.onsuccess=()=>{VDB.db=r.result;res(VDB.db);};
+    r.onerror=()=>rej(r.error||new Error('No se pudo abrir el almacén.'));
+  });
+}
+async function vdbTx(mode,fn){
+  const db=await vdbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('v',mode), st=tx.objectStore('v'); let out;
+    const rq=fn(st); if(rq) rq.onsuccess=()=>{out=rq.result;};
+    tx.oncomplete=()=>res(out); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error||new Error('Sin espacio suficiente.'));
+  });
+}
+async function vidSave(file){
+  try{
+    const key=file.name+'|'+file.size;
+    const ex=await vdbTx('readonly',st=>st.getKey(key));
+    if(ex) return;
+    if(navigator.storage&&navigator.storage.estimate){
+      const e=await navigator.storage.estimate();
+      if(e.quota&&e.usage!=null&&e.quota-e.usage<file.size*1.05){toast('Vídeo abierto, pero no cabe para guardarlo en este dispositivo. Borra alguno en "Mis vídeos".');return;}
+    }
+    toast('Guardando el vídeo en este dispositivo…');
+    await vdbTx('readwrite',st=>st.put({key,name:file.name,size:file.size,type:file.type||'video/mp4',added:Date.now(),blob:file}));
+    try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+    toast('Vídeo guardado: la próxima vez ábrelo desde "Mis vídeos".');
+  }catch(e){ toast('El vídeo está abierto, pero no se pudo guardar ('+((e&&e.message)||'sin espacio')+').'); }
+}
+async function vidList(){
+  const db=await vdbOpen();
+  return new Promise((res,rej)=>{
+    const out=[], rq=db.transaction('v','readonly').objectStore('v').openCursor();
+    rq.onsuccess=()=>{const c=rq.result; if(c){const v=c.value; out.push({key:v.key,name:v.name,size:v.size,added:v.added}); c.continue();} else res(out.sort((a,b)=>b.added-a.added));};
+    rq.onerror=()=>rej(rq.error);
+  });
+}
+async function vidOpenLib(key){
+  try{
+    const v=await vdbTx('readonly',st=>st.get(key));
+    if(!v){toast('No se encuentra ese vídeo.');return;}
+    expClose(); loadFile(new File([v.blob],v.name,{type:v.type}),true);
+  }catch(e){toast('No se pudo abrir: '+((e&&e.message)||e));}
+}
+async function openLib(){
+  let list=[], err='';
+  try{ list=await vidList(); }catch(e){ err=(e&&e.message)||String(e); }
+  let quota='';
+  try{ if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate(); if(e.quota) quota='Usado '+(e.usage/1073741824).toFixed(2)+' GB de ≈ '+(e.quota/1073741824).toFixed(1)+' GB disponibles.';} }catch(e){}
+  const mb=n=>n>=1073741824?(n/1073741824).toFixed(2)+' GB':(n/1048576).toFixed(0)+' MB';
+  const rows=list.map(v=>'<div style="display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:6px">'+
+    '<div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(v.name)+'</div><div style="font-size:12px;color:var(--muted)">'+mb(v.size)+' · '+new Date(v.added).toLocaleDateString()+'</div></div>'+
+    '<button class="btn primary" data-o="'+esc(v.key)+'">Abrir</button><button class="btn danger" data-d="'+esc(v.key)+'">Borrar</button></div>').join('');
+  const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Mis vídeos</h3>'+
+    '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">Se guardan en este dispositivo (no se suben a ningún sitio). Al abrir uno vuelven sus etiquetas, clips y dibujos. '+esc(quota)+'</p>'+
+    (err?'<p style="color:var(--danger,#e55)">'+esc(err)+'</p>':'')+
+    (rows||(err?'':'<p style="color:var(--muted)">Todavía no hay vídeos guardados. Cada vídeo que abras se guarda aquí automáticamente.</p>'))+
+    '<div style="text-align:right;margin-top:8px"><button class="btn" id="lbNo">Cerrar</button></div>');
+  d.querySelector('#lbNo').onclick=expClose;
+  d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>vidOpenLib(b.dataset.o));
+  d.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{
+    if(!confirm('¿Borrar este vídeo del dispositivo? Las etiquetas se conservan; tendrás que volver a subir el vídeo para verlas.')) return;
+    try{await vdbTx('readwrite',st=>st.delete(b.dataset.d));}catch(e){}
+    openLib();
+  });
+}
+$('#bLib').onclick=openLib; $('#bLib2').onclick=openLib;
+
 const vw=$('#vwrap');
 ['dragenter','dragover'].forEach(n=>vw.addEventListener(n,e=>{e.preventDefault();vw.classList.add('drag');}));
 ['dragleave','drop'].forEach(n=>vw.addEventListener(n,e=>{e.preventDefault();vw.classList.remove('drag');}));
