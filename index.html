@@ -877,13 +877,11 @@ body.ipad .ipfz[hidden],.ipfz[hidden]{display:none!important}
 .ex-ck{width:28px;height:28px;border-radius:50%;border:2px solid #555;flex:none}.ex-ck[aria-pressed=true]{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 6px #151515}
 .ex-f{padding:10px 18px 16px;border-top:1px solid #222;display:flex;justify-content:center}
 
-#ipSeg{position:fixed;top:76px;left:calc((100vw - 330px)/2);transform:translateX(-50%);z-index:70;display:none;gap:2px;background:rgba(20,20,20,.82);border:1px solid #333;border-radius:12px;padding:3px;backdrop-filter:blur(6px)}
+#ipSeg{position:fixed;top:5px;left:50%;transform:translateX(-50%);z-index:70;display:none;gap:2px;background:rgba(20,20,20,.82);border:1px solid #333;border-radius:12px;padding:3px;backdrop-filter:blur(6px)}
 body.ipad #ipSeg{display:flex}
 #ipSeg button{min-height:40px;padding:0 14px;border-radius:9px;border:0;background:transparent;color:#ddd;font-size:14px}
 #ipSeg button[aria-pressed=true]{background:var(--accent);color:#111;font-weight:700}
 body.ipad.fz #ipSeg{display:none}
-body.ipad.port #ipSeg{left:50%;top:112px}
-body.ipad.pj #ipSeg{left:calc(150px + (100vw - 300px)/2)}
 #ipPrev{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center}
 #ipPrev .pv-b{background:#111;border:1px solid #333;border-radius:14px;padding:12px;width:min(720px,92vw)}
 #ipPrev .pv-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}#ipPrev .pv-h b{flex:1;font-size:17px}#ipPrev small{opacity:.6}
@@ -937,6 +935,19 @@ body.ipad #pTags .code{background:#151515!important;color:#fff!important;border:
 body.ipad #pTags .code::before{content:"";position:absolute;left:16px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:var(--c)}
 body.ipad #pTags .code .cl{font-size:17px;font-weight:600;color:#fff}
 body.ipad #pTags .code:active{background:#262626!important}
+
+/* iPad: cabecera y barra inferior limpias */
+body.ipad .top .brand h1,body.ipad .top .score,body.ipad .top .hdr-per,body.ipad .top .tsep,body.ipad #bLayout{display:none!important}
+body.ipad .top .brand small{font-size:15px;color:#ddd;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+body.ipad .top-actions{margin-left:auto}
+body.ipad .top-actions .btn.primary{padding:0 12px}
+body.ipad .top-actions .btn .tx{display:none!important}
+body.ipad #bFrameBack,body.ipad #bFrameFwd{display:none}
+body.ipad .transport{gap:14px}
+body.ipad .transport .time{order:0;min-width:0;font-size:13px;opacity:.8}
+body.ipad #ipLow-hold{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #2a2a2a}
+body.ipad #ipLow-hold .hdr-per{display:flex!important;align-items:center;gap:8px;color:#fff}
+body.ipad .transport #bUndo,body.ipad .transport #bRedo{min-width:50px;min-height:54px;border-radius:14px;font-size:20px}
 </style>
 </head>
 <body>
@@ -5904,7 +5915,20 @@ tray.addEventListener('click',e=>{
 window.addEventListener('resize',()=>{applyLayout();});
 if(narrowMQ.addEventListener) narrowMQ.addEventListener('change',applyLayout);
 /* ===== MODO iPad ===== */
+
+var ipRel=(function(){
+  const g=id=>document.getElementById(id), hs=[], origin={};
+  return function(on){
+    const hold=g('ipLow-hold');
+    if(on&&!hold){ const low=document.querySelector('#pTags .bb-low'); if(low){ const h=document.createElement('div'); h.id='ipLow-hold'; low.insertBefore(h,low.firstChild); } }
+    const h2=g('ipLow-hold');
+    document.querySelectorAll('.top .hdr-per').forEach(n=>{ if(!origin[n.className+n.textContent.slice(0,8)]) origin[n.className+n.textContent.slice(0,8)]={n,p:n.parentNode,nx:n.nextSibling}; });
+    const items=[g('bUndo'),g('bRedo')]; items.forEach(n=>{ if(n&&!origin[n.id]) origin[n.id]={n,p:n.parentNode,nx:n.nextSibling}; });
+    Object.keys(origin).forEach(k=>{ const o=origin[k]; if(on){ const isH=o.n.classList.contains('hdr-per'); if(isH&&h2) h2.appendChild(o.n); else if(!isH){ const t=g('ipTags'); if(t) t.parentNode.insertBefore(o.n,t); } } else { if(o.nx&&o.nx.parentNode===o.p) o.p.insertBefore(o.n,o.nx); else o.p.appendChild(o.n); } });
+  };
+})();
 function ipApply(on){
+  ipRel(on);
   document.body.classList.toggle('ipad',on); document.documentElement.classList.toggle('ipad',on);
   layout=loadLayout(); applyLayout(); layoutTele&&layoutTele();
   const b=document.getElementById('bMode'); if(b) b.querySelector('.tx').textContent=on?'Ordenador':'iPad', b.querySelector('.ic').textContent=on?'🖥':'📱';
@@ -5918,7 +5942,7 @@ function ipMarks(){
 {
   const bm=document.getElementById('bMode');
   bm.onclick=()=>{ const on=!document.body.classList.contains('ipad'); IPM.set(on?'ipad':'pc'); ipApply(on); toast(on?'Modo iPad.':'Modo ordenador.'); };
-  bm.querySelector('.tx').textContent=IPM.on?'Ordenador':'iPad'; bm.querySelector('.ic').textContent=IPM.on?'🖥':'📱';
+  bm.querySelector('.tx').textContent=IPM.on?'Ordenador':'iPad'; bm.querySelector('.ic').textContent=IPM.on?'🖥':'📱'; if(IPM.on) ipRel(true);
   const sk=document.getElementById('ipSeek');
   sk.addEventListener('input',()=>{ const d=video.duration; if(d&&isFinite(d)) userSeek(d*sk.value/1000); });
   document.getElementById('ipPen').onclick=()=>{ if(teleEd){ teleEd.tool='pen'; renderDrawPanel(); return; } openTele(); if(teleEd){ teleEd.tool='pen'; renderDrawPanel(); } };
