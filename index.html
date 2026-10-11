@@ -1032,6 +1032,22 @@ body.ipad.vfull #ipScrub,body.ipad.vfull .transport{right:224px;background:rgba(
 
 body.ipad.vfull #ipFz{position:fixed;left:0;right:0;bottom:0;z-index:85;background:rgba(12,12,12,.9);padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 body.ipad.vfull.fz #vfX{display:block}
+
+/* iPad: pantalla limpia al dibujar */
+body.ipad.fz .top,body.ipad.fz #ipSeg{display:none!important}
+#fzPill{display:none}
+body.ipad.fzMin #ipFz{position:fixed;left:50%;right:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;border:1px solid #444;border-radius:16px;padding:6px 8px;flex-direction:row;background:rgba(12,12,12,.85)}
+body.ipad.fzMin #ipFz .fz-row,body.ipad.fzMin #ipFz .fz-top>b,body.ipad.fzMin #ipFz .fz-top>span,body.ipad.fzMin #ipFz #fzDel,body.ipad.fzMin #ipFz #fzMin{display:none}
+body.ipad.fzMin #ipFz .fz-top{gap:8px}
+body.ipad.fzMin.fz #fzPill{display:block;position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:90;min-height:52px;padding:0 16px;border-radius:26px;border:1px solid #444;background:rgba(12,12,12,.85);color:#fff;font-size:16px}
+body.ipad.fzMin #vfX{display:none!important}
+
+#tgTags{display:none}
+body.ipad #tgTags{display:flex;align-items:center;justify-content:center;position:fixed;z-index:95;left:var(--tgL,auto);right:var(--tgR,10px);top:var(--tgT,64px);width:40px;height:40px;border-radius:20px;border:1px solid #444;background:rgba(12,12,12,.85);color:#fff;padding:0}
+body.ipad #tgTags svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2}
+body.ipad.hideTags #dockR{display:none!important}
+body.ipad.hideTags #tgTags{background:var(--accent,#2a6cf0)}
+body.ipad.fz #tgTags{display:none}
 </style>
 </head>
 <body>
@@ -1087,8 +1103,10 @@ body.ipad.vfull.fz #vfX{display:block}
           </div>
         </div>
 
+        <button id="tgTags" aria-label="Mostrar u ocultar botonera"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button id="fzPill" aria-label="Mostrar menú de dibujo">✏️ Menú</button>
         <div class="ipfz ip-only" id="ipFz" hidden>
-          <div class="fz-top"><b>Freeze frame</b><span id="fzT"></span><button class="ib" id="fzDel">Borrar todo</button><button class="ib" id="fzPlay" aria-label="Reanudar">▶ Reanudar</button><button class="ib big" id="fzOk">✓ Listo</button></div>
+          <div class="fz-top"><b>Freeze frame</b><span id="fzT"></span><button class="ib" id="fzMin" aria-label="Ocultar menú">⌄ Ocultar menú</button><button class="ib" id="fzDel">Borrar todo</button><button class="ib" id="fzPlay" aria-label="Reanudar">▶ Reanudar</button><button class="ib big" id="fzOk">✓ Listo</button></div>
           <div class="fz-row"><div class="fz-tools" id="fzTools"></div><div class="fz-cols" id="fzCols"></div><button class="ib" id="fzUndo" aria-label="Quitar figura">⌫</button></div>
           <div class="fz-row"><label class="fz-hold">Pausa <input type="range" id="fzHold" min="0.5" max="10" step="0.5"> <b id="fzHv"></b></label><label class="fz-hold"><input type="checkbox" id="fzOver"> Sobre el vídeo (sin pausa)</label></div>
         </div>
@@ -6302,7 +6320,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
   const on=!!teleEd&&document.body.classList.contains('ipad');
-  bar.hidden=!on; document.body.classList.toggle('fz',on);
+  bar.hidden=!on; document.body.classList.toggle('fz',on); if(!on) document.body.classList.remove('fzMin');
   if(!on) return;
   const ed=teleEd, tl=ed.tele, s=ed.sel!=null?tl.items[ed.sel]:null;
   const tb=document.getElementById('fzTools');
@@ -6324,6 +6342,14 @@ function ipFzSync(){
   $$('fzCols').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b) applyProp('color',b.dataset.color);});
   $$('fzHold').oninput=e=>{const ed=teleEd; if(!ed) return; ed.tele.hold=+e.target.value; $$('fzHv').textContent=String(ed.tele.hold).replace('.',',')+' s'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele();};
   $$('fzOver').onchange=e=>{const ed=teleEd; if(!ed) return; ed.tele.mode=e.target.checked?'overlay':'freeze'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele();};
+  $$('fzMin').onclick=()=>{ document.body.classList.add('fzMin'); };
+  $$('fzPill').onclick=()=>{ document.body.classList.remove('fzMin'); };
+
+  (function(){ const b=document.getElementById('tgTags'); if(!b) return;
+    function pos(){ try{ const d=document.getElementById('dockR'); if(d&&!document.body.classList.contains('hideTags')&&d.offsetParent){ const r=d.getBoundingClientRect(); const st=document.documentElement.style; st.setProperty('--tgT',(r.top+6)+'px'); st.setProperty('--tgL',(r.left+10)+'px'); st.setProperty('--tgR','auto'); } }catch(e){} }
+    b.onclick=()=>{ document.body.classList.toggle('hideTags'); };
+    setInterval(pos,800); pos();
+  })();
   $$('fzOk').onclick=()=>closeTele();
   $$('fzPlay').onclick=()=>{ if(teleEd){ const tl=teleEd.tele; if(tl.items.length){ ensureTele(tl); if(!playTele){playTele=true;const c=document.getElementById('chkTele'); if(c) c.checked=true;} } closeTele(); } video.play().catch(()=>{}); };
   $$('fzDel').onclick=()=>{if(teleEd) deleteTele(teleEd.tele);};
