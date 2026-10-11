@@ -936,8 +936,8 @@ body.ipad #pTags .p-grip{display:none}
 body.ipad #pTags .bb-sh{padding:0 6px 6px;gap:8px}
 body.ipad #pTags #ipSetSel{min-height:46px;border-radius:12px;background:#1a1a1a;border:1px solid #3a2a12;color:#fff;font-size:17px;font-weight:700;padding:0 14px;max-width:220px}
 body.ipad #pTags #phSeg,body.ipad #pTags #bbAddCat{display:none!important}
-body.ipad #pTags #ipLow{margin-left:auto;font-size:0;width:46px;padding:0}
-body.ipad #pTags #ipLow::before{content:"🏷";font-size:18px}
+body.ipad #pTags #ipLow{margin-left:auto;width:46px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+
 body.ipad .codes{gap:6px}
 body.ipad #pTags .code{background:#151515!important;color:#fff!important;border:0!important;box-shadow:none!important;min-height:54px;padding:0 16px 0 44px;position:relative;border-radius:12px}
 body.ipad #pTags .code::before{content:"";position:absolute;left:16px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:var(--c)}
@@ -1276,7 +1276,7 @@ body.ipad.vfull #ipScrub{bottom:calc(76px + env(safe-area-inset-bottom,0px));mar
             <input type="range" id="ceSeek" min="0" max="1000" value="0" aria-label="Posición dentro del clip">
             <span class="ce-time" id="ceTime">00:00 / 00:00</span>
             <button class="btn" id="ceLoop" aria-pressed="false" title="Repetir el clip en bucle" aria-label="Repetir en bucle">↻</button>
-            <button class="btn" id="ceFull" title="Pantalla completa" aria-label="Pantalla completa">⛶</button>
+            <button class="btn" id="ceFull" title="Pantalla completa" aria-label="Pantalla completa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
           </div>
           <div class="ce-trim">
             <div class="ce-track" id="ceTrack"><div class="ce-sel" id="ceSel"></div><div class="ce-ph" id="cePh"></div>
@@ -6044,7 +6044,7 @@ function openIpExport(list,defName){
     '<h4>Filtrar por categoría</h4><div class="ex-chips"><button data-c="" aria-pressed="'+(st.cat==='')+'">Todas</button>'+cats.map(c=>'<button data-c="'+esc(c)+'" aria-pressed="'+(st.cat===c)+'">'+esc(c)+'</button>').join('')+'</div>'+
     '<h4>Elegir clips <span class="ex-all"><a id="exAll">Todos</a> · <a id="exNone">Ninguno</a></span></h4>'+
     vis.map(e=>'<div class="ex-row" data-id="'+e.id+'"><span class="ex-ck" aria-pressed="'+st.sel.has(e.id)+'"></span><i style="background:'+info(e).color+'"></i><div><b>'+esc(evName(e))+'</b><small>'+fmt(e.start)+' – '+fmt(e.end)+'</small></div><button class="ib" data-v="'+e.id+'" aria-label="Ver">▶</button></div>').join('')+'</div>'+
-    '<div class="ex-f"><button class="ib big" id="exGo2"'+(chosen.length?'':' disabled')+'>⤓ Exportar '+chosen.length+'</button></div>';
+    '<div class="ex-f"><button class="ib big" id="exGo2"'+(chosen.length?'':' disabled')+'>↓ Exportar '+chosen.length+'</button></div>';
     el.querySelector('#exQ2').value=st.q;
   };
   draw();
@@ -6153,7 +6153,7 @@ function wbSet(on){
   WB.on=on; let el=document.getElementById('ipWb');
   if(on){ video.pause();
     if(!el){ el=document.createElement('div'); el.id='ipWb';
-      el.innerHTML='<div class="wb-c"><canvas id="wbCv"></canvas></div><div class="wb-t"><div class="wb-g" id="wbTools"><button data-t="pen" aria-pressed="true">✏️</button><button data-t="arrow" aria-pressed="false">➚</button><button data-t="o" aria-pressed="false">●</button><button data-t="x" aria-pressed="false">✕</button><button data-t="erase" aria-pressed="false">🧽</button></div><div class="wb-g" id="wbCols"></div><div class="wb-g"><button id="wbUndo">↶</button><button id="wbClr">🗑</button></div><div class="wb-g"><select id="wbCourt"><option value="full">Pista completa</option><option value="half">Media pista</option><option value="none">Sin pista</option></select></div><div class="wb-g"><button id="wbPrev">‹</button><span id="wbPg">1/1</span><button id="wbNext">›</button><button id="wbAdd">＋</button></div><div class="wb-g"><button id="wbSave">⤓ PNG</button></div></div>';
+      el.innerHTML='<div class="wb-c"><canvas id="wbCv"></canvas></div><div class="wb-t"><div class="wb-g" id="wbTools"><button data-t="pen" aria-pressed="true">✏️</button><button data-t="arrow" aria-pressed="false">↗</button><button data-t="o" aria-pressed="false">●</button><button data-t="x" aria-pressed="false">✕</button><button data-t="erase" aria-pressed="false">🧽</button></div><div class="wb-g" id="wbCols"></div><div class="wb-g"><button id="wbUndo">↶</button><button id="wbClr">🗑</button></div><div class="wb-g"><select id="wbCourt"><option value="full">Pista completa</option><option value="half">Media pista</option><option value="none">Sin pista</option></select></div><div class="wb-g"><button id="wbPrev">‹</button><span id="wbPg">1/1</span><button id="wbNext">›</button><button id="wbAdd">＋</button></div><div class="wb-g"><button id="wbSave">↓ PNG</button></div></div>';
       document.body.appendChild(el);
       el.querySelector('#wbCols').innerHTML=['#e53935','#1e88e5','#43a047','#fb8c00','#212121'].map(c=>'<button data-c="'+c+'" style="background:'+c+'" aria-pressed="'+(c===WB.color)+'"></button>').join('');
       const cv=el.querySelector('#wbCv');
@@ -6199,7 +6199,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 (function(){
   const sh=document.querySelector('#pTags .bb-sh'); if(!sh) return;
-  const b=document.createElement('button'); b.id='ipLow'; b.className='ip-only'; b.textContent='Descriptores'; b.title='Descriptores y jugadoras del último clip';
+  const b=document.createElement('button'); b.id='ipLow'; b.className='ip-only'; b.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>'; b.title='Descriptores y jugadoras del último clip';
   sh.insertBefore(b,sh.querySelector('.sp'));
   b.onclick=()=>document.body.classList.toggle('lowOn');
   document.addEventListener('pointerdown',e=>{ if(document.body.classList.contains('lowOn')&&!e.target.closest('.bb-low,#ipLow')) document.body.classList.remove('lowOn'); },true);
@@ -6211,7 +6211,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 (function(){
   const vw=document.getElementById('vwrap'); if(!vw) return;
   const bar=document.createElement('div'); bar.id='pipBar';
-  bar.innerHTML='<span id="pipT">Reproduciendo</span><button id="pipBig" aria-label="Agrandar">⤢</button><button id="pipX" aria-label="Ocultar">✕</button>';
+  bar.innerHTML='<span id="pipT">Reproduciendo</span><button id="pipBig" aria-label="Agrandar"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button><button id="pipX" aria-label="Ocultar">✕</button>';
   vw.appendChild(bar);
   let dismissed=false, was=false;
   const prodOpen=()=>{ const st=layout&&layout.panels&&layout.panels.prod; return !!(st&&st.vis&&!st.min); };
@@ -6235,7 +6235,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   const zl=document.createElement('div'); zl.id='zl';
   vw.insertBefore(zl,video); zl.appendChild(video); zl.appendChild(document.getElementById('tele'));
   const Z={s:1,x:0,y:0}, P=new Map(); let g=null, lastTap=0;
-  const rz=document.createElement('button'); rz.id='zReset'; rz.textContent='⤺ 1×'; rz.hidden=true; vw.appendChild(rz);
+  const rz=document.createElement('button'); rz.id='zReset'; rz.textContent='↺ 1×'; rz.hidden=true; vw.appendChild(rz);
   const apply=()=>{
     const W=vw.clientWidth,H=vw.clientHeight;
     Z.s=Math.min(6,Math.max(1,Z.s));
@@ -6271,10 +6271,10 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     try{ if(on&&document.documentElement.requestFullscreen&&!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else if(!on&&document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(er){}
     setTimeout(()=>{ try{layoutTele();}catch(er){} apply(); },80);
   };
-  const bt=document.createElement('button'); bt.id='ipFull'; bt.className='ib ip-only'; bt.title='Reproductor a pantalla completa'; bt.setAttribute('aria-label','Pantalla completa'); bt.textContent='⛶';
+  const bt=document.createElement('button'); bt.id='ipFull'; bt.className='ib ip-only'; bt.title='Reproductor a pantalla completa'; bt.setAttribute('aria-label','Pantalla completa'); bt.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
   const tr=document.querySelector('.transport'); tr.insertBefore(bt,document.getElementById('ipTags'));
   bt.onclick=()=>full(!document.body.classList.contains('vfull'));
-  const x=document.createElement('button'); x.id='vfX'; x.textContent='⤡'; x.setAttribute('aria-label','Salir de pantalla completa'); document.body.appendChild(x); x.onclick=()=>full(false);
+  const x=document.createElement('button'); x.id='vfX'; x.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>'; x.setAttribute('aria-label','Salir de pantalla completa'); document.body.appendChild(x); x.onclick=()=>full(false);
   document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&document.body.classList.contains('vfull')){ document.body.classList.remove('vfull'); setTimeout(()=>{try{layoutTele();}catch(er){} apply();},80);} });
 })();
 /* ===== iPad: barra de freeze frame ===== */
