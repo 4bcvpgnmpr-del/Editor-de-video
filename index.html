@@ -1025,7 +1025,9 @@ body.ipad.vfull #pTags button,body.ipad.vfull #pTags select{pointer-events:auto}
 body.ipad.vfull #pTags .code{background:rgba(12,12,12,.42)!important;backdrop-filter:blur(3px);min-height:44px;margin-bottom:0}
 body.ipad.vfull #pTags .code .cl{text-shadow:0 1px 3px #000}
 body.ipad.vfull #pTags #ipSetSel,body.ipad.vfull #pTags #ipLow{background:rgba(12,12,12,.5)!important}
-body.ipad.vfull #pTags .codes{gap:5px;max-height:calc(100vh - 150px);overflow:auto;pointer-events:none}
+body.ipad.vfull #pTags .codes{gap:5px;max-height:calc(100vh - 90px);overflow-y:auto;overflow-x:hidden;pointer-events:auto;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.ipad.vfull #pTags .codes::-webkit-scrollbar{display:none}
+body.ipad.vfull #pTags .bb-wrap,body.ipad.vfull #pTags .bb-cats{overflow:visible}
 body.ipad.vfull #ipScrub,body.ipad.vfull .transport{right:224px;background:rgba(10,10,10,.55)}
 </style>
 </head>
