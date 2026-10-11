@@ -959,6 +959,18 @@ body.ipad .transport #bUndo,body.ipad .transport #bRedo{min-width:50px;min-heigh
 
 html,body{overscroll-behavior:none}
 @media all and (display-mode:fullscreen),(display-mode:standalone){ body.ipad{-webkit-user-select:none;user-select:none} body.ipad input,body.ipad textarea{-webkit-user-select:text;user-select:text} }
+
+/* iPad: botonera más estrecha y reproductor compacto */
+body.ipad:not(.port) .dock.dr{width:248px!important;flex:0 0 248px}
+body.ipad #pTags .code{padding-left:38px;min-height:50px}
+body.ipad #pTags .code::before{left:13px;width:16px;height:16px;margin-top:-8px}
+body.ipad #pTags .code .cl{font-size:16px}
+body.ipad #pTags #ipSetSel{max-width:170px;font-size:16px}
+body.ipad .transport{gap:8px;padding:6px 8px 10px;flex-wrap:nowrap}
+body.ipad .transport .ib{min-width:46px;min-height:50px}
+body.ipad .transport .ib.big{min-width:64px;min-height:56px}
+body.ipad .transport .tsel select{min-height:46px}
+body.ipad #ipPen{margin-right:0}
 </style>
 </head>
 <body>
