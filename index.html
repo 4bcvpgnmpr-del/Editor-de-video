@@ -959,6 +959,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
             <div class="r2">
               <label class="f"><span id="dwHoldLbl">Duración de la pausa</span><select id="dwHold"></select></label>
               <label class="f" id="dwCustomBox" hidden><span>Segundos</span><input id="dwCustom" type="number" min="0.5" max="60" step="0.5"></label>
+              <label class="f"><span>Transición (aparece y desaparece)</span><select id="dwFade"><option value="0">Sin transición</option><option value="0.3">0,3 s</option><option value="0.5">0,5 s</option><option value="1">1 s</option><option value="2">2 s</option></select></label>
             </div>
             <div class="tools" id="dwTools" role="group" aria-label="Herramientas de dibujo"></div>
             <div class="f"><span>Color</span><div class="sw" id="dwColors"></div></div>
@@ -4658,9 +4659,9 @@ async function fxRun(list,o,prog){
       if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
       const frz=(o.draw&&!ev.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=ev.start&&x.t<ev.end).sort((a,b)=>a.t-b.t):[];
       const done=new Set(); let shift=0, decErr=null;
-      const emit=(frame,tl,out)=>{
+      const emit=(frame,tl,out,al)=>{
         fitDraw(ctx,frame,ow,oh);
-        if(tl){ const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); }
+        if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
         if(o.title&&ev.name!==undefined){
           const nm=evName(ev);
           const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(nm).width, pad=fs*0.5;
@@ -4680,10 +4681,10 @@ async function fxRun(list,o,prog){
           const out=base+Math.max(0,t-ev.start)+shift;
           if(f){
             done.add(f.id);
-            const n=Math.max(1,Math.round(f.hold*4));
-            for(let k=0;k<n;k++) emit(frame,f,out+k*(f.hold/n));
+            const n=Math.max(1,Math.round(f.hold*10));
+            for(let k=0;k<n;k++){ const ag=k*(f.hold/n); emit(frame,f,out+ag,teleAlpha(f,ag,f.hold-ag)); }
             shift+=f.hold;
-          }else emit(frame,tl,out);
+          }else emit(frame,tl,out,tl?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1);
           frame.close();
         }catch(e){ decErr=e; try{frame.close();}catch(_){} }
       };
@@ -4742,9 +4743,9 @@ async function expRecord(list,o,prog){
   try{ rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:o.bps}); }catch(e){ rec=new MediaRecorder(stream); }
   rec.ondataavailable=e=>{if(e.data&&e.data.size) chunks.push(e.data);};
   const stopped=new Promise(r=>{rec.onstop=r;});
-  const draw=(ev,tl)=>{
+  const draw=(ev,tl,al)=>{
     ctx.drawImage(video,0,0,ow,oh);
-    if(tl){ const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh); }
+    if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh); ctx.globalAlpha=1; }
     if(o.title&&ev&&ev.name){
       const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(ev.name).width, pad=fs*0.5;
       ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(fs*0.6,fs*0.6,tw+pad*2,fs*1.5);
@@ -4779,7 +4780,7 @@ async function expRecord(list,o,prog){
           if(EXP.cancel){res();return;}
           const now=performance.now(), t=video.currentTime;
           if(fz){
-            draw(ev,fz.tl);
+            draw(ev,fz.tl,teleAlpha(fz.tl,fz.tl.hold-(fz.until-now)/1000,(fz.until-now)/1000));
             if(now>=fz.until){ prev=fz.tl.t; fz=null; lastMove=now; video.play().catch(()=>{}); }
             requestAnimationFrame(loop); return;
           }
@@ -4795,7 +4796,7 @@ async function expRecord(list,o,prog){
             }
           }
           if(Math.abs(t-lastT_)>0.001){lastT_=t;lastMove=now;} else if(now-lastMove>6000&&!video.paused){stalled=true;res();return;} else if(video.paused&&now-lastMove>3000){video.play().catch(()=>{});lastMove=now;}
-          draw(ev,fz?fz.tl:tl); prev=t;
+          draw(ev,fz?fz.tl:tl,(!fz&&tl)?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1); prev=t;
           if(t>=ev.end-0.03||video.ended){res();return;}
           requestAnimationFrame(loop);
         };
@@ -5582,7 +5583,7 @@ $('#dlgMk').addEventListener('click',e=>{if(e.target===$('#dlgMk')) $('#dlgMk').
 const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move'];
 function normTele(x){
   if(!x||!isFinite(x.t)) return null;
-  return {id:x.id||uid(),t:+x.t,mode:x.mode==='overlay'?'overlay':'freeze',hold:clamp(+x.hold||3,0.5,60),
+  return {id:x.id||uid(),t:+x.t,mode:x.mode==='overlay'?'overlay':'freeze',hold:clamp(+x.hold||3,0.5,60),fade:clamp(x.fade==null?0:(+x.fade||0),0,3),
     items:(Array.isArray(x.items)?x.items:[]).filter(s=>s&&SHAPES.includes(s.type)).map(s=>Object.assign({},s,{color:safeColor(s.color),sw:clamp(+s.sw||4,1,12)})),
     rev:0,clipId:String(x.clipId||'')};
 }
@@ -6110,8 +6111,15 @@ function teleVisible(){
   }
   return null;
 }
+function teleAlpha(tl,age,rem){ return (tl&&tl.fade>0)?clamp(Math.min(age,rem)/tl.fade,0,1):1; }
 function teleRender(){
   const tl=teleVisible();
+  { const te=$('#tele'); let a=1;
+    if(tl&&!teleEd){
+      if(freeze&&freeze.tele===tl){ const now=performance.now(); a=teleAlpha(tl,tl.hold-(freeze.until-now)/1000,(freeze.until-now)/1000); }
+      else if(tl.mode==='overlay'){ const t=video.currentTime; a=teleAlpha(tl,t-tl.t,tl.t+tl.hold-t); }
+    }
+    const v=a>=0.999?'':String(Math.round(a*100)/100); if(te.style.opacity!==v) te.style.opacity=v; }
   const key=tl?(tl.id+':'+tl.rev+':'+(teleEd&&teleEd.tele===tl?teleEd.sel+':'+(teleEd.zone?teleEd.zone.length:0):'v')+':'+f1(SH)):'none';
   if(key!==teleKey){teleKey=key;drawTeleSVG(tl);}
   if(tl&&hasLens(tl)) drawLens(tl);
@@ -6162,7 +6170,7 @@ function openTele(existing){
   video.pause();
   const t=video.currentTime;
   let tl=existing||teles.find(x=>Math.abs(x.t-t)<0.06);
-  if(!tl) tl={id:uid(),t,mode:'freeze',hold:3,items:[],rev:0,clipId:''};
+  if(!tl) tl={id:uid(),t,mode:'freeze',hold:3,fade:0.3,items:[],rev:0,clipId:''};
   else if(existing&&Math.abs(video.currentTime-tl.t)>0.001) video.currentTime=tl.t;
   teleEd={id:tl.id,tele:tl,tool:'select',sel:null,color:teleColor,sw:teleSw,zone:null};
   const st=layout.panels.draw;
@@ -6371,6 +6379,7 @@ function renderDrawPanel(){
   const showCustom=ed.customOpen||!preset;
   $('#dwHold').value=showCustom?'custom':String(tl.hold);
   $('#dwCustomBox').hidden=!showCustom;
+  { const fs_=$('#dwFade'); const fv=String(tl.fade||0); if(![...fs_.options].some(o=>o.value===fv)){ const o=document.createElement('option'); o.value=fv; o.textContent=fv.replace('.',',')+' s'; fs_.appendChild(o);} fs_.value=fv; }
   $('#dwTools').querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===ed.tool));
   const col=(s?s.color:ed.color).toLowerCase();
   $('#dwColors').querySelectorAll('[data-color]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.color.toLowerCase()===col));
@@ -6402,6 +6411,7 @@ $('#dwHold').onchange=e=>{
   if(e.target.value==='custom'){ed.customOpen=true;renderDrawPanel();$('#dwCustom').focus();return;}
   ed.customOpen=false; ed.tele.hold=+e.target.value; if(ed.tele.items.length) ensureTele(ed.tele); e.target.blur(); commitTele();
 };
+$('#dwFade').onchange=e=>{ const ed=teleEd; if(!ed) return; ed.tele.fade=clamp(parseFloat(e.target.value)||0,0,3); if(ed.tele.items.length) ensureTele(ed.tele); e.target.blur(); commitTele(); };
 $('#dwCustom').onchange=e=>{
   const ed=teleEd; if(!ed) return;
   ed.tele.hold=clamp(parseFloat(e.target.value)||3,0.5,60); if(ed.tele.items.length) ensureTele(ed.tele); commitTele();
