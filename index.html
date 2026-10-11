@@ -845,7 +845,7 @@ body.ipad .bb-cats .bb-sh{flex-wrap:wrap;gap:8px}
 body.ipad #pDraw{display:none!important}
 body.ipad.fz #pTags,body.ipad.fz .transport,body.ipad.fz #ipScrub{display:none!important}
 .ipfz{background:#101010;border-top:2px solid var(--accent);padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px}
-.ipfz[hidden]{display:none}
+body.ipad .ipfz[hidden],.ipfz[hidden]{display:none!important}
 .ipfz .fz-top{display:flex;align-items:center;gap:10px}.ipfz .fz-top b{font-size:17px}.ipfz .fz-top span{flex:1;opacity:.6;font-size:13px}
 .ipfz .ib{min-height:48px;padding:0 16px;border-radius:12px;font-size:15px}.ipfz .ib.big{background:var(--accent);color:#111;font-weight:700}
 .ipfz .fz-row{display:flex;align-items:center;gap:12px}
@@ -855,6 +855,27 @@ body.ipad.fz #pTags,body.ipad.fz .transport,body.ipad.fz #ipScrub{display:none!i
 .ipfz .fz-cols{display:flex;gap:8px}.ipfz .fz-cols button{width:40px;height:40px;border-radius:50%;border:3px solid #333}
 .ipfz .fz-cols button[aria-pressed=true]{border-color:#fff}
 .ipfz .fz-hold{display:flex;align-items:center;gap:8px;font-size:14px;flex:1}.ipfz .fz-hold input[type=range]{flex:1;min-height:36px}
+
+#ipEx{position:fixed;inset:0;z-index:8000;background:#0b0b0b;color:var(--text);display:flex;flex-direction:column}
+#ipEx .ib{min-height:48px;min-width:48px;padding:0 14px;border-radius:12px;border:1px solid #333;background:#1c1c1c;color:#fff;font-size:15px}
+#ipEx .ib.big{background:var(--accent);color:#111;font-weight:700;min-width:240px;min-height:56px;font-size:17px}
+#ipEx .ib:disabled{opacity:.4}
+.ex-h{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #222}.ex-h b{font-size:18px;flex:1}.ex-h span{opacity:.6}
+.ex-b{flex:1;overflow:auto;padding:6px 18px 20px}
+.ex-b h4{margin:18px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;opacity:.7;display:flex;justify-content:space-between}
+.ex-all a{color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0}
+.ex-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ex-modes button{text-align:left;padding:14px;border-radius:12px;border:1px solid #333;background:#161616;color:#fff;display:flex;flex-direction:column;gap:3px}
+.ex-modes button[aria-pressed=true]{border-color:var(--accent);background:#2a1a08}.ex-modes small{opacity:.6}
+.ex-tg{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-top:12px}
+.ex-tg label{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;font-size:15px}
+.ex-tg input[type=checkbox]{width:44px;height:26px}.ex-tg select{min-height:42px;border-radius:10px;font-size:16px;background:#1c1c1c;color:#fff;border:1px solid #333;padding:0 10px}
+.ex-chips{display:flex;gap:8px;flex-wrap:wrap}.ex-chips button{min-height:42px;padding:0 16px;border-radius:21px;border:1px solid #333;background:#161616;color:#fff;font-size:14px}
+.ex-chips button[aria-pressed=true]{background:var(--accent);color:#111;border-color:var(--accent)}
+.ex-row{display:flex;align-items:center;gap:12px;min-height:64px;padding:6px 12px;border-radius:12px;background:#151515;margin-bottom:8px}
+.ex-row>div{flex:1}.ex-row small{display:block;opacity:.6;font-size:12px}.ex-row i{width:6px;align-self:stretch;border-radius:3px}
+.ex-ck{width:28px;height:28px;border-radius:50%;border:2px solid #555;flex:none}.ex-ck[aria-pressed=true]{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 6px #151515}
+.ex-f{padding:10px 18px 16px;border-top:1px solid #222;display:flex;justify-content:center}
 </style>
 </head>
 <body>
@@ -5308,6 +5329,7 @@ function openExport(list,defName){
   if(teleEd){toast('Cierra antes el editor de dibujos.');return;}
   list=list.filter(Boolean); if(!list.length){toast('No hay clips para exportar.');return;}
   if(!expMime()){toast('Este navegador no puede grabar vídeo. Prueba con Safari o Chrome actualizados.');return;}
+  if(document.body.classList.contains('ipad')&&!DLGDOC){ openIpExport(list,defName); return; }
   const dur=expDur(list,true), mm=expMime();
   const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Guardar como vídeo</h3>'+
     '<p style="margin:0 0 10px;color:var(--muted)">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'. Se procesa lo más rápido que permita el dispositivo; si no puede, se graba en tiempo real.</p>'+
@@ -5854,6 +5876,46 @@ function ipMarks(){
 }
 
 
+
+/* ===== iPad: pantalla de exportación ===== */
+function openIpExport(list,defName){
+  const old=document.getElementById('ipEx'); if(old) old.remove();
+  const st={mode:'each',q:'720',draw:true,title:true,cat:'',sel:new Set(list.map(e=>e.id))};
+  const cats=[]; list.forEach(e=>{const l=info(e).label; if(cats.indexOf(l)<0) cats.push(l);});
+  const el=document.createElement('div'); el.id='ipEx'; document.body.appendChild(el);
+  const draw=()=>{
+    const vis=list.filter(e=>!st.cat||info(e).label===st.cat);
+    const chosen=list.filter(e=>st.sel.has(e.id));
+    el.innerHTML='<div class="ex-h"><button class="ib" id="exX">✕</button><b>Exportar vídeo</b><span>'+chosen.length+'/'+list.length+' clips</span></div>'+
+    '<div class="ex-b"><h4>Modo</h4><div class="ex-modes"><button data-m="each" aria-pressed="'+(st.mode==='each')+'"><b>Clips sueltos</b><small>Un archivo por clip</small></button><button data-m="one" aria-pressed="'+(st.mode==='one')+'"><b>Secuencia</b><small>Todos en un solo vídeo</small></button></div>'+
+    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Calidad</span><select id="exQ2"><option value="540">540p</option><option value="720">720p</option><option value="1080">1080p</option></select></label></div>'+
+    '<h4>Filtrar por categoría</h4><div class="ex-chips"><button data-c="" aria-pressed="'+(st.cat==='')+'">Todas</button>'+cats.map(c=>'<button data-c="'+esc(c)+'" aria-pressed="'+(st.cat===c)+'">'+esc(c)+'</button>').join('')+'</div>'+
+    '<h4>Elegir clips <span class="ex-all"><a id="exAll">Todos</a> · <a id="exNone">Ninguno</a></span></h4>'+
+    vis.map(e=>'<div class="ex-row" data-id="'+e.id+'"><span class="ex-ck" aria-pressed="'+st.sel.has(e.id)+'"></span><i style="background:'+info(e).color+'"></i><div><b>'+esc(evName(e))+'</b><small>'+fmt(e.start)+' – '+fmt(e.end)+'</small></div><button class="ib" data-v="'+e.id+'" aria-label="Ver">▶</button></div>').join('')+'</div>'+
+    '<div class="ex-f"><button class="ib big" id="exGo2"'+(chosen.length?'':' disabled')+'>⤓ Exportar '+chosen.length+'</button></div>';
+    el.querySelector('#exQ2').value=st.q;
+  };
+  draw();
+  el.addEventListener('click',e=>{
+    const t=e.target;
+    if(t.closest('#exX')){ el.remove(); return; }
+    let b;
+    if((b=t.closest('[data-m]'))){ st.mode=b.dataset.m; draw(); return; }
+    if((b=t.closest('[data-c]'))){ st.cat=b.dataset.c; draw(); return; }
+    if(t.closest('#exAll')){ list.filter(x=>!st.cat||info(x).label===st.cat).forEach(x=>st.sel.add(x.id)); draw(); return; }
+    if(t.closest('#exNone')){ list.filter(x=>!st.cat||info(x).label===st.cat).forEach(x=>st.sel.delete(x.id)); draw(); return; }
+    if((b=t.closest('[data-v]'))){ el.remove(); playClip(b.dataset.v); return; }
+    if((b=t.closest('.ex-row'))){ const id=b.dataset.id; st.sel.has(id)?st.sel.delete(id):st.sel.add(id); draw(); return; }
+    if(t.closest('#exGo2')){
+      const chosen=list.filter(x=>st.sel.has(x.id)); if(!chosen.length) return;
+      const q=+el.querySelector('#exQ2').value, o={w:Math.round(q*16/9),bps:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
+      el.remove();
+      try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(er){}
+      runExport(chosen,defName,chosen.length>1?st.mode:'one',o);
+    }
+  });
+  el.addEventListener('change',e=>{ if(e.target.id==='exQ2') st.q=e.target.value; if(e.target.id==='exD') st.draw=e.target.checked; if(e.target.id==='exT') st.title=e.target.checked; });
+}
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
