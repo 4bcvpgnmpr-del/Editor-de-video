@@ -668,6 +668,31 @@ input,select,textarea{border-radius:3px}
 .pf-f{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
 body.tbl-open .app{padding-bottom:min(48vh,480px)}
 @media (max-width:700px){.tb-filters{display:none}}
+
+/* ---- cabecera limpia ---- */
+.top{flex-wrap:nowrap;gap:14px;padding:6px 12px;min-height:50px}
+.brand{min-width:0;flex:0 1 auto}
+.brand h1{font-size:15px;letter-spacing:.06em;white-space:nowrap}
+.brand small{max-width:200px;margin-top:2px;font-size:11.5px}
+.score{margin-left:0;gap:14px}
+.score .n{font-size:24px}
+.top-actions{margin-left:auto;flex-wrap:nowrap;align-items:center;gap:6px;flex:none}
+.top-actions .btn{padding:6px 11px;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.top-actions .btn.ico{padding:6px 10px;font-size:17px;line-height:1}
+.top-actions .tsep{width:1px;height:22px;background:var(--line);margin:0 2px}
+@media (max-width:1180px){.top-actions .btn:not(.primary) .tx{display:none}.top-actions .btn{padding:6px 10px;font-size:16px}.brand small{max-width:120px}}
+@media (max-width:760px){.top{flex-wrap:wrap}.top-actions{margin-left:0;width:100%;justify-content:flex-end}}
+.foot{display:flex;flex-direction:column;gap:8px;padding:8px 10px}
+.foot .fg{display:flex;flex-direction:column;gap:4px}
+.foot .fl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.foot .fb{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px}
+.foot .fb .btn{padding:6px 8px;font-size:12.5px;white-space:nowrap}
+.foot{justify-content:flex-start;align-content:flex-start;flex-wrap:nowrap}
+.foot .fg{flex:none}
+.side-h{flex-wrap:wrap;gap:6px;row-gap:6px}
+.side-h .cnt{flex:none;white-space:nowrap}
+.side-h select{flex:1 1 120px;min-width:0}
+.side-h .btn{flex:none;padding:6px 10px;font-size:12.5px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -681,13 +706,15 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
     <div class="hdr-per" title="Equipo de las acciones que etiquetas (tecla 0)"><span>Equipo</span><div class="seg" role="group" aria-label="Equipo de la acción"><button id="teamL" style="--c:var(--local)" aria-pressed="true"></button><button id="teamR" style="--c:var(--rival)" aria-pressed="false"></button></div></div>
     <label class="hdr-per" title="Cuarto en el que se etiquetan las acciones (atajo: Mayús+1 a 5)"><span>Cuarto</span><select id="periodSel" aria-label="Cuarto actual"></select></label>
     <div class="top-actions">
-      <button class="btn primary" id="bOpen">Abrir vídeo</button>
-      <button class="btn" id="bLib" title="Vídeos guardados en este dispositivo">📚 Mis vídeos</button>
-      <button class="btn" id="bUndo" title="Deshacer (Ctrl/Cmd+Z)" disabled>Deshacer</button>
-      <button class="btn" id="bRedo" title="Rehacer (Ctrl/Cmd+Mayús+Z)" disabled>Rehacer</button>
-      <button class="btn" id="bCfg" title="Editar botonera"><span class="lg">Editar botonera</span><span class="sh">Botonera</span></button>
-      <button class="btn" id="bProd" aria-pressed="false" title="Mesa de producción: playlists y dibujos"><span class="lg">Mesa de producción</span><span class="sh">Producción</span></button>
-      <button class="btn" id="bLayout" title="Paneles y diseño"><span class="lg">Paneles y diseño</span><span class="sh">Diseño</span></button>
+      <button class="btn primary" id="bOpen" title="Abrir vídeo"><span class="ic">📂</span><span class="tx">Abrir vídeo</span></button>
+      <button class="btn" id="bLib" title="Vídeos guardados en este dispositivo"><span class="ic">📚</span><span class="tx">Mis vídeos</span></button>
+      <span class="tsep"></span>
+      <button class="btn ico" id="bUndo" title="Deshacer (Ctrl/Cmd+Z)" aria-label="Deshacer" disabled>↶</button>
+      <button class="btn ico" id="bRedo" title="Rehacer (Ctrl/Cmd+Mayús+Z)" aria-label="Rehacer" disabled>↷</button>
+      <span class="tsep"></span>
+      <button class="btn" id="bCfg" title="Editar botonera"><span class="ic">⚙</span><span class="tx">Botonera</span></button>
+      <button class="btn" id="bProd" aria-pressed="false" title="Mesa de producción: playlists y dibujos"><span class="ic">🎬</span><span class="tx">Producción</span></button>
+      <button class="btn" id="bLayout" title="Paneles y diseño"><span class="ic">▦</span><span class="tx">Diseño</span></button>
     </div>
   </header>
 
@@ -844,14 +871,9 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
             <ul class="list" id="list" aria-label="Lista de clips"></ul>
           </div>
           <div class="foot">
-            <button class="btn" id="bPerf">👤 Rendimiento</button>
-            <button class="btn" id="bInd">🎞 Vídeo individual</button>
-            <button class="btn" id="bCol">🎞 Vídeo colectivo</button>
-            <button class="btn" id="bTable">📋 Tabla</button>
-            <button class="btn" id="bStats">📊 Estadísticas</button>
-            <button class="btn" id="bCsv">Exportar CSV</button>
-            <button class="btn" id="bJson">Guardar proyecto</button>
-            <button class="btn" id="bLoad">Cargar proyecto</button>
+            <div class="fg"><span class="fl">Análisis</span><div class="fb"><button class="btn" id="bPerf">👤 Rendimiento</button><button class="btn" id="bTable">📋 Tabla</button><button class="btn" id="bStats">📊 Estadísticas</button></div></div>
+            <div class="fg"><span class="fl">Vídeos</span><div class="fb"><button class="btn" id="bInd">🎞 Individual</button><button class="btn" id="bCol">🎞 Colectivo</button></div></div>
+            <div class="fg"><span class="fl">Proyecto</span><div class="fb"><button class="btn" id="bCsv">CSV</button><button class="btn" id="bJson">💾 Guardar</button><button class="btn" id="bLoad">📂 Cargar</button></div></div>
           </div>
         </div>
         <i class="rz rz-e" data-rz="e"></i><i class="rz rz-s" data-rz="s"></i><i class="rz rz-se" data-rz="se"></i>
