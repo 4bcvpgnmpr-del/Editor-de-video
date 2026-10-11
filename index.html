@@ -989,6 +989,15 @@ body.ipad #pClip .p-body.ce>.ce-times{grid-row:1;grid-area:auto}
 body.ipad #pClip .ce-side{grid-area:ri;overflow:auto;display:flex;flex-direction:column;gap:10px}
 body.ipad.port #pClip .p-body.ce{display:flex;flex-direction:column;overflow:auto}
 body.ipad.port #pClip .ce-vwrap{height:auto;aspect-ratio:16/9;max-height:55vh}
+
+#pipBar{display:none}
+body.ipad.pip #vwrap{position:fixed!important;right:14px;bottom:14px;top:auto!important;left:auto!important;width:min(48vw,560px)!important;height:auto!important;aspect-ratio:16/9;z-index:95;border:2px solid var(--accent);border-radius:12px;overflow:hidden;box-shadow:0 14px 44px rgba(0,0,0,.7);background:#000}
+body.ipad.pip #pipBar{display:flex;position:absolute;left:0;right:0;top:0;z-index:5;align-items:center;gap:6px;padding:4px 6px;background:linear-gradient(#000c,#0000);color:#fff;font-size:13px}
+body.ipad.pip #pipT{display:none}
+body.ipad.pip #pipBar{justify-content:flex-end;pointer-events:none}body.ipad.pip #pipBar button{pointer-events:auto}
+body.ipad.pip #badge{top:52px!important}
+#pipBar button{min-width:40px;min-height:40px;border-radius:10px;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:18px}
+body.ipad.pip #ipSeg{display:none}
 </style>
 </head>
 <body>
@@ -6184,6 +6193,28 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 })();
 
 document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle('libMore');
+
+/* ===== iPad: mini-reproductor flotante al reproducir desde la mesa de producción ===== */
+(function(){
+  const vw=document.getElementById('vwrap'); if(!vw) return;
+  const bar=document.createElement('div'); bar.id='pipBar';
+  bar.innerHTML='<span id="pipT">Reproduciendo</span><button id="pipBig" aria-label="Agrandar">⤢</button><button id="pipX" aria-label="Ocultar">✕</button>';
+  vw.appendChild(bar);
+  let dismissed=false, was=false;
+  const prodOpen=()=>{ const st=layout&&layout.panels&&layout.panels.prod; return !!(st&&st.vis&&!st.min); };
+  const set=on=>{ document.body.classList.toggle('pip',on); if(on){ try{layoutTele&&layoutTele();}catch(e){} } };
+  setInterval(()=>{
+    const ip=document.body.classList.contains('ipad');
+    const playing=!!clip&&!video.paused;
+    if(playing&&!was) dismissed=false; was=playing;
+    const on=ip&&prodOpen()&&(!!clip)&&!dismissed;
+    if(on!==document.body.classList.contains('pip')) set(on);
+    if(on){ const t=document.getElementById('pipT'); const e=clipEv&&clipEv(); const txt=(clip.title?clip.title+' · ':'')+(e?evName(e):'')+' · '+(clip.idx+1)+'/'+clip.queue.length; if(t.textContent!==txt) t.textContent=txt; }
+  },300);
+  document.getElementById('pipX').onclick=()=>{ dismissed=true; set(false); };
+  document.getElementById('pipBig').onclick=()=>{ const st=layout.panels.prod; st.vis=false; applyLayout(); saveLayout(); set(false); };
+  video.addEventListener('timeupdate',()=>{ if(document.body.classList.contains('pip')) try{layoutTele&&layoutTele();}catch(e){} });
+})();
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
