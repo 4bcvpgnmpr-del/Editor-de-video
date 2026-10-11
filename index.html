@@ -708,6 +708,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 /* ================= MODO iPad ================= */
 .ip-only{display:none!important}
 body.ipad .ip-only{display:inline-flex!important}
+body.ipad select#ipSetSel{display:inline-block!important}
 body.ipad{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 body.ipad button,body.ipad .btn,body.ipad .ib,body.ipad select,body.ipad label{touch-action:manipulation;-webkit-user-select:none;user-select:none}
 body.ipad input,body.ipad select,body.ipad textarea{font-size:16px}
@@ -798,6 +799,48 @@ body.ipad.port .dock.db{border-top:1px solid #222}
 .brand{min-width:0;overflow:hidden}
 .brand h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ip-x{margin-left:auto;background:var(--accent);color:#111;border:0;border-radius:10px;font:700 15px var(--f-body);padding:0 16px;min-height:38px;align-items:center}
+
+select#ipSetSel{max-width:150px;min-height:40px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-weight:700;padding:0 8px;margin-left:8px}
+#ipBe{position:fixed;inset:0;z-index:1000;background:#0a0a0a;color:var(--text);display:flex;flex-direction:column;font-family:var(--f-body)}
+#ipBe .be-h{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #222;background:#101010;flex:none}
+#ipBe .be-h b{font:700 20px var(--f-head);color:var(--accent);margin:0 8px;text-transform:uppercase;letter-spacing:.06em}
+#ipBe .be-h .sp{flex:1}
+#ipBe button{font:600 15px var(--f-body);color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;min-height:44px;min-width:44px;padding:0 14px;cursor:pointer}
+#ipBe button:disabled{opacity:.4}
+#ipBe select,#ipBe input{font:16px var(--f-body);color:var(--text);background:#181818;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:0 12px;box-sizing:border-box}
+#ipBe .be-done,#ipBe .be-save{background:var(--accent);color:#111;border-color:var(--accent);font-weight:800}
+#ipBe .be-b{flex:1;min-height:0;display:grid;grid-template-columns:min(340px,38%) 1fr}
+#ipBe .be-l{overflow:auto;border-right:1px solid #222;padding:8px;display:flex;flex-direction:column;gap:6px}
+#ipBe .be-row{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:58px;border:1px solid #222;border-radius:12px;background:#141414;cursor:pointer}
+#ipBe .be-row.sel{border-color:var(--accent);background:#21160a}
+#ipBe .be-row>i{width:22px;height:22px;border-radius:50%;flex:none}
+#ipBe .be-t{flex:1;min-width:0;display:flex;flex-direction:column}
+#ipBe .be-t b{font:700 17px var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ipBe .be-t small{color:var(--muted);font-size:12.5px}
+#ipBe .be-g{font-size:26px;color:var(--muted);padding:6px 8px;touch-action:none;cursor:grab}
+#ipBe .be-new{margin-top:6px;border-style:dashed;color:var(--accent)}
+#ipBe .be-f{overflow:auto;padding:18px 24px;display:flex;flex-direction:column;gap:10px}
+#ipBe .be-f label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+#ipBe .be-s{font-size:13px;color:var(--muted);margin-top:6px}
+#ipBe .be-cols{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#ipBe .be-cols button{width:46px;height:46px;border-radius:50%;padding:0;border:3px solid #333}
+#ipBe .be-cols button.on{border-color:#fff}
+#ipBe .be-cols input[type=color]{width:56px;padding:2px}
+#ipBe .be-sl{display:flex;align-items:center;gap:14px}
+#ipBe .be-sl input[type=range]{flex:1;padding:0;accent-color:var(--accent);height:44px}
+#ipBe .be-sl input[type=number]{width:84px;text-align:center}
+#ipBe .be-two{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+#ipBe .be-act{display:flex;gap:12px;margin-top:10px}
+#ipBe .be-save{flex:1;min-height:52px;font-size:17px}
+#ipBe .be-del{color:#ff6b6b}
+#ipBe .be-nav{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:auto;padding-top:14px}
+@media (max-width:900px){#ipBe .be-b{grid-template-columns:1fr 1fr}#ipBe .be-two{grid-template-columns:1fr}}
+
+body.ipad .bb-cats .bb-sh>b{display:none}
+body.ipad .bb-cats .bb-sh select#ipSetSel{margin-left:0;max-width:none;flex:1;font-size:17px}
+body.ipad .bb-size[aria-label="Tamaño de los botones"],body.ipad #bbEdit{display:none!important}
+body.ipad #pTags .p-head [data-pa="edit"]{min-width:44px;min-height:40px}
+body.ipad .bb-cats .bb-sh{flex-wrap:wrap;gap:8px}
 </style>
 </head>
 <body>
@@ -926,7 +969,7 @@ body.ipad.port .dock.db{border-top:1px solid #222}
         </div>
         <div class="p-body bbx"><div class="bb-wrap">
           <div class="bb-cats">
-            <div class="bb-sh"><b>Categorías</b><span class="sp"></span>
+            <div class="bb-sh"><b>Categorías</b><select id="ipSetSel" class="ip-only" aria-label="Conjunto de botones"></select><span class="sp"></span>
               <span class="bb-size" id="phSeg" role="group" aria-label="Fase de juego"><button class="bb-ib" data-ph="A" aria-pressed="false" title="Las jugadas nuevas se marcan como ataque">⚔ Ataque</button><button class="bb-ib" data-ph="D" aria-pressed="false" title="Las jugadas nuevas se marcan como defensa">🛡 Defensa</button></span>
               <span class="bb-size" role="group" aria-label="Tamaño de los botones"><button class="bb-ib" id="bbSmaller" title="Botones más pequeños" aria-label="Botones más pequeños">A−</button><button class="bb-ib" id="bbBigger" title="Botones más grandes" aria-label="Botones más grandes">A+</button></span>
               <button class="bb-ib" id="bbEdit" aria-pressed="false" title="Al activarlo, pulsa cualquier categoría, descriptor o jugadora para cambiarle el nombre, el color, el tamaño o borrarlo">✎ Editar</button>
@@ -3516,7 +3559,9 @@ function inkOf(c){
   return (0.299*r+0.587*g+0.114*b)/255>0.62?'#14202B':'#fff';
 }
 function renderCodes(){
-  const items=cfg.buttons.filter(b=>!b.hidden);
+  const ipSelEl=document.getElementById('ipSetSel');
+  if(ipSelEl&&typeof IPS!=='undefined'){ ipSelEl.innerHTML='<option value="*">Todos</option>'+cfg.pages.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join(''); if(IPS.set!=='*'&&!cfg.pages.includes(IPS.set)) IPS.set='*'; ipSelEl.value=IPS.set; }
+  const items=cfg.buttons.filter(b=>!b.hidden&&(!document.body.classList.contains('ipad')||typeof IPS==='undefined'||!IPS||IPS.set==='*'||(b.page||cfg.pages[0])===IPS.set));
   const btnHtml=b=>'<button class="code '+(b.size||'m')+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
   codes.innerHTML=items.length?items.map(btnHtml).join(''):
     '<p class="hint" style="grid-column:1/-1">No hay categorías. Crea una con «+ Categoría».</p>';
@@ -5787,6 +5832,86 @@ function ipMarks(){
     const ev=normEvent({id:uid(),btnId:MANUAL,label:'Clip manual',color:'#9AA7FF',pts:0,t,start,end,team,player,period,video:videoName,note:'',phase:PH.cur});
     events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); openClipEditor(ev.id);
   };
+}
+
+/* ===== iPad: editor de botonera (lista + ficha, como DrawSports) ===== */
+var IPS={set:lsGet('bbtag.ipset')||'*',sel:null};
+const ipSetOf=b=>b.page||cfg.pages[0];
+function ipSetList(){ return cfg.pages.slice(); }
+function closeIpBe(){ const o=document.getElementById('ipBe'); if(o) o.remove(); renderCodes(); renderDescStrip&&renderDescStrip(); }
+function openIpBe(newBtn){
+  if(document.getElementById('ipBe')) return;
+  const o=document.createElement('div'); o.id='ipBe'; document.body.appendChild(o);
+  const vis=()=>cfg.buttons.filter(b=>IPS.set==='*'||ipSetOf(b)===IPS.set);
+  const sub=b=>'−'+(b.pre||0)+' s / +'+(b.post||0)+' s'+(b.pts?' · '+b.pts+' pt'+(b.pts>1?'s':''):'');
+  const touch=()=>{ saveCfg(); };
+  function add(){
+    const b={id:uid(),label:'',group:'Otros',sub:'',page:IPS.set==='*'?cfg.pages[0]:IPS.set,key:'',pre:5,post:3,pts:0,color:PALETTE[cfg.buttons.length%PALETTE.length],icon:'',size:'m',hidden:false};
+    cfg.buttons.push(b); if(!cfg.cats.includes('Otros')) cfg.cats.push('Otros'); IPS.sel=b.id; touch(); render(true);
+  }
+  function render(focusName){
+    const list=vis(); if(!list.some(b=>b.id===IPS.sel)) IPS.sel=list.length?list[0].id:null;
+    const b=cfg.buttons.find(x=>x.id===IPS.sel), i=list.findIndex(x=>x.id===IPS.sel);
+    const sets=ipSetList();
+    o.innerHTML='<div class="be-h"><button class="be-x" id="beX" aria-label="Cerrar">✕</button><b>Editar botonera</b>'+
+      '<select id="beSet" aria-label="Conjunto"><option value="*"'+(IPS.set==='*'?' selected':'')+'>Todos los botones</option>'+sets.map(s=>'<option value="'+esc(s)+'"'+(IPS.set===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select>'+
+      '<button class="be-m" id="beSetNew">＋ Conjunto</button><button class="be-m" id="beSetRen"'+(IPS.set==='*'?' disabled':'')+'>✎</button><button class="be-m" id="beSetDel"'+(IPS.set==='*'||sets.length<2?' disabled':'')+'>🗑</button>'+
+      '<span class="sp"></span><button class="be-done" id="beDone">Hecho</button></div>'+
+      '<div class="be-b"><div class="be-l" id="beList">'+list.map(x=>'<div class="be-row'+(x.id===IPS.sel?' sel':'')+'" data-id="'+esc(x.id)+'"><i style="background:'+safeColor(x.color)+'"></i><span class="be-t"><b>'+esc(x.label||'Sin nombre')+'</b><small>'+esc(sub(x))+'</small></span><span class="be-g" data-grip title="Arrastra para ordenar">≡</span></div>').join('')+
+        '<button class="be-new" id="beNew">＋ Nueva categoría</button></div>'+
+      '<div class="be-f">'+(b?
+        '<label>Nombre<input id="beName" maxlength="30" value="'+esc(b.label)+'" placeholder="p. ej. Poste bajo"></label>'+
+        '<div class="be-s">Color</div><div class="be-cols">'+PALETTE.concat(['#FFFFFF','#111111']).map(c=>'<button data-c="'+c+'" style="background:'+c+'" class="'+(safeColor(b.color).toLowerCase().slice(0,7)===c.toLowerCase()?'on':'')+'" aria-label="Color '+c+'"></button>').join('')+'<input type="color" id="beColor" value="'+safeColor(b.color).slice(0,7)+'" aria-label="Otro color"></div>'+
+        '<div class="be-s">Segundos antes del momento</div><div class="be-sl"><input type="range" id="bePre" min="0" max="30" value="'+(b.pre||0)+'"><input type="number" id="bePreN" min="0" max="120" value="'+(b.pre||0)+'"><span>s</span></div>'+
+        '<div class="be-s">Segundos después</div><div class="be-sl"><input type="range" id="bePost" min="0" max="30" value="'+(b.post||0)+'"><input type="number" id="bePostN" min="0" max="120" value="'+(b.post||0)+'"><span>s</span></div>'+
+        '<div class="be-two"><label>Puntos que suma<select id="bePts">'+[0,1,2,3].map(n=>'<option value="'+n+'"'+((b.pts||0)===n?' selected':'')+'>'+n+'</option>').join('')+'</select></label>'+
+        '<label>Conjunto<select id="beSetOf">'+sets.map(s=>'<option value="'+esc(s)+'"'+(ipSetOf(b)===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label>'+
+        '<label>Tecla (teclado)<input id="beKey" maxlength="1" value="'+esc(b.key||'')+'"></label></div>'+
+        '<div class="be-act"><button class="be-save" id="beSave">Guardar</button><button class="be-del" id="beDel">Borrar categoría</button></div>'+
+        '<div class="be-nav"><button id="bePrev"'+(i<=0?' disabled':'')+'>‹ Anterior</button><button id="beNext"'+(i>=list.length-1?' disabled':'')+'>Siguiente ›</button></div>'
+        :'<p class="hint" style="padding:24px">No hay categorías en este conjunto. Pulsa «＋ Nueva categoría».</p>')+'</div></div>';
+    const g=s=>o.querySelector(s);
+    g('#beX').onclick=g('#beDone').onclick=closeIpBe;
+    g('#beSet').onchange=e=>{IPS.set=e.target.value;lsSet('bbtag.ipset',IPS.set);IPS.sel=null;render();};
+    g('#beSetNew').onclick=()=>{ const n=(prompt('Nombre del conjunto (p. ej. Ataque, Defensa)')||'').trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
+    g('#beSetRen').onclick=()=>{ const old=IPS.set, n=(prompt('Nuevo nombre del conjunto',old)||'').trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
+    g('#beSetDel').onclick=()=>{ const old=IPS.set; if(!confirm('¿Borrar el conjunto «'+old+'»? Sus botones pasan al primer conjunto.')) return; cfg.pages=cfg.pages.filter(x=>x!==old); cfg.buttons.forEach(x=>{if(x.page===old) x.page=cfg.pages[0];}); IPS.set='*'; lsSet('bbtag.ipset','*'); touch(); render(); };
+    g('#beNew').onclick=add;
+    o.querySelectorAll('.be-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('[data-grip]')) return; IPS.sel=r.dataset.id; render(); }));
+    /* arrastrar para ordenar */
+    o.querySelectorAll('[data-grip]').forEach(gr=>gr.addEventListener('pointerdown',e=>{
+      e.preventDefault(); const id=gr.closest('.be-row').dataset.id; gr.setPointerCapture&&gr.setPointerCapture(e.pointerId);
+      const mv=m=>{ const el=document.elementFromPoint(m.clientX,m.clientY), row=el&&el.closest('.be-row'); if(!row||row.dataset.id===id) return;
+        const a=cfg.buttons.findIndex(x=>x.id===id), t=cfg.buttons.findIndex(x=>x.id===row.dataset.id); if(a<0||t<0) return;
+        const [it]=cfg.buttons.splice(a,1); cfg.buttons.splice(t,0,it); const sc=o.querySelector('#beList').scrollTop; render(); o.querySelector('#beList').scrollTop=sc; };
+      const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); touch(); renderCodes(); };
+      window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+    }));
+    if(!b) return;
+    const live=()=>{ touch(); renderCodes();
+      const row=o.querySelector('.be-row.sel'); if(row){ row.querySelector('b').textContent=b.label||'Sin nombre'; row.querySelector('small').textContent=sub(b); row.querySelector('i').style.background=safeColor(b.color); } };
+    g('#beName').oninput=e=>{ b.label=e.target.value.trim().slice(0,30)||''; events.forEach(ev=>{if(ev.btnId===b.id&&b.label) ev.label=b.label;}); live(); };
+    o.querySelectorAll('.be-cols [data-c]').forEach(c=>c.onclick=()=>{ b.color=c.dataset.c; events.forEach(ev=>{if(ev.btnId===b.id) ev.color=b.color;}); render(); live(); });
+    g('#beColor').oninput=e=>{ b.color=e.target.value; events.forEach(ev=>{if(ev.btnId===b.id) ev.color=b.color;}); live(); };
+    g('#beColor').onchange=()=>render();
+    const bind=(k,sl,nu)=>{ const S=g(sl), N=g(nu); S.oninput=()=>{b[k]=+S.value; N.value=S.value; live();}; N.oninput=()=>{const v=Math.max(0,Math.min(120,+N.value||0)); b[k]=v; if(v<=30) S.value=v; live();}; };
+    bind('pre','#bePre','#bePreN'); bind('post','#bePost','#bePostN');
+    g('#bePts').onchange=e=>{ b.pts=+e.target.value; live(); renderScore(); };
+    g('#beSetOf').onchange=e=>{ b.page=e.target.value; touch(); renderCodes(); if(IPS.set!=='*'&&b.page!==IPS.set) IPS.sel=null; render(); };
+    g('#beKey').oninput=e=>{ b.key=e.target.value.toLowerCase().slice(0,1); live(); };
+    g('#beSave').onclick=()=>{ if(!b.label){ toast('Escribe un nombre.'); g('#beName').focus(); return; } touch(); renderCodes(); toast('Guardado.'); };
+    g('#beDel').onclick=()=>{ if(!confirm('¿Borrar «'+(b.label||'Sin nombre')+'»?')) return; cfg.buttons=cfg.buttons.filter(x=>x.id!==b.id); IPS.sel=null; touch(); renderCodes(); render(); };
+    g('#bePrev').onclick=()=>{ if(i>0){IPS.sel=list[i-1].id;render();} };
+    g('#beNext').onclick=()=>{ if(i<list.length-1){IPS.sel=list[i+1].id;render();} };
+    if(focusName){ const nm=g('#beName'); if(nm){ nm.focus(); } }
+  }
+  if(newBtn) add(); else render();
+}
+{
+  const be=document.getElementById('bbEdit'); be.addEventListener('click',e=>{ if(!document.body.classList.contains('ipad')) return; e.stopImmediatePropagation(); openIpBe(); },true);
+  const ad=document.getElementById('bbAddCat'); ad.addEventListener('click',e=>{ if(!document.body.classList.contains('ipad')) return; e.stopImmediatePropagation(); openIpBe(true); },true);
+  document.querySelectorAll('#pTags [data-pa="edit"]').forEach(x=>x.addEventListener('click',e=>{ if(!document.body.classList.contains('ipad')) return; e.stopImmediatePropagation(); e.preventDefault(); openIpBe(); },true));
+  const ss=document.getElementById('ipSetSel'); ss.onchange=()=>{ IPS.set=ss.value; lsSet('bbtag.ipset',IPS.set); renderCodes(); };
 }
 
 
