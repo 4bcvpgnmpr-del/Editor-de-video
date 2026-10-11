@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scouting">
+<meta name="theme-color" content="#0b0b0b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>Scouting de baloncesto</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -948,6 +956,9 @@ body.ipad .transport .time{order:0;min-width:0;font-size:13px;opacity:.8}
 body.ipad #ipLow-hold{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #2a2a2a}
 body.ipad #ipLow-hold .hdr-per{display:flex!important;align-items:center;gap:8px;color:#fff}
 body.ipad .transport #bUndo,body.ipad .transport #bRedo{min-width:50px;min-height:54px;border-radius:14px;font-size:20px}
+
+html,body{overscroll-behavior:none}
+@media all and (display-mode:fullscreen),(display-mode:standalone){ body.ipad{-webkit-user-select:none;user-select:none} body.ipad input,body.ipad textarea{-webkit-user-select:text;user-select:text} }
 </style>
 </head>
 <body>
@@ -7715,6 +7726,9 @@ histInit();
 
 /* API mínima para pruebas automáticas */
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
+
+/* app instalable: service worker + bloqueo de zoom/rebote en iPad */
+try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
 })();
 </script>
 </body>
