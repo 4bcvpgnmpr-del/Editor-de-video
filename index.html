@@ -528,23 +528,23 @@ body.popwin{margin:0;height:100vh;overflow:hidden}
 .ce-name,.ce-note{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:9px 11px;color:var(--text);font:15px var(--f-body);width:100%;resize:vertical}
 
 @media (max-width:900px){
-  html,body{height:auto}
-  .app{height:auto;min-height:100%}
-  .ws{display:block;overflow:visible}
-  .center{display:block}
-  .main{display:flex}
-  .vwrap{flex:none;aspect-ratio:16/9;min-height:0}
-  .dock.db{height:auto;display:block}
-  .dock.db>.panel{border-top:1px solid var(--line);max-height:none}
-  .dock.db>.panel .p-body{max-height:70vh}
-  .dock.db>.panel .list{max-height:44vh}
-  .split,.dock.dl,.dock.dr,.dock.dt,.dzs,.tray{display:none!important}
-  .p-head{cursor:default}
-  .p-head [data-pa="menu"],.p-head [data-pa="min"],.p-head [data-pa="max"]{display:none}
-  .score{margin-left:0}
-  .tsel{margin-left:0}
-  #pDraw{position:fixed;left:0;right:0;bottom:0;z-index:45;max-height:48vh;border-top:2px solid var(--accent);box-shadow:0 -10px 28px rgba(0,0,0,.45)}
-  .dock.db>#pDraw .p-body{max-height:calc(48vh - 34px)}
+  :root:not(.ipad),:root:not(.ipad) body{height:auto}
+  body:not(.ipad) .app{height:auto;min-height:100%}
+  body:not(.ipad) .ws{display:block;overflow:visible}
+  body:not(.ipad) .center{display:block}
+  body:not(.ipad) .main{display:flex}
+  body:not(.ipad) .vwrap{flex:none;aspect-ratio:16/9;min-height:0}
+  body:not(.ipad) .dock.db{height:auto;display:block}
+  body:not(.ipad) .dock.db>.panel{border-top:1px solid var(--line);max-height:none}
+  body:not(.ipad) .dock.db>.panel .p-body{max-height:70vh}
+  body:not(.ipad) .dock.db>.panel .list{max-height:44vh}
+  body:not(.ipad) .split,body:not(.ipad) .dock.dl,body:not(.ipad) .dock.dr,body:not(.ipad) .dock.dt,body:not(.ipad) .dzs,body:not(.ipad) .tray{display:none!important}
+  body:not(.ipad) .p-head{cursor:default}
+  body:not(.ipad) .p-head [data-pa="menu"],body:not(.ipad) .p-head [data-pa="min"],body:not(.ipad) .p-head [data-pa="max"]{display:none}
+  body:not(.ipad) .score{margin-left:0}
+  body:not(.ipad) .tsel{margin-left:0}
+  body:not(.ipad) #pDraw{position:fixed;left:0;right:0;bottom:0;z-index:45;max-height:48vh;border-top:2px solid var(--accent);box-shadow:0 -10px 28px rgba(0,0,0,.45)}
+  body:not(.ipad) .dock.db>#pDraw .p-body{max-height:calc(48vh - 34px)}
 }
 @media (prefers-reduced-motion: reduce){
   .code.hit{animation:none}
@@ -704,6 +704,100 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 .side-h .cnt{flex:none;white-space:nowrap}
 .side-h select{flex:1 1 120px;min-width:0}
 .side-h .btn{flex:none;padding:6px 10px;font-size:12.5px;white-space:nowrap}
+
+/* ================= MODO iPad ================= */
+.ip-only{display:none!important}
+body.ipad .ip-only{display:inline-flex!important}
+body.ipad{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+body.ipad button,body.ipad .btn,body.ipad .ib,body.ipad select,body.ipad label{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+body.ipad input,body.ipad select,body.ipad textarea{font-size:16px}
+/* cabecera */
+body.ipad .top{min-height:54px;padding:5px 12px;gap:10px;background:#0b0b0b}
+body.ipad .brand h1{font-size:13px;letter-spacing:.12em;opacity:.9}
+body.ipad .brand small{max-width:260px;font-size:13px;color:var(--text);margin-top:1px}
+body.ipad .top-actions{gap:6px}
+body.ipad .top-actions .btn{min-height:44px;min-width:44px;padding:0 12px;font-size:19px;justify-content:center;border-radius:10px}
+body.ipad .top-actions .btn .tx{display:none}
+body.ipad .top-actions .btn.primary{padding:0 16px}
+body.ipad .top-actions .btn.primary .tx{display:inline;font-size:15px}
+body.ipad #bLayout,body.ipad .tsep{display:none}
+body.ipad #bUndo,body.ipad #bRedo{font-size:22px}
+body.ipad #bMode .tx{display:inline;font-size:13px}
+body.ipad #bProd .tx{display:inline;font-size:13px}
+body.ipad .hdr-per .seg button{min-height:40px;padding:4px 14px;font-size:15px}
+body.ipad .hdr-per select{min-height:40px;font-size:16px}
+body.ipad .score .n{font-size:26px}
+/* zona de vídeo */
+body.ipad .main{background:#000}
+body.ipad .vwrap{border-radius:0}
+body.ipad .tl{display:none}
+body.ipad #bFreeze,body.ipad #bBack1,body.ipad #bFwd1,body.ipad .tsel label:nth-child(1),body.ipad .tsel label:nth-child(3){display:none}
+body.ipad .tsel{margin-left:0}
+/* barra inferior */
+body.ipad .ip-scrub{position:relative;height:34px;display:flex!important;align-items:center;padding:0 14px;background:#101010;flex:none}
+body.ipad #ipSeek{width:100%;height:34px;margin:0;-webkit-appearance:none;appearance:none;background:transparent;position:relative;z-index:2}
+body.ipad #ipSeek::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#2a2a2a}
+body.ipad #ipSeek::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);border:3px solid #fff;margin-top:-10px}
+body.ipad #ipSeek::-moz-range-track{height:6px;border-radius:3px;background:#2a2a2a}
+body.ipad #ipSeek::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid #fff}
+body.ipad .ip-marks{position:absolute;left:14px;right:14px;top:3px;height:8px;pointer-events:none;z-index:1}
+body.ipad .ip-marks i{position:absolute;top:0;width:3px;height:8px;border-radius:1px;transform:translateX(-1px)}
+body.ipad .ip-marks b{position:absolute;bottom:-18px;top:auto;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:6px solid #FFD23F;transform:translateX(-4px)}
+body.ipad .transport{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:6px;padding:8px 10px 12px;background:#101010;border-top:0}
+body.ipad .transport .ib{min-width:50px;min-height:54px;flex:none;border-radius:14px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
+body.ipad .transport .ib.big{min-width:72px;min-height:60px;background:var(--accent);color:#111}
+body.ipad .transport .time{font-size:14px;min-width:104px;text-align:center;flex:none}
+body.ipad .tsel label{font-size:0}
+body.ipad .tsel select{font-size:16px}
+body.ipad #ipPen{font-size:24px;margin-right:6px}
+body.ipad .transport .tsel select{min-height:48px;border-radius:12px;font-size:16px;padding:0 8px}
+body.ipad #ipTag{background:var(--accent);color:#111;font-weight:800;padding:0 14px}
+
+/* paletas de tags a la derecha */
+body.ipad .dock.dr{border-left:1px solid #222}
+body.ipad #pTags .p-head{height:40px}
+body.ipad .codes{grid-template-columns:1fr!important;gap:8px}
+body.ipad #pTags .code{grid-column:auto;min-height:60px;justify-content:flex-start;text-align:left;padding:0 16px;border-radius:12px}
+body.ipad .code .cl{font-size:19px}
+body.ipad .code .cm{right:12px;top:50%;transform:translateY(-50%)}
+body.ipad .code .cm kbd{display:none}
+body.ipad .bb-ib{min-height:40px;min-width:40px}
+/* panels como cajones / pantallas completas */
+body.ipad .panel.float{border-radius:0}
+body.ipad .p-head{cursor:default;height:44px}
+body.ipad .p-head [data-pa="menu"],body.ipad .p-head [data-pa="min"],body.ipad .p-head [data-pa="max"],body.ipad .p-head [data-pa="pop"],body.ipad .rz,body.ipad .split{display:none!important}
+body.ipad .p-head button{min-width:44px;min-height:40px}
+body.ipad #pEvents.float{left:auto!important;right:0!important;top:0!important;width:min(460px,94vw)!important;height:100%!important;z-index:60;border-left:2px solid var(--accent)}
+body.ipad #pProd.float,body.ipad #pClip.float{left:0!important;top:0!important;right:0!important;bottom:0!important;width:100%!important;height:100%!important;z-index:70}
+body.ipad #pDraw.float{left:auto!important;right:0!important;top:54px!important;bottom:0!important;width:330px!important;height:auto!important;z-index:55;border-left:2px solid var(--accent)}
+body.ipad .tray{display:none!important}
+/* listas y filas táctiles */
+body.ipad .ev{min-height:52px}
+body.ipad .ev .acts button{width:38px!important;height:44px!important}
+body.ipad .rk{width:22px;height:22px}
+body.ipad .btn,body.ipad .mini,body.ipad .chip2{min-height:42px}
+body.ipad .mini{min-width:42px;padding:0 12px;font-size:15px}
+body.ipad .chip2{padding:8px 14px;font-size:15px}
+body.ipad #perfPanel,body.ipad #qtPanel{width:min(460px,96vw);max-height:84vh}
+body.ipad .foot .fb .btn{min-height:46px;font-size:14px}
+body.ipad select{min-height:42px}
+body.ipad .prow{min-height:54px}
+body.ipad .avi{min-height:50px}
+body.ipad .tools button,body.ipad #dwTools button{min-width:52px;min-height:52px}
+
+body.ipad .ev,body.ipad .ev-h{grid-template-columns:54px minmax(60px,1fr) minmax(0,1fr) 56px 176px!important}
+body.ipad .foot .fb{grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}
+body.ipad.port .brand,body.ipad.port #bLib .tx,body.ipad.port #bMode .tx,body.ipad.port #bProd .tx{display:none}
+body.ipad.port .top{gap:6px}
+body.ipad.port .score .n{font-size:22px}
+body.ipad.port #bFrameBack,body.ipad.port #bFrameFwd{display:none}
+body.ipad.port .codes{grid-template-columns:1fr 1fr!important}
+body.ipad.port #pTags .code{min-height:56px}
+body.ipad.port .dock.db{border-top:1px solid #222}
+
+.brand{min-width:0;overflow:hidden}
+.brand h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ip-x{margin-left:auto;background:var(--accent);color:#111;border:0;border-radius:10px;font:700 15px var(--f-body);padding:0 16px;min-height:38px;align-items:center}
 </style>
 </head>
 <body>
@@ -725,6 +819,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
       <span class="tsep"></span>
       <button class="btn" id="bCfg" title="Editar botonera"><span class="ic">⚙</span><span class="tx">Botonera</span></button>
       <button class="btn" id="bProd" aria-pressed="false" title="Mesa de producción: playlists y dibujos"><span class="ic">🎬</span><span class="tx">Producción</span></button>
+      <button class="btn" id="bMode" title="Cambiar entre modo iPad y modo ordenador"><span class="ic">📱</span><span class="tx">iPad</span></button>
       <button class="btn" id="bLayout" title="Paneles y diseño"><span class="ic">▦</span><span class="tx">Diseño</span></button>
     </div>
   </header>
@@ -758,7 +853,9 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
           </div>
         </div>
 
+        <div class="ip-scrub ip-only" id="ipScrub"><input type="range" id="ipSeek" min="0" max="1000" value="0" aria-label="Posición del vídeo"><div class="ip-marks" id="ipMarks"></div></div>
         <div class="transport">
+          <button class="ib ip-only" id="ipPen" title="Dibujar sobre la imagen (congela el fotograma)" aria-label="Dibujar">✏️</button>
           <button class="ib" id="bBack5" title="Retroceder 5 s (Ctrl/Cmd + flecha izquierda)" aria-label="Retroceder 5 segundos">−5 s</button>
           <button class="ib" id="bBack1" title="Retroceder 1 s (Mayús + flecha izquierda)" aria-label="Retroceder 1 segundo">−1 s</button>
           <button class="ib" id="bFrameBack" title="Fotograma anterior (flecha izquierda o coma)" aria-label="Fotograma anterior"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
@@ -767,6 +864,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
           <button class="ib" id="bFwd1" title="Avanzar 1 s (Mayús + flecha derecha)" aria-label="Avanzar 1 segundo">+1 s</button>
           <button class="ib" id="bFwd5" title="Avanzar 5 s (Ctrl/Cmd + flecha derecha)" aria-label="Avanzar 5 segundos">+5 s</button>
           <span class="time" id="timeEl">0:00.0 / 0:00</span>
+          <button class="ib ip-only ip-tag" id="ipTag" title="Crear un clip manual aquí">＋ Tag</button><button class="ib ip-only" id="ipTags" title="Lista de clips">☰ Clips</button><span id="ipUndo" hidden></span><span id="ipRedo" hidden></span>
           <button class="ib" id="bFreeze" title="Congelar imagen y dibujar encima (Mayús+F)" style="min-width:auto">Freeze frame</button>
           <div class="tsel">
             <label title="Mostrar los dibujos y congelaciones durante la reproducción"><input type="checkbox" id="chkTele" checked> Dibujos
@@ -3318,7 +3416,7 @@ function normEvent(x){
 const H={undo:[],redo:[],cur:'',last:0};
 const snap=()=>JSON.stringify({events,markers,stints,teles,playlists,covers,externals});
 function histInit(){H.undo=[];H.redo=[];H.cur=snap();H.last=0;updateUndoBtns();}
-function updateUndoBtns(){$('#bUndo').disabled=!H.undo.length;$('#bRedo').disabled=!H.redo.length;}
+function updateUndoBtns(){$('#bUndo').disabled=!H.undo.length;$('#bRedo').disabled=!H.redo.length;const a=document.getElementById('ipUndo'),b=document.getElementById('ipRedo'); if(a){a.disabled=!H.undo.length;b.disabled=!H.redo.length;}}
 function record(co){
   const s=snap();
   if(s===H.cur){saveProject();return;}
@@ -3572,6 +3670,7 @@ function renderDetail(){
    LÍNEA DE TIEMPO
    ===================================================================== */
 function renderTimeline(){
+  if(typeof ipMarks==='function') ipMarks();
   const dur=video.duration;
   if(!hasVideo||!isFinite(dur)||!dur){
     tlInner.style.width=''; TL.trackW=0;
@@ -4131,6 +4230,7 @@ function loop(){
   if(t!==lastT){
     lastT=t;
     $('#timeEl').textContent=fmt(t,true)+' / '+fmt(video.duration||0);
+    { const sk=document.getElementById('ipSeek'); if(sk&&video.duration&&document.activeElement!==sk) sk.value=Math.round(t/video.duration*1000); }
     updatePlayhead(t);
   }
   if(clip) clipTick();
@@ -4848,6 +4948,7 @@ function openQt(){
 }
 document.getElementById('bQt').onclick=openQt;
 
+
 /* ===== EXPORTACIÓN RÁPIDA (WebCodecs + MP4) ===== */
 const FX={err:''};
 const fxSleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -5554,7 +5655,11 @@ const PANELS={
   prod:{el:$('#pProd'),title:'Mesa de producción',w:760,h:250},
   clip:{el:$('#pClip'),title:'Editar clip',w:980,h:800}
 };
+const IPM=(()=>{ let m=lsGet('bbtag.mode')||'auto'; const ua=navigator.userAgent||''; const auto=/iPad/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  return {get mode(){return m;},set(v){m=v;lsSet('bbtag.mode',v);},get on(){return m==='ipad'||(m==='auto'&&auto);},auto}; })();
+document.body.classList.toggle('ipad',IPM.on); document.documentElement.classList.toggle('ipad',IPM.on);
 const narrowMQ=window.matchMedia('(max-width:900px)');
+const isNarrow=()=>narrowMQ.matches&&!IPM.on;
 let zTop=30;
 
 function pst(dock,vis,w,h,x,y){return {dock,vis:vis!==false,min:false,max:false,rect:{x:x==null?80:x,y:y==null?60:y,w:w||380,h:h||420}};}
@@ -5577,7 +5682,7 @@ const PRESETS={
 function loadLayout(){
   const b=baseLayout();
   try{
-    const o=JSON.parse(lsGet('bbtag.layout')||'null');
+    const o=JSON.parse(lsGet(IPM.on?'bbtag.layout.ip':'bbtag.layout')||'null');
     if(o&&o.panels){
       Object.keys(PANELS).forEach(id=>{
         const s=o.panels[id]; if(!s) return;
@@ -5589,11 +5694,13 @@ function loadLayout(){
       if(o.saved&&typeof o.saved==='object') b.saved=o.saved;
     }
   }catch(e){}
+  if(IPM.on){ b.panels.tags.dock='right'; b.panels.tags.vis=true; b.panels.events.dock='float'; b.panels.events.vis=false; b.sizes.right=Math.min(b.sizes.right,320);
+    Object.keys(b.panels).forEach(k=>{b.panels[k].min=false;b.panels[k].max=false;}); b.panels.draw.dock='float'; b.panels.clip.dock='float'; b.panels.prod.dock='float'; }
   b.panels.prod.vis=false; b.panels.prod.min=false; b.panels.prod.max=false; b.panels.clip.vis=false; b.panels.clip.min=false; b.panels.clip.max=false;   /* la mesa se abre cuando la necesitas */
   return b;
 }
 let layout=loadLayout();
-function saveLayout(){lsSet('bbtag.layout',JSON.stringify(layout));}
+function saveLayout(){lsSet(IPM.on?'bbtag.layout.ip':'bbtag.layout',JSON.stringify(layout));}
 function wsSize(){const r=ws.getBoundingClientRect();return {w:r.width,h:r.height};}
 function clampRect(r){
   const s=wsSize();
@@ -5601,7 +5708,10 @@ function clampRect(r){
   return {x:clamp(r.x,-(w-90),Math.max(0,s.w-90)),y:clamp(r.y,0,Math.max(0,s.h-38)),w,h};
 }
 function applyLayout(){
-  const narrow=narrowMQ.matches;
+  const narrow=isNarrow();
+  if(IPM.on){ const port=window.innerWidth<window.innerHeight; document.body.classList.toggle('port',port);
+    layout.panels.tags.dock=port?'bottom':'right'; if(port) layout.sizes.bottom=Math.round(window.innerHeight*0.44); }
+  else document.body.classList.remove('port');
   Object.keys(PANELS).forEach(id=>{
     const st=layout.panels[id], el=PANELS[id].el;
     if(st.win) return;
@@ -5646,6 +5756,39 @@ tray.addEventListener('click',e=>{
 });
 window.addEventListener('resize',()=>{applyLayout();});
 if(narrowMQ.addEventListener) narrowMQ.addEventListener('change',applyLayout);
+/* ===== MODO iPad ===== */
+function ipApply(on){
+  document.body.classList.toggle('ipad',on); document.documentElement.classList.toggle('ipad',on);
+  layout=loadLayout(); applyLayout(); layoutTele&&layoutTele();
+  const b=document.getElementById('bMode'); if(b) b.querySelector('.tx').textContent=on?'Ordenador':'iPad', b.querySelector('.ic').textContent=on?'🖥':'📱';
+  ipMarks();
+}
+function ipMarks(){
+  const el=document.getElementById('ipMarks'); if(!el) return;
+  const d=video&&video.duration; if(!d||!isFinite(d)){el.innerHTML='';return;}
+  el.innerHTML=events.map(e=>'<i style="left:'+(e.t/d*100).toFixed(2)+'%;background:'+safeColor(info(e).color)+'"></i>').join('')+teles.map(t=>'<b style="left:'+(t.t/d*100).toFixed(2)+'%"></b>').join('');
+}
+{
+  const bm=document.getElementById('bMode');
+  bm.onclick=()=>{ const on=!document.body.classList.contains('ipad'); IPM.set(on?'ipad':'pc'); ipApply(on); toast(on?'Modo iPad.':'Modo ordenador.'); };
+  bm.querySelector('.tx').textContent=IPM.on?'Ordenador':'iPad'; bm.querySelector('.ic').textContent=IPM.on?'🖥':'📱';
+  const sk=document.getElementById('ipSeek');
+  sk.addEventListener('input',()=>{ const d=video.duration; if(d&&isFinite(d)) userSeek(d*sk.value/1000); });
+  document.getElementById('ipPen').onclick=()=>{ if(teleEd){ teleEd.tool='pen'; renderDrawPanel(); return; } openTele(); if(teleEd){ teleEd.tool='pen'; renderDrawPanel(); } };
+  document.getElementById('ipUndo').onclick=()=>$('#bUndo').click();
+  document.getElementById('ipRedo').onclick=()=>$('#bRedo').click();
+  $('#vwrap').addEventListener('pointerdown',()=>{ if(document.body.classList.contains('ipad')&&layout.panels.events.vis){ layout.panels.events.vis=false; applyLayout(); saveLayout(); } });
+  ['prod','clip','events'].forEach(id=>{ const h=PANELS[id].el.querySelector('.p-head'); if(!h) return; const x=document.createElement('button'); x.className='ip-x ip-only'; x.textContent='✕ Cerrar'; x.setAttribute('aria-label','Cerrar');
+    x.onclick=e=>{ e.stopPropagation(); layout.panels[id].vis=false; layout.panels[id].min=false; applyLayout(); saveLayout(); }; h.appendChild(x); });
+  document.getElementById('ipTags').onclick=()=>{ const st=layout.panels.events; st.vis=!st.vis; st.min=false; st.dock='float'; applyLayout(); saveLayout(); };
+  document.getElementById('ipTag').onclick=()=>{
+    if(!hasVideo){toast('Abre primero un vídeo.');return;}
+    const dur=video.duration||0, t=video.currentTime, start=Math.max(0,t-5); let end=Math.min(dur,t+5); if(end-start<0.5) end=Math.min(dur,start+0.5);
+    const ev=normEvent({id:uid(),btnId:MANUAL,label:'Clip manual',color:'#9AA7FF',pts:0,t,start,end,team,player,period,video:videoName,note:'',phase:PH.cur});
+    events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); openClipEditor(ev.id);
+  };
+}
+
 
 function zoneAt(cx,cy){
   const r=ws.getBoundingClientRect();
@@ -5659,7 +5802,7 @@ function zoneAt(cx,cy){
 function showZone(z){dzs.querySelectorAll('.dz').forEach(d=>d.classList.toggle('on',d.dataset.z===z));}
 
 function startDrag(id,e){
-  if(narrowMQ.matches||e.button!==0||layout.panels[id].win) return;
+  if(isNarrow()||e.button!==0||layout.panels[id].win) return;
   const st=layout.panels[id], el=PANELS[id].el;
   const sx=e.clientX, sy=e.clientY;
   let dragging=false, offX=0, offY=0, zone=null;
@@ -5732,7 +5875,7 @@ Object.keys(PANELS).forEach(id=>{
     if(head&&!e.target.closest('button')) startDrag(id,e);
   });
   el.addEventListener('dblclick',e=>{
-    if(e.target.closest('.p-head')&&!e.target.closest('button')&&!narrowMQ.matches) toggleMax(id);
+    if(e.target.closest('.p-head')&&!e.target.closest('button')&&!isNarrow()) toggleMax(id);
   });
   el.addEventListener('click',e=>{
     const b=e.target.closest('[data-pa]'); if(!b) return;
@@ -5748,6 +5891,7 @@ Object.keys(PANELS).forEach(id=>{
 const popWins={}, popDocRefs={};
 function popOut(id,opts){
   opts=opts||{};
+  if(IPM.on) return false;
   const st=layout.panels[id], el=PANELS[id].el;
   if(st.win){const w0=popWins[id]; if(w0&&!w0.closed){w0.focus();return true;} popBack(id,true);}
   if(id==='draw'&&teleEd){toast('Cierra el editor de dibujo antes de sacar este panel a otra ventana.');return false;}
@@ -5887,7 +6031,7 @@ $('#dlgMk').addEventListener('click',e=>{if(e.target===$('#dlgMk')) $('#dlgMk').
    Un dibujo ("tele") está ligado a un instante del vídeo. Un clip que
    contiene ese instante lo reproduce automáticamente.
    ===================================================================== */
-const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move','tline','img'];
+const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move','tline','img','pen'];
 function normTele(x){
   if(!x||!isFinite(x.t)) return null;
   return {id:x.id||uid(),t:+x.t,mode:x.mode==='overlay'?'overlay':'freeze',hold:clamp(+x.hold||3,0.5,60),fade:clamp(x.fade==null?0:(+x.fade||0),0,3),
@@ -5966,7 +6110,7 @@ function showProd(){
 function openProd(){
   const st=layout.panels.prod;
   if(st.win&&popWins.prod&&!popWins.prod.closed){popWins.prod.focus();return;}
-  if(narrowMQ.matches){showProd();return;}
+  if(isNarrow()){showProd();return;}
   if(!popOut('prod',{eph:true,fallback:true})) showProd();
 }
 $('#bProd').onclick=openProd;
@@ -6246,6 +6390,7 @@ const TOOLS=[
   ['circle','Círculo','<circle cx="12" cy="12" r="8"/>'],
   ['rect','Rectángulo','<rect x="4" y="6" width="16" height="12" rx="1"/>'],
   ['text','Texto','<path d="M5 6h14M12 6v14"/>'],
+  ['pen','Lápiz (a mano alzada)','<path d="M4 20l1-4 11-11 3 3L8 19z"/><path d="M14 7l3 3"/>'],
   ['hl','Resaltador','<path d="M4 20l4-1 11-11-3-3L5 16z"/>'],
   ['spot','Spotlight (oscurece el resto)','<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/>'],
   ['lens','Lupa','<circle cx="10" cy="10" r="6"/><path d="M15 15l5 5"/>'],
@@ -6321,6 +6466,11 @@ function shapeSVG(s,i){
       const fs=20+(s.sw||4)*3;
       return g('<text x="'+f1(X(s.x))+'" y="'+f1(Y(s.y))+'" font-size="'+fs+'" font-weight="700" font-family="Barlow,Arial,sans-serif" fill="'+c+'" stroke="#000" stroke-opacity=".85" stroke-width="'+f1(fs*0.14)+'" paint-order="stroke" stroke-linejoin="round" pointer-events="all">'+esc(s.text)+'</text>');
     }
+    case 'pen':{
+      if(!s.pts||s.pts.length<2) return '';
+      const d=pathOf(s.pts);
+      return g(hit(d)+'<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+f1((s.sw||4)*1.15)+'" stroke-linecap="round" stroke-linejoin="round"/>');
+    }
     case 'hl':{
       if(!s.pts||s.pts.length<2) return '';
       const d=pathOf(s.pts);
@@ -6362,7 +6512,7 @@ function bboxOf(s){
     case 'rect':case 'img':pts.push([X(s.x),Y(s.y)],[X(s.x+s.rw),Y(s.y+s.rh)]);break;
     case 'text':{const fs=20+(s.sw||4)*3;pts.push([X(s.x),Y(s.y)-fs],[X(s.x)+String(s.text).length*fs*0.58,Y(s.y)+fs*0.3]);break;}
     case 'num':{const R=16+(s.sw||4)*1.6;pts.push([X(s.x)-R,Y(s.y)-R],[X(s.x)+R,Y(s.y)+R]);break;}
-    case 'hl':case 'traj':case 'zone':(s.pts||[]).forEach(p=>pts.push([X(p[0]),Y(p[1])]));break;
+    case 'hl':case 'pen':case 'traj':case 'zone':(s.pts||[]).forEach(p=>pts.push([X(p[0]),Y(p[1])]));break;
   }
   if(!pts.length) return null;
   const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]), pad=10+(s.sw||4)*1.2;
@@ -6492,9 +6642,9 @@ function openTele(existing){
   let tl=existing||teles.find(x=>Math.abs(x.t-t)<0.06);
   if(!tl) tl={id:uid(),t,mode:'freeze',hold:3,fade:0.3,items:[],rev:0,clipId:''};
   else if(existing&&Math.abs(video.currentTime-tl.t)>0.001) video.currentTime=tl.t;
-  teleEd={id:tl.id,tele:tl,tool:'select',sel:null,color:teleColor,sw:teleSw,zone:null};
+  teleEd={id:tl.id,tele:tl,tool:(IPM.on&&!existing&&!tl.items.length)?'pen':'select',sel:null,color:teleColor,sw:teleSw,zone:null};
   const st=layout.panels.draw;
-  if(!st.placed&&!narrowMQ.matches){
+  if(!st.placed&&!isNarrow()){
     const vr=$('#vwrap').getBoundingClientRect(), wr=ws.getBoundingClientRect();
     st.rect={x:Math.max(8,vr.right-wr.left-308),y:Math.max(8,vr.top-wr.top+8),w:298,h:Math.min(560,Math.max(360,wr.height-24))};
     st.dock='float'; st.placed=true;
@@ -6814,7 +6964,7 @@ function openClipEditor(id){
   ce={id,v:null,doc:null,win:null,lastT:0,freeze:null,sel:null,shown:'',loop:false,raf:0,ctxA:0,ctxB:0,drag:null,ro:null};
   selectedId=id; renderList(); renderTimeline(); renderDescStrip();
   const st=layout.panels.clip;
-  const ok=narrowMQ.matches?false:popOut('clip',{eph:true,fallback:true,w:1000,h:860,what:'el editor del clip'});
+  const ok=(isNarrow()||IPM.on)?false:popOut('clip',{eph:true,fallback:true,w:1000,h:860,what:'el editor del clip'});
   if(!ok){st.vis=true;st.min=false;st.max=false;applyLayout();saveLayout();}
   ceBuild();
 }
