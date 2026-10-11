@@ -998,6 +998,19 @@ body.ipad.pip #pipBar{justify-content:flex-end;pointer-events:none}body.ipad.pip
 body.ipad.pip #badge{top:52px!important}
 #pipBar button{min-width:40px;min-height:40px;border-radius:10px;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:18px}
 body.ipad.pip #ipSeg{display:none}
+
+#zl{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
+#zl>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+body.ipad #vwrap{touch-action:none}
+#zReset{position:absolute;left:72px;top:10px;z-index:6;min-height:44px;padding:0 14px;border-radius:22px;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:15px}
+#vfX{display:none}
+body.ipad.vfull #vfX{display:block;position:fixed;left:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:90;min-width:48px;min-height:48px;border-radius:24px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:22px}
+body.ipad.vfull .top{display:none!important}
+body.ipad.vfull #ipSeg{display:none!important}
+body.ipad.vfull .ws{height:100vh}
+body.ipad.vfull #ipScrub,body.ipad.vfull .transport{position:fixed;left:0;right:248px;z-index:60;background:rgba(10,10,10,.82);backdrop-filter:blur(8px)}
+body.ipad.vfull .transport{bottom:0;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+body.ipad.vfull #ipScrub{bottom:calc(76px + env(safe-area-inset-bottom,0px));margin:0}
 </style>
 </head>
 <body>
@@ -6214,6 +6227,55 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   document.getElementById('pipX').onclick=()=>{ dismissed=true; set(false); };
   document.getElementById('pipBig').onclick=()=>{ const st=layout.panels.prod; st.vis=false; applyLayout(); saveLayout(); set(false); };
   video.addEventListener('timeupdate',()=>{ if(document.body.classList.contains('pip')) try{layoutTele&&layoutTele();}catch(e){} });
+})();
+
+/* ===== iPad: zoom con dos dedos + pantalla completa del reproductor ===== */
+(function(){
+  const vw=document.getElementById('vwrap'); if(!vw) return;
+  const zl=document.createElement('div'); zl.id='zl';
+  vw.insertBefore(zl,video); zl.appendChild(video); zl.appendChild(document.getElementById('tele'));
+  const Z={s:1,x:0,y:0}, P=new Map(); let g=null, lastTap=0;
+  const rz=document.createElement('button'); rz.id='zReset'; rz.textContent='⤺ 1×'; rz.hidden=true; vw.appendChild(rz);
+  const apply=()=>{
+    const W=vw.clientWidth,H=vw.clientHeight;
+    Z.s=Math.min(6,Math.max(1,Z.s));
+    Z.x=Math.min(0,Math.max(W*(1-Z.s),Z.x)); Z.y=Math.min(0,Math.max(H*(1-Z.s),Z.y));
+    zl.style.transform=Z.s===1?'':'translate('+Z.x+'px,'+Z.y+'px) scale('+Z.s+')';
+    rz.hidden=Z.s===1; vw.classList.toggle('zoomed',Z.s>1);
+  };
+  const reset=()=>{Z.s=1;Z.x=0;Z.y=0;apply();};
+  rz.onclick=reset;
+  video.addEventListener('loadedmetadata',reset);
+  const pos=e=>{const r=vw.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
+  vw.addEventListener('pointerdown',e=>{
+    if(!document.body.classList.contains('ipad')||e.target.closest('button,select,input,#pipBar,#badge')) return;
+    P.set(e.pointerId,pos(e));
+    if(P.size===2){ const [a,b]=[...P.values()]; g={d:Math.hypot(a.x-b.x,a.y-b.y),cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,s:Z.s,x:Z.x,y:Z.y}; }
+    else if(P.size===1){ const n=Date.now(); if(n-lastTap<300&&Z.s>1&&!teleEd){reset();} lastTap=n; g=Z.s>1&&!teleEd?{pan:true,px:pos(e).x,py:pos(e).y,x:Z.x,y:Z.y}:null; }
+  },true);
+  vw.addEventListener('pointermove',e=>{
+    if(!P.has(e.pointerId)) return; P.set(e.pointerId,pos(e));
+    if(!g) return;
+    if(P.size>=2&&g.d){ const [a,b]=[...P.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y), cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+      const ns=Math.min(6,Math.max(1,g.s*d/g.d)); const k=ns/g.s;
+      Z.s=ns; Z.x=cx-(g.cx-g.x)*k; Z.y=cy-(g.cy-g.y)*k; apply(); e.preventDefault(); }
+    else if(g.pan&&P.size===1){ const p=pos(e); Z.x=g.x+(p.x-g.px); Z.y=g.y+(p.y-g.py); apply(); }
+  },true);
+  const up=e=>{ P.delete(e.pointerId); if(P.size<2&&g&&g.d){ g=null; if(P.size===1){ const q=[...P.values()][0]; g=Z.s>1?{pan:true,px:q.x,py:q.y,x:Z.x,y:Z.y}:null; } } if(!P.size) g=null; };
+  vw.addEventListener('pointerup',up,true); vw.addEventListener('pointercancel',up,true);
+  window.addEventListener('resize',apply);
+
+  /* pantalla completa del reproductor (botonera visible) */
+  const full=on=>{
+    document.body.classList.toggle('vfull',on);
+    try{ if(on&&document.documentElement.requestFullscreen&&!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else if(!on&&document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(er){}
+    setTimeout(()=>{ try{layoutTele();}catch(er){} apply(); },80);
+  };
+  const bt=document.createElement('button'); bt.id='ipFull'; bt.className='ib ip-only'; bt.title='Reproductor a pantalla completa'; bt.setAttribute('aria-label','Pantalla completa'); bt.textContent='⛶';
+  const tr=document.querySelector('.transport'); tr.insertBefore(bt,document.getElementById('ipTags'));
+  bt.onclick=()=>full(!document.body.classList.contains('vfull'));
+  const x=document.createElement('button'); x.id='vfX'; x.textContent='⤡'; x.setAttribute('aria-label','Salir de pantalla completa'); document.body.appendChild(x); x.onclick=()=>full(false);
+  document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&document.body.classList.contains('vfull')){ document.body.classList.remove('vfull'); setTimeout(()=>{try{layoutTele();}catch(er){} apply();},80);} });
 })();
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
