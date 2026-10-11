@@ -2060,6 +2060,7 @@ requestAnimationFrame(loop);
 /* =====================================================================
    ABRIR VÍDEO  (sistema existente, sin cambios de comportamiento)
    ===================================================================== */
+let lastFile=null;
 function loadFile(file,fromLib){
   if(!file) return;
   if(file.type&&!file.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm|mkv|avi|mts|m2ts|3gp)$/i.test(file.name)){toast('Ese archivo no es un vídeo ('+file.type+').');return;}
@@ -2070,7 +2071,7 @@ function loadFile(file,fromLib){
   videoName=file.name; videoKey=file.name+'|'+file.size;
   video.src=objectURL;
   $('#videoName').textContent=file.name;
-  if(!fromLib) vidSave(file);
+  lastFile=file;
 }
 video.addEventListener('loadedmetadata',()=>{
   hasVideo=true;
@@ -2130,7 +2131,7 @@ async function vidSave(file){
     toast('Guardando el vídeo en este dispositivo…');
     await vdbTx('readwrite',st=>st.put({key,name:file.name,size:file.size,type:file.type||'video/mp4',added:Date.now(),blob:file}));
     try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
-    toast('Vídeo guardado: la próxima vez ábrelo desde "Mis vídeos".');
+    toast('Vídeo guardado.');
   }catch(e){ toast('El vídeo está abierto, pero no se pudo guardar ('+((e&&e.message)||'sin espacio')+').'); }
 }
 async function vidList(){
@@ -2160,8 +2161,9 @@ async function openLib(){
   const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Mis vídeos</h3>'+
     '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">Se guardan en este dispositivo (no se suben a ningún sitio). Al abrir uno vuelven sus etiquetas, clips y dibujos. '+esc(quota)+'</p>'+
     (err?'<p style="color:var(--danger,#e55)">'+esc(err)+'</p>':'')+
-    (rows||(err?'':'<p style="color:var(--muted)">Todavía no hay vídeos guardados. Cada vídeo que abras se guarda aquí automáticamente.</p>'))+
-    '<div style="text-align:right;margin-top:8px"><button class="btn" id="lbNo">Cerrar</button></div>');
+    (rows||(err?'':'<p style="color:var(--muted)">Todavía no hay vídeos guardados. Abre un vídeo y pulsa «Guardar el vídeo abierto».</p>'))+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">'+(hasVideo&&lastFile?'<button class="btn primary" id="lbSave">💾 Guardar el vídeo abierto</button>':'')+'<button class="btn" id="lbNo">Cerrar</button></div>');
+  const sv=d.querySelector('#lbSave'); if(sv) sv.onclick=async()=>{sv.disabled=true;sv.textContent='Guardando…';await vidSave(lastFile);openLib();};
   d.querySelector('#lbNo').onclick=expClose;
   d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>vidOpenLib(b.dataset.o));
   d.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{
