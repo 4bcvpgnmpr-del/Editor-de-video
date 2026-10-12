@@ -724,7 +724,7 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 .pset-t{display:flex;gap:6px}
 .pset-t button{flex:1;min-height:32px;border-radius:9px;border:1.5px solid var(--line);background:var(--panel2);color:var(--text);font:700 12px var(--f-head);cursor:pointer;padding:0 10px}
 .pset-t button.on{background:var(--tc);border-color:var(--tc);color:#fff}
-.pset-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(70px*var(--bbs,1)),1fr));gap:5px}
+.pset-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px}
 .pcard{position:relative;display:flex;flex-direction:column;padding:0;border:0;border-radius:10px;overflow:hidden;background:#1c1f24;color:#fff;cursor:pointer;aspect-ratio:1/1;min-height:0;text-align:center;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 2px 6px rgba(0,0,0,.35)}
 .pcard:active{transform:scale(.97)}
 .pcard .ph{flex:1;min-height:0;background:#2b3038 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font:800 22px var(--f-head);color:#6b7686}
@@ -756,7 +756,8 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 
 
 body.ipad .ip-only{display:inline-flex!important}
-#pTags select#ipSetSel{display:inline-block!important}
+#pTags select#ipSetSel{display:inline-block!important;min-height:32px;max-width:120px;font-size:13px;padding:0 4px;margin-left:4px}
+#pTags .bb-cats .bb-sh{flex-wrap:wrap;row-gap:4px}
 body.ipad select#ipSetSel{display:inline-block!important}
 body.ipad{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 body.ipad button,body.ipad .btn,body.ipad .ib,body.ipad select,body.ipad label{touch-action:manipulation;-webkit-user-select:none;user-select:none}
