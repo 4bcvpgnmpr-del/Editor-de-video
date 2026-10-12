@@ -6430,10 +6430,15 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 })();
 
 (function(){ const b=document.getElementById('bFs'); if(!b) return;
-  const tgl=()=>{ try{ const c=document.querySelector('.center'); if(document.fullscreenElement) document.exitFullscreen(); else if(c.requestFullscreen) c.requestFullscreen().catch(()=>{}); }catch(e){} };
+  let tmp=false, prev='pc', was=false;
+  const tgl=()=>{ const B=document.body;
+    if(B.classList.contains('ipad')){ const f=document.getElementById('ipFull'); if(f) f.click(); return; }
+    tmp=true; prev=IPM.mode; IPM.set('ipad'); ipApply(true);
+    setTimeout(()=>{ const f=document.getElementById('ipFull'); if(f) f.click(); },200);
+  };
   b.onclick=tgl;
-  document.addEventListener('keydown',e=>{ if((e.key==='f'||e.key==='F')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')&&!document.body.classList.contains('ipad')&&hasVideo){ e.preventDefault(); tgl(); } });
-  document.addEventListener('fullscreenchange',()=>{ setTimeout(()=>{ try{ layoutTele(); }catch(er){} },120); });
+  document.addEventListener('keydown',e=>{ if((e.key==='f'||e.key==='F')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')&&hasVideo&&!document.body.classList.contains('vfull')&&!document.body.classList.contains('ipad')){ e.preventDefault(); tgl(); } });
+  new MutationObserver(()=>{ const v=document.body.classList.contains('vfull'); if(was&&!v&&tmp){ tmp=false; IPM.set(prev); ipApply(false); } was=v; }).observe(document.body,{attributes:true,attributeFilter:['class']});
 })();
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
