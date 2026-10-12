@@ -1092,6 +1092,8 @@ body.ipHome #ipHome{display:block;position:fixed;left:0;right:0;top:var(--hmT,54
 #ipHome .hm-t i{width:12px;height:12px;border-radius:50%;flex:none}
 #ipHome .hm-t small{display:block;font-weight:400;opacity:.6;font-size:12px}
 #ipHome h3{margin:26px 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#aaa}
+#ipHome .hm-fh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#ipHome .hm-fh select{background:#1c1c1c;color:#fff;border:1px solid #333;border-radius:10px;padding:8px 10px;font-size:14px;max-width:55%}
 #ipHome .hm-r{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 #ipHome .hm-c{position:relative;padding:0;border:1px solid #2a2a2a;border-radius:12px;overflow:hidden;background:#151515;color:#fff;text-align:left}
 #ipHome .hm-c .th{aspect-ratio:16/9;background:#222 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:.95}
@@ -3634,7 +3636,7 @@ let plCur=null;
 let descOpen=false;
 let playTele=lsGet('bbtag.playTele')!=='0';
 const FREEZE='__freeze';
-let hasVideo=false, videoKey=null, videoName='', objectURL=null;
+let matchMeta=null, hasVideo=false, videoKey=null, videoName='', objectURL=null;
 let team='L', player='', period='1C';
 let page=lsGet('bbtag.page')||cfg.pages[0];
 if(!cfg.pages.includes(page)) page=cfg.pages[0];
@@ -3744,9 +3746,34 @@ function bbItemClick(e,forceEdit){
 }
 $('#dstrip').addEventListener('click',e=>{bbItemClick(e,false);});
 $('#dstrip').addEventListener('contextmenu',e=>{if(e.target.closest('.dchip,.pchip')){e.preventDefault();bbItemClick(e,true);}});
-function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg)); lsSet('bbtag.cts',String(Date.now())); if(window.__clC) window.__clC();}
+function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg)); lsSet('bbtag.cts',String(Date.now())); if(window.__clC) window.__clC(); try{ teamSync(); }catch(e){} }
 function normStint(x){ if(!x||!Array.isArray(x.players)||!isFinite(x.from)) return null; return {id:x.id||uid(),team:x.team==='R'?'R':'L',players:x.players.map(String),from:+x.from,to:(x.to==null||!isFinite(x.to))?null:+x.to}; }
-function saveProject(){if(videoKey){ lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals})); lsSet('bbtag.pts.'+videoKey,String(Date.now())); if(window.__clQ) window.__clQ(); }}
+function saveProject(){if(videoKey){ lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals,meta:matchMeta})); lsSet('bbtag.pts.'+videoKey,String(Date.now())); titleSet(videoKey); if(window.__clQ) window.__clQ(); }}
+/* ---- equipos guardados y datos del partido ---- */
+function teamsGet(){ try{ const a=JSON.parse(lsGet('bbtag.teams')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function teamsSave(a){ lsSet('bbtag.teams',JSON.stringify(a)); lsSet('bbtag.tts',String(Date.now())); if(window.__clT) window.__clT(); }
+function matchTitle(m){ return m?((m.L&&m.L.name)||'Local')+' vs '+((m.R&&m.R.name)||'Rival'):''; }
+function matchDate(d){ if(!d) return ''; try{ return new Date(d+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}); }catch(e){ return d; } }
+function titlesGet(){ try{ return JSON.parse(lsGet('bbtag.titles')||'{}')||{}; }catch(e){ return {}; } }
+function titleSet(key){ if(!key) return; const m=titlesGet(); if(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date)) m[key]={t:matchTitle(matchMeta),d:matchMeta.date||'',n:[matchMeta.L&&matchMeta.L.name,matchMeta.R&&matchMeta.R.name].filter(Boolean)}; else delete m[key]; lsSet('bbtag.titles',JSON.stringify(m)); }
+window.__mt=key=>titlesGet()[key]||null;
+let baseTeams=null;
+function matchApply(render){
+  if(matchMeta&&(matchMeta.L||matchMeta.R)){
+    if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
+    ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(p=>({n:String(p.n),name:String(p.name||'')})); } });
+  } else if(baseTeams){ try{ const b=JSON.parse(baseTeams); cfg.teamNames=b.teamNames; cfg.rosters=b.rosters; }catch(e){} baseTeams=null; }
+  const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')):videoName;
+  if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} }
+}
+function teamSync(){
+  if(!matchMeta||!videoKey) return; let ch=false; const tl=teamsGet(); let tch=false;
+  ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(!t||!t.name) return;
+    const pl=roster(k).map(p=>({n:p.n,name:p.name})), nm=cfg.teamNames[k];
+    if(JSON.stringify(t.players||[])!==JSON.stringify(pl)||t.name!==nm){ t.players=pl; t.name=nm; ch=true; const lt=t.id&&tl.find(x=>x.id===t.id); if(lt){ lt.players=pl; lt.name=nm; tch=true; } } });
+  if(tch) teamsSave(tl);
+  if(ch) saveProject();
+}
 function normEvent(x){
   return {id:x.id||uid(),btnId:String(x.btnId||''),label:String(x.label||''),color:safeColor(x.color),pts:+x.pts||0,
     t:+x.t,start:+x.start,end:+x.end,team:x.team==='R'?'R':'L',player:String(x.player==null?'':x.player),
@@ -4612,6 +4639,7 @@ function applyProjectObj(o){
     covers=(o&&Array.isArray(o.covers))?o.covers.map(normCover):[];
     externals=(o&&Array.isArray(o.externals))?o.externals.map(normExt):[];
     var restored=events.length;
+    matchMeta=(o&&o.meta&&typeof o.meta==='object')?o.meta:null; matchApply(false); titleSet(videoKey);
     return restored;
 }
 video.addEventListener('loadedmetadata',()=>{
@@ -4620,13 +4648,14 @@ video.addEventListener('loadedmetadata',()=>{
   let restored=0;
   try{
     restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
-  }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];}
+  }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];matchMeta=null;}
   selectedId=null; sel=null; zoom=1; teleEd=null; freeze=null; plCur=null; $('#fbadge').hidden=true; teleKey='';
   filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';
   fpsAuto=25; renderFps(); lastT=-1;
   sortEvents(); renderAll(); histInit(); lastW=tlScroll.clientWidth;
   if(restored) toast('Se recuperaron '+restored+' etiquetas de este vídeo.');
   if(window.__cloudPull) window.__cloudPull();
+  if(window.__matchAsk) window.__matchAsk();
 });
 video.addEventListener('error',()=>{
   if(!video.getAttribute('src')) return;
@@ -4686,22 +4715,29 @@ async function vidOpenLib(key){
     expClose(); loadFile(new File([v.blob],v.name,{type:v.type}),true);
   }catch(e){toast('No se pudo abrir: '+((e&&e.message)||e));}
 }
+let libTeamF='';
 async function openLib(){
   let list=[], err='';
   try{ list=await vidList(); }catch(e){ err=(e&&e.message)||String(e); }
   let quota='';
   try{ if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate(); if(e.quota) quota='Usado '+(e.usage/1073741824).toFixed(2)+' GB de ≈ '+(e.quota/1073741824).toFixed(1)+' GB disponibles.';} }catch(e){}
   const mb=n=>n>=1073741824?(n/1073741824).toFixed(2)+' GB':(n/1048576).toFixed(0)+' MB';
+  const tNames=[...new Set(teamsGet().map(t=>t.name).concat(...Object.values(titlesGet()).map(x=>x.n||[])))].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  if(libTeamF&&!tNames.includes(libTeamF)) libTeamF='';
+  list=list.map(v=>Object.assign({m:window.__mt(v.key)},v)).filter(v=>!libTeamF||(v.m&&(v.m.n||[]).includes(libTeamF)));
+  list.sort((a,b)=>String((b.m&&b.m.d)||'').localeCompare(String((a.m&&a.m.d)||''))||b.added-a.added);
   const rows=list.map(v=>'<div style="display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:6px">'+
-    '<div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(v.name)+'</div><div style="font-size:12px;color:var(--muted)">'+mb(v.size)+' · '+new Date(v.added).toLocaleDateString()+'</div></div>'+
+    '<div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(v.m?v.m.t:v.name)+'</div><div style="font-size:12px;color:var(--muted)">'+(v.m&&v.m.d?esc(matchDate(v.m.d))+' · ':'')+(v.m?esc(v.name)+' · ':'')+mb(v.size)+(v.m&&v.m.d?'':' · '+new Date(v.added).toLocaleDateString())+'</div></div>'+
     '<button class="btn primary" data-o="'+esc(v.key)+'">Abrir</button><button class="btn danger" data-d="'+esc(v.key)+'">Borrar</button></div>').join('');
   const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Mis vídeos</h3>'+
     '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">Se guardan en este dispositivo (no se suben a ningún sitio). Al abrir uno vuelven sus etiquetas, clips y dibujos. '+esc(quota)+'</p>'+
     (err?'<p style="color:var(--danger,#e55)">'+esc(err)+'</p>':'')+
+    (tNames.length?'<label style="display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:13px;color:var(--muted)">Equipo <select id="lbTeam" style="flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text)"><option value="">Todos</option>'+tNames.map(n=>'<option'+(n===libTeamF?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>':'')+
     (rows||(err?'':'<p style="color:var(--muted)">Todavía no hay vídeos guardados. Abre un vídeo y pulsa «Guardar el vídeo abierto».</p>'))+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">'+(hasVideo&&lastFile?'<button class="btn primary" id="lbSave">💾 Guardar el vídeo abierto</button>':'')+'<button class="btn" id="lbNo">Cerrar</button></div>');
   const sv=d.querySelector('#lbSave'); if(sv) sv.onclick=async()=>{sv.disabled=true;sv.textContent='Guardando…';await vidSave(lastFile);openLib();};
   d.querySelector('#lbNo').onclick=expClose;
+  { const tf=d.querySelector('#lbTeam'); if(tf) tf.onchange=()=>{ libTeamF=tf.value; openLib(); }; }
   d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>vidOpenLib(b.dataset.o));
   d.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{
     if(!confirm('¿Borrar este vídeo del dispositivo? Las etiquetas se conservan; tendrás que volver a subir el vídeo para verlas.')) return;
@@ -6477,20 +6513,31 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   async function pushProject(key){
     const raw=lsGet('bbtag.project.'+key); if(!raw) return;
     const o=JSON.parse(raw), ts=num('bbtag.pts.'+key)||Date.now();
-    await upsert({key,name:key.split('|')[0],n:(o.events||[]).length,ts,data:o});
+    await upsert({key,name:(o.meta&&(o.meta.L||o.meta.R)?matchTitle(o.meta)+(o.meta.date?' · '+matchDate(o.meta.date):''):key.split('|')[0]),n:(o.events||[]).length,ts,data:o});
     lsSet('bbtag.psy.'+key,String(ts));
+  }
+  async function pushTeams(){ const ts=num('bbtag.tts'); if(!ts) return; await upsert({key:'__teams__',name:'Equipos',n:0,ts,data:teamsGet()}); lsSet('bbtag.tsy',String(ts)); }
+  async function pullTeams(){
+    if(!on()) return;
+    try{
+      const rows=await rest('video_projects?select=ts,data&key=eq.__teams__&limit=1'); const r=rows&&rows[0];
+      const tts=num('bbtag.tts'), tsy=num('bbtag.tsy');
+      if(r&&r.ts>tsy&&r.ts>tts&&Array.isArray(r.data)){ lsSet('bbtag.teams',JSON.stringify(r.data)); lsSet('bbtag.tts',String(r.ts)); lsSet('bbtag.tsy',String(r.ts)); if(window.__renderRec) window.__renderRec(); }
+      else if(tts>(r?r.ts:0)) await pushTeams();
+    }catch(e){ setSt('err',e.message); }
   }
   async function pushCfg(){ const ts=num('bbtag.cts'); if(!ts) return; await upsert({key:'__config__',name:'Botonera',n:0,ts,data:cfg}); lsSet('bbtag.csy',String(ts)); }
   /* cola de subida con espera */
-  const dirty=new Set(); let qT=null, cDirty=false;
+  const dirty=new Set(); let qT=null, cDirty=false, tDirty=false;
   async function flush(){
-    if(!on()) return; const keys=[...dirty]; dirty.clear(); const c=cDirty; cDirty=false;
-    try{ for(const k of keys) await pushProject(k); if(c) await pushCfg(); setSt('ok'); }
-    catch(e){ keys.forEach(k=>dirty.add(k)); if(c) cDirty=true; setSt('err',e.message); }
+    if(!on()) return; const keys=[...dirty]; dirty.clear(); const c=cDirty, t=tDirty; cDirty=false; tDirty=false;
+    try{ for(const k of keys) await pushProject(k); if(c) await pushCfg(); if(t) await pushTeams(); setSt('ok'); }
+    catch(e){ keys.forEach(k=>dirty.add(k)); if(c) cDirty=true; if(t) tDirty=true; setSt('err',e.message); }
   }
   const later=()=>{ clearTimeout(qT); qT=setTimeout(flush,2500); setSt('pend'); };
   window.__clQ=()=>{ if(!on()||APPLY||!videoKey) return; dirty.add(videoKey); later(); };
   window.__clC=()=>{ if(!on()||APPLY) return; cDirty=true; later(); };
+  window.__clT=()=>{ if(!on()||APPLY) return; tDirty=true; later(); };
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&(dirty.size||cDirty)) flush(); });
   /* estado visible en el botón */
   let stMsg='';
@@ -6529,10 +6576,11 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }catch(e){ setSt('err',e.message); }
   }
   async function pushAll(){
+    await pullCfg(); await pullTeams();
     const keys=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('bbtag.project.')===0) keys.push(k.slice(14)); } }catch(e){}
     let n=0; for(const k of keys){ if(num('bbtag.pts.'+k)>num('bbtag.psy.'+k)||!num('bbtag.psy.'+k)){ if(!num('bbtag.pts.'+k)) lsSet('bbtag.pts.'+k,String(Date.now())); await pushProject(k); n++; } }
-    if(!num('bbtag.cts')) lsSet('bbtag.cts',String(Date.now()));
-    await pushCfg(); return n;
+    if(!num('bbtag.tts')&&teamsGet().length) lsSet('bbtag.tts',String(Date.now()));
+    await pushCfg(); await pushTeams(); return n;
   }
   /* ----- diálogo ----- */
   const dlg=document.createElement('dialog'); dlg.id='dlgCloud'; dlg.className='sm';
@@ -6558,7 +6606,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
         try{
           const j=await auth(mode==='up'?'signup':'token?grant_type=password',{email:em,password:pw});
           if(!j.access_token){ save(); M('Cuenta creada. Confirma el correo que te han enviado y pulsa «Entrar».'); return; }
-          sess(j); toast('Conectado a la nube.'); await render(); await pullCfg();
+          sess(j); toast('Conectado a la nube.'); await render(); await pullCfg(); await pullTeams();
           if(videoKey) window.__cloudPull();
         }catch(e){ M(e.message); }
       };
@@ -6569,9 +6617,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="clSync">Sincronizar ahora</button></div>'+
       '<div style="font:700 13px var(--f-head);letter-spacing:.04em;color:var(--muted)">PROYECTOS EN LA NUBE</div><div id="clL" style="display:flex;flex-direction:column;gap:8px"><span style="color:var(--muted);font-size:13px">Cargando…</span></div>';
     document.getElementById('clOut').onclick=()=>{ CL.s=null; save(); setSt(''); render(); };
-    document.getElementById('clSync').onclick=async()=>{ M('Sincronizando…'); try{ const n=await pushAll(); await pullCfg(); if(videoKey) await window.__cloudPull(); M(''); setSt('ok'); toast('Sincronizado ('+n+' proyectos subidos).'); render(); }catch(e){ M(e.message); } };
+    document.getElementById('clSync').onclick=async()=>{ M('Sincronizando…'); try{ const n=await pushAll(); await pullCfg(); await pullTeams(); if(videoKey) await window.__cloudPull(); M(''); setSt('ok'); toast('Sincronizado ('+n+' proyectos subidos).'); render(); }catch(e){ M(e.message); } };
     try{
-      const rows=(await rest('video_projects?select=key,name,n,ts&key=neq.__config__&order=ts.desc'))||[];
+      const rows=(await rest('video_projects?select=key,name,n,ts&key=not.in.(__config__,__teams__)&order=ts.desc'))||[];
       const L=document.getElementById('clL');
       L.innerHTML=rows.length?rows.map((r,i)=>'<div style="display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">'+esc(r.name)+'</div><div style="font-size:12px;color:var(--muted)">'+r.n+' etiquetas · '+fmtD(r.ts)+'</div></div><button class="btn" data-o="'+i+'">Abrir</button><button class="btn danger" data-d="'+i+'" aria-label="Borrar de la nube">🗑</button></div>').join(''):'<span style="color:var(--muted);font-size:13px">Aún no hay proyectos. Abre un vídeo y etiqueta: se suben solos.</span>';
       L.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{ const r=rows[+b.dataset.o]; dlg.close(); toast('Elige el vídeo «'+r.name+'» para cargar sus marcas.'); document.getElementById('fileVideo').click(); });
@@ -6585,7 +6633,82 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   if(bc){ const b=document.createElement('button'); b.className='btn'; b.id='bCloud'; b.title='Nube'; b.innerHTML='<span class="ic">☁</span><span class="tx">Nube</span>'; bc.parentNode.insertBefore(b,bc); b.onclick=window.openCloud; }
   const g=document.querySelector('#ipHome .hm-g');
   if(g){ const t=document.createElement('button'); t.className='hm-t'; t.id='hmCloud'; t.innerHTML='<i style="background:#4ad0ff"></i><span>Nube<small>Sincronizar iPad y ordenador</small></span>'; t.onclick=window.openCloud; g.appendChild(t); }
-  if(on()){ setSt(''); pullCfg(); }
+  if(on()){ setSt(''); pullCfg(); pullTeams(); }
+})();
+
+/* ===== EQUIPOS GUARDADOS + DATOS DEL PARTIDO ===== */
+(function(){
+  const fld='width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px';
+  const lab='display:block;font-size:12.5px;color:var(--muted)';
+  const mk=(id,title)=>{ const d=document.createElement('dialog'); d.id=id; d.className='sm'; d.innerHTML='<div class="dlg-h"><h2>'+title+'</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" data-b></div><div class="dlg-f"><span class="msg" data-m role="alert"></span></div>'; document.body.appendChild(d); d.querySelector('[data-x]').onclick=()=>d.close(); return d; };
+  const dT=mk('dlgTeams','Equipos'), dM=mk('dlgMatch','Datos del partido');
+  const msg=(d,t)=>{ d.querySelector('[data-m]').textContent=t||''; };
+  /* ---- gestor de equipos ---- */
+  function listT(){
+    const B=dT.querySelector('[data-b]'), tl=teamsGet(); msg(dT,'');
+    B.innerHTML='<p style="margin:0;color:var(--muted);font-size:13.5px">Crea tus equipos una vez, con sus jugadoras, y elígelos al abrir cada partido. Se guardan en este dispositivo y en la nube si has iniciado sesión.</p>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+(tl.length?tl.map((t,i)=>'<div style="display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.name)+'</div><div style="font-size:12px;color:var(--muted)">'+(t.players||[]).length+' jugadoras</div></div><button class="btn" data-e="'+i+'">Editar</button><button class="btn danger" data-d="'+i+'" aria-label="Borrar equipo">🗑</button></div>').join(''):'<span style="color:var(--muted);font-size:13px">Aún no hay equipos.</span>')+'</div>'+
+      '<button class="btn primary" id="tmNew">＋ Nuevo equipo</button>';
+    B.querySelector('#tmNew').onclick=()=>editT(null);
+    B.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>editT(+b.dataset.e));
+    B.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ const t=tl[+b.dataset.d]; if(!confirm('¿Borrar el equipo «'+t.name+'»?\nLos partidos que ya tienen este equipo lo conservan.')) return; teamsSave(tl.filter(x=>x.id!==t.id)); listT(); });
+  }
+  function editT(i){
+    const B=dT.querySelector('[data-b]'), tl=teamsGet(), t=i==null?{id:uid(),name:'',players:[]}:tl[i];
+    B.innerHTML='<label style="'+lab+'">Nombre del equipo<input id="teN" style="'+fld+'" value="'+esc(t.name)+'" placeholder="Ej. Cadete A"></label>'+
+      '<label style="'+lab+'">Jugadoras (una por línea: dorsal y nombre)<textarea id="teP" rows="10" style="'+fld+';font-family:inherit" placeholder="4 Ana García&#10;7 Laia&#10;10 Marta">'+esc((t.players||[]).map(p=>p.n+' '+p.name).join('\n'))+'</textarea></label>'+
+      '<div style="display:flex;gap:8px"><button class="btn primary" id="teOk">Guardar</button><button class="btn" id="teNo">Cancelar</button></div>';
+    B.querySelector('#teNo').onclick=listT;
+    B.querySelector('#teOk').onclick=()=>{
+      const name=B.querySelector('#teN').value.trim(); if(!name){ msg(dT,'Pon un nombre al equipo.'); return; }
+      const r=parseRoster(B.querySelector('#teP').value); if(r.bad&&r.bad.length){ msg(dT,'Revisa: '+r.bad.join(' · ')); return; }
+      t.name=name; t.players=r.out; if(i==null) tl.push(t); teamsSave(tl);
+      /* si el partido abierto usa este equipo, se actualiza */
+      if(matchMeta){ let ch=false; ['L','R'].forEach(k=>{ if(matchMeta[k]&&matchMeta[k].id===t.id){ matchMeta[k]={id:t.id,name:t.name,players:t.players.map(p=>({n:p.n,name:p.name}))}; ch=true; } }); if(ch){ matchApply(true); saveProject(); } }
+      listT();
+    };
+  }
+  window.openTeams=()=>{ dT.showModal(); listT(); };
+  /* ---- datos del partido ---- */
+  function fmtIso(ms){ const d=new Date(ms||Date.now()); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  window.openMatch=function(){
+    if(!hasVideo||!videoKey){ toast('Abre primero un vídeo.'); return; }
+    const tl=teamsGet(), m=matchMeta||{}, B=dM.querySelector('[data-b]'); msg(dM,'');
+    const opts=k=>'<option value="">— Sin equipo —</option>'+tl.map(t=>'<option value="'+esc(t.id)+'"'+(m[k]&&m[k].id===t.id?' selected':'')+'>'+esc(t.name)+'</option>').join('');
+    B.innerHTML=(tl.length?'':'<p style="margin:0;color:var(--muted);font-size:13.5px">Todavía no tienes equipos guardados. Créalos primero y vuelve aquí.</p>')+
+      '<label style="'+lab+'">Fecha del partido<input id="maD" type="date" style="'+fld+'" value="'+esc(m.date||fmtIso(lastFile&&lastFile.lastModified))+'"></label>'+
+      '<label style="'+lab+'">Equipo local<select id="maL" style="'+fld+'">'+opts('L')+'</select></label>'+
+      '<label style="'+lab+'">Equipo rival<select id="maR" style="'+fld+'">'+opts('R')+'</select></label>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="maOk">Guardar</button><button class="btn" id="maTm">Gestionar equipos</button>'+(matchMeta?'<button class="btn danger" id="maDel">Quitar datos</button>':'')+'</div>';
+    B.querySelector('#maTm').onclick=()=>{ dM.close(); window.openTeams(); };
+    const del=B.querySelector('#maDel'); if(del) del.onclick=()=>{ matchMeta=null; matchApply(true); saveProject(); if(window.__renderRec) window.__renderRec(); dM.close(); toast('Datos del partido quitados.'); };
+    B.querySelector('#maOk').onclick=()=>{
+      const lid=B.querySelector('#maL').value, rid=B.querySelector('#maR').value, date=B.querySelector('#maD').value;
+      if(lid&&lid===rid){ msg(dM,'El local y el rival no pueden ser el mismo equipo.'); return; }
+      const snap=id=>{ const t=tl.find(x=>x.id===id); return t?{id:t.id,name:t.name,players:(t.players||[]).map(p=>({n:p.n,name:p.name}))}:null; };
+      const nm={date:date||'',L:snap(lid),R:snap(rid)};
+      if(!nm.L&&!nm.R&&!nm.date){ matchMeta=null; } else { matchMeta=nm; }
+      try{ localStorage.setItem('bbtag.asked.'+videoKey,'1'); }catch(e){}
+      matchApply(true); saveProject(); if(window.__renderRec) window.__renderRec(); dM.close(); toast('Partido guardado.');
+    };
+    dM.showModal();
+  };
+  /* preguntar al abrir un vídeo nuevo (solo si ya hay equipos) */
+  window.__matchAsk=function(){
+    const k=videoKey; if(!k) return;
+    setTimeout(()=>{
+      if(videoKey!==k||matchMeta||!teamsGet().length||dM.open||dT.open) return;
+      try{ if(localStorage.getItem('bbtag.asked.'+k)) return; localStorage.setItem('bbtag.asked.'+k,'1'); }catch(e){}
+      window.openMatch();
+    },2200);
+  };
+  /* accesos */
+  const vn=document.getElementById('videoName'); if(vn){ vn.style.cursor='pointer'; vn.title='Datos del partido: equipos y fecha'; vn.addEventListener('click',()=>window.openMatch()); }
+  const g=document.querySelector('#ipHome .hm-g');
+  if(g){ const t=document.createElement('button'); t.className='hm-t'; t.id='hmTeams'; t.innerHTML='<i style="background:#ff7ad9"></i><span>Equipos<small>Jugadoras guardadas</small></span>'; t.onclick=()=>window.openTeams(); g.appendChild(t); }
+  const bc=document.getElementById('bCfg');
+  if(bc){ const b=document.createElement('button'); b.className='btn'; b.id='bTeams'; b.title='Equipos y jugadoras guardados'; b.innerHTML='<span class="ic">👥</span><span class="tx">Equipos</span>'; bc.parentNode.insertBefore(b,bc); b.onclick=()=>window.openTeams();
+    const b2=document.createElement('button'); b2.className='btn'; b2.id='bMatch'; b2.title='Datos del partido: equipos y fecha'; b2.innerHTML='<span class="ic">📅</span><span class="tx">Partido</span>'; bc.parentNode.insertBefore(b2,bc); b2.onclick=()=>window.openMatch(); }
 })();
 
 document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle('libMore');
@@ -6673,7 +6796,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
    '<button class="hm-t" id="hmFile"><i style="background:#ff5a5a"></i><span>Desde Archivos<small>iCloud, Drive, En mi iPad</small></span></button>'+
    '<button class="hm-t" id="hmMarks"><i style="background:#ff9f2f"></i><span>Recuperar marcas<small>Archivo de proyecto</small></span></button>'+
    '<button class="hm-t" id="hmEdit"><i style="background:#ffc933"></i><span>Editar set de botones</span></button>'+
-   '</div><h3>Recientes</h3><div class="hm-r" id="hmRec"></div></div>';
+   '</div><div class="hm-fh"><h3>Recientes</h3><select id="hmTeamF" aria-label="Filtrar por equipo" hidden></select></div><div class="hm-r" id="hmRec"></div></div>';
   B.appendChild(h);
   const f2=document.createElement('input'); f2.type='file'; f2.accept='.mp4,.m4v,.mov,.webm,.mkv'; f2.hidden=true; B.appendChild(f2);
   f2.onchange=e=>{ loadFile(e.target.files[0]); e.target.value=''; };
@@ -6683,8 +6806,13 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   $h('hmPrev').onclick=()=>{ DLGDOC=null; openLib(); };
   $h('hmMarks').onclick=()=>document.getElementById('fileProject').click();
   $h('hmEdit').onclick=()=>openIpBe();
+  { const g=document.querySelector('#ipHome .hm-g');
+    const add=(id,col,t1,t2,fn)=>{ const b=document.createElement('button'); b.className='hm-t'; b.id=id; b.innerHTML='<i style="background:'+col+'"></i><span>'+t1+'<small>'+t2+'</small></span>'; b.onclick=()=>{ if(window[fn]) window[fn](); }; g.appendChild(b); };
+    add('hmTeams','#ff7ad9','Equipos','Jugadoras guardadas','openTeams'); add('hmCloud','#4ad0ff','Nube','Sincronizar iPad y ordenador','openCloud'); }
   $h('hmNew').onclick=()=>{ openIpBe(); setTimeout(()=>{ const b=document.getElementById('beSetNew'); if(b) b.click(); },60); };
   if(!IPM.on){ $h('hmPhoto').innerHTML='<i style="background:#4a9eff"></i><span>Elegir vídeo<small>Desde este equipo</small></span>'; $h('hmFile').innerHTML='<i style="background:#ff5a5a"></i><span>Otras carpetas<small>Discos, USB, red</small></span>'; }
+  window.__renderRec=()=>{ try{renderRec();}catch(e){} };
+  $h('hmTeamF').onchange=e=>{ RF=e.target.value; renderRec(); };
   let force=false;
   $h('hmX').onclick=()=>{ force=false; B.classList.remove('hmForce'); };
   const btn=document.createElement('button'); btn.id='ipHomeBtn'; btn.className='btn'; btn.title='Inicio'; btn.setAttribute('aria-label','Inicio');
@@ -6692,15 +6820,18 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   btn.onclick=()=>{ force=true; B.classList.add('hmForce'); renderRec(); };
   const ta=document.querySelector('.top-actions'); if(ta) ta.insertBefore(btn,ta.firstChild);
   /* recientes */
-  const RK='bbtag.recent';
+  const RK='bbtag.recent'; let RF='';
   const getRec=()=>{ try{ const a=JSON.parse(lsGet(RK)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
   function renderRec(){
-    const a=getRec(), el=$h('hmRec');
-    el.innerHTML=a.length?a.map((r,i)=>'<div class="hm-w" style="position:relative"><span class="hm-d" data-del="'+i+'" role="button" aria-label="Eliminar proyecto" title="Eliminar proyecto">🗑</span><button class="hm-c" style="width:100%" data-i="'+i+'"><div class="th" style="'+(r.th?'background-image:url('+r.th+')':'')+'">'+(r.th?'':'🎬')+'</div>'+(r.n?'<em>'+r.n+' clips</em>':'')+'<b>'+esc(r.name)+'</b><small>'+new Date(r.at).toLocaleDateString()+'</small></button></div>').join(''):'<p style="opacity:.6;grid-column:1/-1;margin:0">Aún no hay vídeos recientes. Abre uno para empezar.</p>';
+    const tn=[...new Set(teamsGet().map(t=>t.name).concat(...Object.values(titlesGet()).map(x=>x.n||[])))].filter(Boolean).sort((x,y)=>x.localeCompare(y));
+    if(RF&&!tn.includes(RF)) RF='';
+    const sf=$h('hmTeamF'); if(sf){ sf.hidden=!tn.length; sf.innerHTML='<option value="">Todos los equipos</option>'+tn.map(n=>'<option'+(n===RF?' selected':'')+'>'+esc(n)+'</option>').join(''); }
+    const a=getRec().filter(r=>{ if(!RF) return true; const m=window.__mt(r.key); return m&&(m.n||[]).includes(RF); }), el=$h('hmRec');
+    el.innerHTML=a.length?a.map((r,i)=>'<div class="hm-w" style="position:relative"><span class="hm-d" data-del="'+i+'" role="button" aria-label="Eliminar proyecto" title="Eliminar proyecto">🗑</span><button class="hm-c" style="width:100%" data-i="'+i+'"><div class="th" style="'+(r.th?'background-image:url('+r.th+')':'')+'">'+(r.th?'':'🎬')+'</div>'+(r.n?'<em>'+r.n+' clips</em>':'')+'<b>'+esc((window.__mt(r.key)||{}).t||r.name)+'</b><small>'+(((window.__mt(r.key)||{}).d)?esc(matchDate(window.__mt(r.key).d)):new Date(r.at).toLocaleDateString())+'</small></button></div>').join(''):'<p style="opacity:.6;grid-column:1/-1;margin:0">Aún no hay vídeos recientes. Abre uno para empezar.</p>';
     el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async e=>{
       e.stopPropagation(); const r=a[+b.dataset.del]; if(!r) return;
       if(!confirm('¿Eliminar el proyecto «'+r.name+'»?\nSe borran sus etiquetas, clips y dibujos y el vídeo guardado en este dispositivo.')) return;
-      try{ localStorage.removeItem('bbtag.project.'+r.key); }catch(er){}
+      try{ localStorage.removeItem('bbtag.project.'+r.key); const tm=titlesGet(); delete tm[r.key]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(er){}
       try{ await vdbTx('readwrite',st=>st.delete(r.key)); }catch(er){}
       try{ lsSet(RK,JSON.stringify(getRec().filter(x=>x.key!==r.key))); }catch(er){}
       if(videoKey===r.key){ videoKey=null; events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[]; selectedId=null; try{ renderAll(); }catch(er){} }
@@ -6721,7 +6852,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
         save(c.toDataURL('image/jpeg',0.6)); }catch(e){ save(''); } done(); };
       v.onerror=()=>{ save(''); done(); };
     }catch(e){ save(''); }
-    function save(th){ const key=file.name+'|'+file.size; let a=getRec().filter(r=>r.key!==key); a.unshift({key,name:file.name,at:Date.now(),th,n:events.length}); a=a.slice(0,9); try{ lsSet(RK,JSON.stringify(a)); }catch(e){ a.forEach(r=>r.th=''); try{lsSet(RK,JSON.stringify(a));}catch(e2){} } renderRec(); }
+    function save(th){ const key=file.name+'|'+file.size; let a=getRec().filter(r=>r.key!==key); a.unshift({key,name:file.name,at:Date.now(),th,n:events.length}); a=a.slice(0,30); try{ lsSet(RK,JSON.stringify(a)); }catch(e){ a.forEach(r=>r.th=''); try{lsSet(RK,JSON.stringify(a));}catch(e2){} } renderRec(); }
   }
   video.addEventListener('loadedmetadata',()=>{ force=false; B.classList.remove('hmForce'); B.classList.remove('ipHome'); if(lastFile){ thumb(lastFile); setTimeout(()=>{ try{ if(lastFile&&lastFile.size<4e9) vidSave(lastFile); }catch(e){} },2500); } });
   const tick=()=>{ const tp=document.querySelector('.top'); if(tp) document.documentElement.style.setProperty('--hmT',Math.round(tp.getBoundingClientRect().bottom)+'px'); B.classList.toggle('ipHome',(!hasVideo||force)); if(!hasVideo) B.classList.remove('hmForce'); };
