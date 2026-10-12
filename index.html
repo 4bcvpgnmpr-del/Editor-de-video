@@ -3864,7 +3864,7 @@ function matchApply(render){
     ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(rp); } });
   } else if(baseTeams){ try{ const b=JSON.parse(baseTeams); cfg.teamNames=b.teamNames; cfg.rosters=b.rosters; }catch(e){} baseTeams=null; }
   const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')):videoName;
-  if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} }
+  if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} try{ renderCodes(); renderDescStrip(); renderTimeline(); }catch(e){} }
 }
 function teamSync(){
   if(!matchMeta||!videoKey) return; let ch=false; const tl=teamsGet(); let tch=false;
