@@ -1095,6 +1095,11 @@ body.ipad .ev .acts{overflow:hidden;gap:0;padding:0}
 body.ipad .ev .acts button{width:36px!important;min-width:0!important;height:40px!important;padding:0!important;flex:none}
 body.ipad .ev .t{padding:6px 4px}
 body.ipad.ovl #tgTags,body.ipad.evOpen #tgTags{display:none!important}
+body.ipad .dk-only{display:none!important}
+.center:fullscreen{background:#000;padding:8px;gap:8px}
+.center:fullscreen .main{padding:0}
+.center:fullscreen #vwrap{flex:1;min-height:0;max-height:none;height:auto}
+.center:fullscreen #tlWrap,.center:fullscreen .tl{display:none}
 </style>
 </head>
 <body>
@@ -1167,6 +1172,7 @@ body.ipad.ovl #tgTags,body.ipad.evOpen #tgTags{display:none!important}
           <button class="ib" id="bFrameFwd" title="Fotograma siguiente (flecha derecha o punto)" aria-label="Fotograma siguiente"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
           <button class="ib" id="bFwd1" title="Avanzar 1 s (Mayús + flecha derecha)" aria-label="Avanzar 1 segundo">+1 s</button>
           <button class="ib" id="bFwd5" title="Avanzar 5 s (Ctrl/Cmd + flecha derecha)" aria-label="Avanzar 5 segundos">+5 s</button>
+          <button class="ib dk-only" id="bFs" title="Pantalla completa del reproductor (F)" aria-label="Pantalla completa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
           <span class="time" id="timeEl">0:00.0 / 0:00</span>
           <button class="ib ip-only ip-tag" id="ipTag" title="Crear un clip manual aquí">＋ Tag</button><button class="ib ip-only" id="ipTags" title="Lista de clips">☰ Clips</button><span id="ipUndo" hidden></span><span id="ipRedo" hidden></span>
           <button class="ib" id="bFreeze" title="Congelar imagen y dibujar encima (Mayús+F)" style="min-width:auto">Freeze frame</button>
@@ -6418,9 +6424,16 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     }catch(e){ save(''); }
     function save(th){ const key=file.name+'|'+file.size; let a=getRec().filter(r=>r.key!==key); a.unshift({key,name:file.name,at:Date.now(),th,n:events.length}); a=a.slice(0,9); try{ lsSet(RK,JSON.stringify(a)); }catch(e){ a.forEach(r=>r.th=''); try{lsSet(RK,JSON.stringify(a));}catch(e2){} } renderRec(); }
   }
-  video.addEventListener('loadedmetadata',()=>{ if(lastFile) thumb(lastFile); });
+  video.addEventListener('loadedmetadata',()=>{ force=false; B.classList.remove('hmForce'); B.classList.remove('ipHome'); if(lastFile){ thumb(lastFile); setTimeout(()=>{ try{ if(lastFile&&lastFile.size<4e9) vidSave(lastFile); }catch(e){} },2500); } });
   const tick=()=>{ const tp=document.querySelector('.top'); if(tp) document.documentElement.style.setProperty('--hmT',Math.round(tp.getBoundingClientRect().bottom)+'px'); B.classList.toggle('ipHome',(!hasVideo||force)); if(!hasVideo) B.classList.remove('hmForce'); };
   setInterval(tick,250); tick(); renderRec();
+})();
+
+(function(){ const b=document.getElementById('bFs'); if(!b) return;
+  const tgl=()=>{ try{ const c=document.querySelector('.center'); if(document.fullscreenElement) document.exitFullscreen(); else if(c.requestFullscreen) c.requestFullscreen().catch(()=>{}); }catch(e){} };
+  b.onclick=tgl;
+  document.addEventListener('keydown',e=>{ if((e.key==='f'||e.key==='F')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')&&!document.body.classList.contains('ipad')&&hasVideo){ e.preventDefault(); tgl(); } });
+  document.addEventListener('fullscreenchange',()=>{ setTimeout(()=>{ try{ layoutTele(); }catch(er){} },120); });
 })();
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
