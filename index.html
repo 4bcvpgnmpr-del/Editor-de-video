@@ -1048,6 +1048,11 @@ body.ipad #tgTags svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:
 body.ipad.hideTags #dockR{display:none!important}
 body.ipad.hideTags #tgTags{background:var(--accent,#2a6cf0)}
 body.ipad.fz #tgTags{display:none}
+
+body.ipad.vfull:not(.ctlOn):not(.fz) #ipScrub,body.ipad.vfull:not(.ctlOn):not(.fz) .transport{opacity:0;pointer-events:none}
+body.ipad.vfull #ipScrub,body.ipad.vfull .transport{transition:opacity .25s}
+body.ipad.ovl #tgTags{display:none!important}
+body.ipad.vfull #tgTags{left:68px!important;right:auto!important;top:calc(14px + env(safe-area-inset-top,0px))!important}
 </style>
 </head>
 <body>
@@ -6345,6 +6350,17 @@ function ipFzSync(){
   $$('fzMin').onclick=()=>{ document.body.classList.add('fzMin'); };
   $$('fzPill').onclick=()=>{ document.body.classList.remove('fzMin'); };
 
+  (function(){ const B=document.body; let tm=0;
+    window.__ctlShow=function(){ B.classList.add('ctlOn'); clearTimeout(tm); tm=setTimeout(()=>B.classList.remove('ctlOn'),3500); };
+    const vw=document.getElementById('vwrap');
+    vw.addEventListener('click',e=>{ if(!B.classList.contains('vfull')||e.target.closest('button,select,input')) return; if(B.classList.contains('ctlOn')){ B.classList.remove('ctlOn'); clearTimeout(tm);} else window.__ctlShow(); });
+    let was=false; new MutationObserver(()=>{ const v=B.classList.contains('vfull'); if(v===was) return; was=v; if(v) window.__ctlShow(); else B.classList.remove('ctlOn'); }).observe(B,{attributes:true,attributeFilter:['class']});
+    const closeLib=()=>{ if(B.classList.contains('ipad')&&layout.panels.events.vis){ layout.panels.events.vis=false; applyLayout(); saveLayout(); } };
+    video.addEventListener('play',closeLib);
+    document.addEventListener('play',e=>{ if(e.target&&e.target.closest&&e.target.closest('#ceVwrap')) closeLib(); },true);
+    setInterval(()=>{ const p=layout.panels; B.classList.toggle('ovl',!!((p.clip&&p.clip.vis)||(p.prod&&p.prod.vis))); },250);
+  })();
+
   (function(){ const b=document.getElementById('tgTags'); if(!b) return;
     function pos(){ try{ const d=document.getElementById('dockR'); if(d&&!document.body.classList.contains('hideTags')&&d.offsetParent){ const r=d.getBoundingClientRect(); const st=document.documentElement.style; st.setProperty('--tgT',(r.top+6)+'px'); st.setProperty('--tgL',(r.left+10)+'px'); st.setProperty('--tgR','auto'); } }catch(e){} }
     b.onclick=()=>{ document.body.classList.toggle('hideTags'); };
@@ -7609,6 +7625,7 @@ function openClipEditor(id){
   ceStop();
   ce={id,v:null,doc:null,win:null,lastT:0,freeze:null,sel:null,shown:'',loop:false,raf:0,ctxA:0,ctxB:0,drag:null,ro:null};
   selectedId=id; renderList(); renderTimeline(); renderDescStrip();
+  if(IPM.on) layout.panels.events.vis=false;
   const st=layout.panels.clip;
   const ok=(isNarrow()||IPM.on)?false:popOut('clip',{eph:true,fallback:true,w:1000,h:860,what:'el editor del clip'});
   if(!ok){st.vis=true;st.min=false;st.max=false;applyLayout();saveLayout();}
