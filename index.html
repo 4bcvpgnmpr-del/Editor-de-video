@@ -6847,7 +6847,26 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     const B=dT.querySelector('[data-b]'), tl=teamsGet(), t=i==null?{id:uid(),name:'',players:[]}:tl[i];
     B.innerHTML='<label style="'+lab+'">Nombre del equipo<input id="teN" style="'+fld+'" value="'+esc(t.name)+'" placeholder="Ej. Cadete A"></label>'+
       '<label style="'+lab+'">Jugadoras (una por línea: dorsal y nombre)<textarea id="teP" rows="10" style="'+fld+';font-family:inherit" placeholder="4 Ana García&#10;7 Laia&#10;10 Marta">'+esc((t.players||[]).map(p=>p.n+' '+p.name).join('\n'))+'</textarea></label>'+
+      '<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" id="tePh" type="button">📷 Fotos en bloque</button><input type="file" id="tePhF" accept="image/*" multiple hidden><span style="font-size:12.5px;color:var(--muted)">Elige varias a la vez. Se asignan por el nombre del archivo: <b>7.jpg</b> o <b>Lisa.jpg</b></span></div><div id="tePhR" style="display:flex;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)"></div></div>'+
       '<div style="display:flex;gap:8px"><button class="btn primary" id="teOk">Guardar</button><button class="btn" id="teNo">Cancelar</button></div>';
+    const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+    function showPh(extra){ const R=B.querySelector('#tePhR'); const ps=(t.players||[]).filter(q=>q.photo); R.innerHTML=ps.map(q=>'<span title="'+esc(q.name)+'" style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#2b3038 center/cover no-repeat url('+q.photo+')"></span>').join('')+(ps.length?'<span style="align-self:center">'+ps.length+' con foto</span>':'')+(extra?'<div style="flex-basis:100%;color:var(--text)">'+extra+'</div>':''); }
+    showPh('');
+    B.querySelector('#tePh').onclick=()=>B.querySelector('#tePhF').click();
+    B.querySelector('#tePhF').onchange=async e=>{
+      const files=[...e.target.files]; e.target.value=''; if(!files.length) return;
+      const r=parseRoster(B.querySelector('#teP').value); if(r.bad&&r.bad.length){ msg(dT,'Revisa la lista de jugadoras: '+r.bad.join(' · ')); return; }
+      t.players=keepPh(r.out,t.players); const pl=t.players; let ok=0; const miss=[];
+      if(!pl.length){ msg(dT,'Escribe primero las jugadoras (dorsal y nombre).'); return; }
+      for(const f of files){
+        const base=norm(f.name.replace(/\.[^.]+$/,'')); let q=null; const m=base.match(/(?:^|\s)(\d{1,3})(?:\s|$)/);
+        if(m) q=pl.find(x=>String(parseInt(x.n,10))===String(parseInt(m[1],10)));
+        if(!q&&base){ q=pl.find(x=>norm(x.name)===base)||pl.find(x=>{ const nn=norm(x.name); return nn&&(base.includes(nn)||nn.includes(base)); })||pl.find(x=>norm(x.name).split(' ').some(w=>w.length>2&&base.split(' ').includes(w))); }
+        if(!q){ miss.push(f.name); continue; }
+        try{ q.photo=await photoFromFile(f); ok++; }catch(er){ miss.push(f.name); }
+      }
+      msg(dT,''); showPh('✔ '+ok+' foto'+(ok===1?'':'s')+' asignada'+(ok===1?'':'s')+(miss.length?' · Sin asignar: '+esc(miss.join(', ')):'')+'. Pulsa Guardar.');
+    };
     B.querySelector('#teNo').onclick=listT;
     B.querySelector('#teOk').onclick=()=>{
       const name=B.querySelector('#teN').value.trim(); if(!name){ msg(dT,'Pon un nombre al equipo.'); return; }
