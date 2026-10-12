@@ -4004,7 +4004,8 @@ function renderSetQuick(){
 }
 function setQuickGo(name){
   if(typeof IPS==='undefined'||!IPS||!cfg.pages.includes(name)) return;
-  IPS.set=name; lsSet('bbtag.ipset',name); renderCodes();
+  IPS.set=name; lsSet('bbtag.ipset',name);
+  try{ renderCodes(); }catch(e){ toast('Error al cambiar de botonera: '+(e&&e.message||e)); }
 }
 function setQuickNext(){
   const ps=cfg.pages||[]; if(ps.length<2||typeof IPS==='undefined'||!IPS) return;
@@ -7071,7 +7072,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='12/10/2026 · 22:40';
+  const BUILD='12/10/2026 · 22:50 (botoneras rápidas)';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
