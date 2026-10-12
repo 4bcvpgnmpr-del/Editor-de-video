@@ -1063,6 +1063,32 @@ body.ipad.pj.vfull #ipPj{top:0;z-index:80;background:rgba(14,14,14,.94)}
 body.ipad.pj.vfull.port #ipPj{top:auto}
 body.ipad.pj.vfull #ipScrub,body.ipad.pj.vfull .transport{right:0}
 body.ipad.pj:not(.vfull) #tgTags{display:none!important}
+
+/* ===== iPad: sala de análisis (inicio / importación) ===== */
+body.ipad #empty{display:none!important}
+#ipHome{display:none}
+body.ipad.ipHome #ipHome{display:block;position:fixed;left:0;right:0;top:54px;bottom:0;z-index:45;background:#0b0b0b;overflow:auto;padding:22px 28px 40px;-webkit-overflow-scrolling:touch}
+#ipHome .hm-in{max-width:980px;margin:0 auto}
+#ipHome .hm-logo{width:64px;height:64px;border-radius:16px;margin:4px auto 8px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff8a1f,#d94f00)}
+#ipHome .hm-logo svg{width:34px;height:34px;fill:#fff}
+#ipHome h2{margin:0 0 18px;text-align:center;font:700 24px var(--f-head,inherit);color:#fff}
+#ipHome .hm-g{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+#ipHome .hm-t{display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;border-radius:14px;border:1px solid #2a2a2a;background:#161616;color:#fff;font-size:16px;font-weight:600;text-align:left}
+#ipHome .hm-t i{width:12px;height:12px;border-radius:50%;flex:none}
+#ipHome .hm-t small{display:block;font-weight:400;opacity:.6;font-size:12px}
+#ipHome h3{margin:26px 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#aaa}
+#ipHome .hm-r{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#ipHome .hm-c{position:relative;padding:0;border:1px solid #2a2a2a;border-radius:12px;overflow:hidden;background:#151515;color:#fff;text-align:left}
+#ipHome .hm-c .th{aspect-ratio:16/9;background:#222 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:.95}
+#ipHome .hm-c b{display:block;padding:8px 10px 0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ipHome .hm-c small{display:block;padding:2px 10px 9px;font-size:11.5px;opacity:.6}
+#ipHome .hm-c em{position:absolute;right:8px;top:8px;font-style:normal;font-size:11px;background:rgba(0,0,0,.65);padding:2px 7px;border-radius:9px}
+#ipHome .hm-x{position:fixed;right:14px;top:62px;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid #444;background:#1c1c1c;color:#fff;display:none}
+body.ipad.ipHome.hmForce #ipHome .hm-x{display:block}
+body.port #ipHome .hm-g,body.port #ipHome .hm-r{grid-template-columns:repeat(2,1fr)}
+#ipHomeBtn{display:none}
+body.ipad #ipHomeBtn{display:inline-flex}
+body.ipHome #tgTags{display:none!important}
 </style>
 </head>
 <body>
@@ -6330,6 +6356,63 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   bt.onclick=()=>full(!document.body.classList.contains('vfull'));
   const x=document.createElement('button'); x.id='vfX'; x.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>'; x.setAttribute('aria-label','Salir de pantalla completa'); document.body.appendChild(x); x.onclick=()=>full(false);
   document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&document.body.classList.contains('vfull')){ document.body.classList.remove('vfull'); setTimeout(()=>{try{layoutTele();}catch(er){} apply();},80);} });
+})();
+
+/* ===== iPad: sala de análisis ===== */
+(function(){
+  const B=document.body; if(!IPM.on) { /* se activa también si cambia el modo en caliente */ }
+  const h=document.createElement('div'); h.id='ipHome';
+  h.innerHTML='<button class="hm-x" id="hmX">Volver al vídeo ✕</button><div class="hm-in"><div class="hm-logo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><h2>Sala de análisis</h2>'+
+   '<div class="hm-g">'+
+   '<button class="hm-t" id="hmPhoto"><i style="background:#4a9eff"></i><span>Desde Fotos<small>Galería del iPad</small></span></button>'+
+   '<button class="hm-t" id="hmPrev"><i style="background:#b07cff"></i><span>Análisis previo<small>Vídeos guardados</small></span></button>'+
+   '<button class="hm-t" id="hmNew"><i style="background:#2fd07a"></i><span>Nuevo set de botones</span></button>'+
+   '<button class="hm-t" id="hmFile"><i style="background:#ff5a5a"></i><span>Desde Archivos<small>iCloud, Drive, En mi iPad</small></span></button>'+
+   '<button class="hm-t" id="hmMarks"><i style="background:#ff9f2f"></i><span>Recuperar marcas<small>Archivo de proyecto</small></span></button>'+
+   '<button class="hm-t" id="hmEdit"><i style="background:#ffc933"></i><span>Editar set de botones</span></button>'+
+   '</div><h3>Recientes</h3><div class="hm-r" id="hmRec"></div></div>';
+  B.appendChild(h);
+  const f2=document.createElement('input'); f2.type='file'; f2.accept='.mp4,.m4v,.mov,.webm,.mkv'; f2.hidden=true; B.appendChild(f2);
+  f2.onchange=e=>{ loadFile(e.target.files[0]); e.target.value=''; };
+  const $h=id=>document.getElementById(id);
+  $h('hmPhoto').onclick=()=>document.getElementById('fileVideo').click();
+  $h('hmFile').onclick=()=>f2.click();
+  $h('hmPrev').onclick=()=>{ DLGDOC=null; openLib(); };
+  $h('hmMarks').onclick=()=>document.getElementById('fileProject').click();
+  $h('hmEdit').onclick=()=>openIpBe();
+  $h('hmNew').onclick=()=>{ openIpBe(); setTimeout(()=>{ const b=document.getElementById('beSetNew'); if(b) b.click(); },60); };
+  let force=false;
+  $h('hmX').onclick=()=>{ force=false; B.classList.remove('hmForce'); };
+  const btn=document.createElement('button'); btn.id='ipHomeBtn'; btn.className='btn'; btn.title='Inicio'; btn.setAttribute('aria-label','Inicio');
+  btn.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>';
+  btn.onclick=()=>{ force=true; B.classList.add('hmForce'); renderRec(); };
+  const ta=document.querySelector('.top-actions'); if(ta) ta.insertBefore(btn,ta.firstChild);
+  /* recientes */
+  const RK='bbtag.recent';
+  const getRec=()=>{ try{ const a=JSON.parse(lsGet(RK)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
+  function renderRec(){
+    const a=getRec(), el=$h('hmRec');
+    el.innerHTML=a.length?a.map((r,i)=>'<button class="hm-c" data-i="'+i+'"><div class="th" style="'+(r.th?'background-image:url('+r.th+')':'')+'">'+(r.th?'':'🎬')+'</div>'+(r.n?'<em>'+r.n+' clips</em>':'')+'<b>'+esc(r.name)+'</b><small>'+new Date(r.at).toLocaleDateString()+'</small></button>').join(''):'<p style="opacity:.6;grid-column:1/-1;margin:0">Aún no hay vídeos recientes. Abre uno desde Fotos o Archivos.</p>';
+    el.querySelectorAll('.hm-c').forEach(b=>b.onclick=async()=>{
+      const r=a[+b.dataset.i]; let found=null;
+      try{ found=(await vidList()).find(v=>v.key===r.key); }catch(e){}
+      if(found){ vidOpenLib(found.key); } else { toast('Elige otra vez el vídeo «'+r.name+'» para recuperar sus marcas.'); document.getElementById('fileVideo').click(); }
+    });
+  }
+  function thumb(file){
+    try{
+      const v=document.createElement('video'), u=URL.createObjectURL(file); v.muted=true; v.playsInline=true; v.preload='auto'; v.src=u;
+      const done=()=>{ try{URL.revokeObjectURL(u);}catch(e){} };
+      v.onloadedmetadata=()=>{ try{ v.currentTime=Math.min(3,(v.duration||6)*0.15); }catch(e){} };
+      v.onseeked=()=>{ try{ const c=document.createElement('canvas'); c.width=320; c.height=Math.round(320*(v.videoHeight||9)/(v.videoWidth||16)); c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+        save(c.toDataURL('image/jpeg',0.6)); }catch(e){ save(''); } done(); };
+      v.onerror=()=>{ save(''); done(); };
+    }catch(e){ save(''); }
+    function save(th){ const key=file.name+'|'+file.size; let a=getRec().filter(r=>r.key!==key); a.unshift({key,name:file.name,at:Date.now(),th,n:events.length}); a=a.slice(0,9); try{ lsSet(RK,JSON.stringify(a)); }catch(e){ a.forEach(r=>r.th=''); try{lsSet(RK,JSON.stringify(a));}catch(e2){} } renderRec(); }
+  }
+  video.addEventListener('loadedmetadata',()=>{ if(lastFile) thumb(lastFile); });
+  const tick=()=>{ B.classList.toggle('ipHome',B.classList.contains('ipad')&&(!hasVideo||force)); if(!hasVideo) B.classList.remove('hmForce'); };
+  setInterval(tick,250); tick(); renderRec();
 })();
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
