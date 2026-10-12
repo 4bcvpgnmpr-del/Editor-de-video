@@ -1089,6 +1089,11 @@ body.port #ipHome .hm-g,body.port #ipHome .hm-r{grid-template-columns:repeat(2,1
 #ipHomeBtn{display:none}
 body.ipad #ipHomeBtn{display:inline-flex}
 body.ipHome #tgTags{display:none!important}
+body.ipad .ev,body.ipad .ev-h{grid-template-columns:44px minmax(60px,1fr) minmax(0,.8fr) 54px 186px!important}
+body.ipad .ev .acts{overflow:hidden;gap:0;padding:0}
+body.ipad .ev .acts button{width:36px!important;min-width:0!important;height:40px!important;padding:0!important;flex:none}
+body.ipad .ev .t{padding:6px 4px}
+body.ipad.ovl #tgTags,body.ipad.evOpen #tgTags{display:none!important}
 </style>
 </head>
 <body>
@@ -6451,7 +6456,7 @@ function ipFzSync(){
     const closeLib=()=>{ if(B.classList.contains('ipad')&&layout.panels.events.vis){ layout.panels.events.vis=false; applyLayout(); saveLayout(); } };
     video.addEventListener('play',closeLib);
     document.addEventListener('play',e=>{ if(e.target&&e.target.closest&&e.target.closest('#ceVwrap')) closeLib(); },true);
-    setInterval(()=>{ const p=layout.panels; B.classList.toggle('ovl',!!((p.clip&&p.clip.vis)||(p.prod&&p.prod.vis))); },250);
+    let pc=false; setInterval(()=>{ const p=layout.panels; const cv=!!(p.clip&&p.clip.vis); if(pc&&!cv&&ipLibBack&&B.classList.contains('ipad')){ ipLibBack=false; p.events.vis=true; applyLayout(); saveLayout(); } pc=cv; B.classList.toggle('ovl',!!((p.clip&&p.clip.vis)||(p.prod&&p.prod.vis)||(p.events&&p.events.vis))); },250);
   })();
 
   (function(){ const b=document.getElementById('tgTags'); if(!b) return;
@@ -7712,13 +7717,14 @@ function teleMarkup(tl){
   }
   return out+tl.items.map((s,i)=>shapeSVG(s,i)).join('');
 }
+let ipLibBack=false;
 function openClipEditor(id){
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
   if(!events.some(e=>e.id===id)) return;
   ceStop();
   ce={id,v:null,doc:null,win:null,lastT:0,freeze:null,sel:null,shown:'',loop:false,raf:0,ctxA:0,ctxB:0,drag:null,ro:null};
   selectedId=id; renderList(); renderTimeline(); renderDescStrip();
-  if(IPM.on) layout.panels.events.vis=false;
+  if(IPM.on){ ipLibBack=layout.panels.events.vis; layout.panels.events.vis=false; }
   const st=layout.panels.clip;
   const ok=(isNarrow()||IPM.on)?false:popOut('clip',{eph:true,fallback:true,w:1000,h:860,what:'el editor del clip'});
   if(!ok){st.vis=true;st.min=false;st.max=false;applyLayout();saveLayout();}
@@ -7734,7 +7740,7 @@ function ceStop(){
 function ceClose(){
   const st=layout.panels.clip, was=st.win;
   ceStop();
-  if(was) popBack('clip'); else {st.vis=false;applyLayout();saveLayout();}
+  if(was) popBack('clip'); else {st.vis=false; if(IPM.on&&ipLibBack){ layout.panels.events.vis=true; ipLibBack=false; } applyLayout();saveLayout();}
 }
 function ceFit(){
   const ev=ceEv(), dur=video.duration||0; if(!ev) return;
