@@ -1,8 +1,78 @@
-/* Service worker: red primero (así se actualiza siempre) y copia local si no hay conexión */
-const C='scouting-v1';
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'])).catch(()=>{}));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{
-  const r=e.request; if(r.method!=='GET'||new URL(r.url).origin!==location.origin) return;
-  e.respondWith(fetch(r).then(res=>{const cp=res.clone(); caches.open(C).then(c=>c.put(r,cp)); return res;}).catch(()=>caches.match(r).then(m=>m||caches.match('./index.html'))));
+/* ScoutFlow - service worker
+   Objetivo: que la app se pueda instalar y abrir rapido,
+   pero SIN guardar nunca datos viejos de Google Sheets ni de la FEB.
+   Estrategia: red primero, y si no hay internet, lo guardado. */
+
+const CACHE = "scoutflow-2026-10-12t";
+
+const BASICOS = [
+  "./",
+  "./index.html",
+  "./entrenador.html",
+  "./pizarra.html",
+  "./manifest.json",
+  "./icono-192.png",
+  "./icono-512.png",
+  "./icono-180.png"
+];
+
+// Librerias externas que la app necesita para abrir sin internet
+const EXTRAS = [
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"
+];
+
+// Dominios que NUNCA se guardan en cache (datos que deben estar al dia)
+function esDatosEnVivo(url) {
+  return url.includes("google.com") ||
+         url.includes("googleusercontent.com") ||
+         url.includes("gstatic.com/charts") ||
+         url.includes("feb.es") ||
+         url.includes("youtube.com") ||
+         url.includes("vimeo.com");
+}
+
+self.addEventListener("install", (evento) => {
+  evento.waitUntil(
+    caches.open(CACHE).then((c) => Promise.all(
+      BASICOS.map((u) => c.add(u).catch(() => {})).concat(
+        EXTRAS.map((u) => c.add(new Request(u, { mode: "cors" })).catch(() => {}))
+      )
+    ))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (evento) => {
+  evento.waitUntil(
+    caches.keys()
+      .then((claves) => Promise.all(
+        claves.filter((k) => k !== CACHE).map((k) => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (evento) => {
+  const peticion = evento.request;
+
+  if (peticion.method !== "GET") return;
+  if (esDatosEnVivo(peticion.url)) return;          // va directo a la red
+  if (!peticion.url.startsWith("http")) return;
+
+  // Red primero, pero con limite de tiempo: si el wifi del pabellon va lento, se usa lo guardado
+  const guardada = () => caches.match(peticion).then((g) => g || caches.match(peticion, { ignoreSearch: true }));
+  const red = fetch(peticion, { cache: "no-cache" }).then((respuesta) => {
+    if (respuesta && respuesta.status === 200 &&
+        (respuesta.type === "basic" || respuesta.type === "cors")) {
+      const copia = respuesta.clone();
+      caches.open(CACHE).then((c) => c.put(peticion, copia)).catch(() => {});
+    }
+    return respuesta;
+  });
+  const limite = new Promise((_, no) => setTimeout(() => no(new Error("lento")), 5000));
+  evento.respondWith(
+    Promise.race([red, limite]).catch(() =>
+      guardada().then((g) => g || red.catch(() => caches.match("./index.html")))
+    )
+  );
 });
