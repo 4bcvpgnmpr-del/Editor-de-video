@@ -1105,7 +1105,7 @@ body.ipad .dk-only{display:none!important}
 .center:fullscreen #vwrap{flex:1;min-height:0;max-height:none;height:auto}
 .center:fullscreen #tlWrap,.center:fullscreen .tl{display:none}
 #pClip:fullscreen{background:var(--bg,#111);width:100vw!important;height:100vh!important;max-width:none!important;display:flex;flex-direction:column;position:static!important;inset:auto!important}
-#pClip:fullscreen .p-head,#pClip:fullscreen .ce-title,#pClip:fullscreen .ce-list,#pClip:fullscreen .ce-name,#pClip:fullscreen .ce-note{display:none!important}
+#pClip:fullscreen .p-head,#pClip:fullscreen .ce-title,#pClip:fullscreen .ce-list,#pClip:fullscreen .ce-note{display:none!important}
 #pClip:fullscreen .p-body.ce,body.ipad #pClip:fullscreen .p-body.ce{display:flex!important;flex-direction:column;height:100vh;padding:8px 12px;gap:6px;overflow:hidden;grid-template-columns:none}
 #pClip:fullscreen .ce-vwrap{flex:1 1 auto;height:auto!important;max-height:none!important;aspect-ratio:auto!important;min-height:0}
 #pClip:fullscreen .ce-side{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;overflow:visible}
@@ -1116,6 +1116,10 @@ body.ipad #pClip:fullscreen .ce-times,body.ipad #pClip:fullscreen .ce-ann{grid-c
 /* home: borrar proyecto */
 #ipHome .hm-d{position:absolute;left:8px;top:8px;z-index:2;min-width:38px;min-height:38px;border-radius:19px;border:0;background:rgba(0,0,0,.65);color:#ff7a7a;font-size:17px;padding:0}
 body.ipad #bTgBot{display:none!important}
+body.fz #pDraw{display:none!important}
+.ipfz.ip-only:not([hidden]){display:flex!important}
+body:not(.ipad) .ipfz .fz-top #fzMin{display:none}
+#pClip:fullscreen .ce-name{display:block!important;flex:none;margin:0;min-height:40px}
 </style>
 </head>
 <body>
@@ -6473,7 +6477,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
-  const on=!!teleEd&&document.body.classList.contains('ipad');
+  const on=!!teleEd;
   bar.hidden=!on; document.body.classList.toggle('fz',on); if(!on) document.body.classList.remove('fzMin');
   if(!on) return;
   const ed=teleEd, tl=ed.tele, s=ed.sel!=null?tl.items[ed.sel]:null;
@@ -7453,7 +7457,7 @@ function openTele(existing){
   let tl=existing||teles.find(x=>Math.abs(x.t-t)<0.06);
   if(!tl) tl={id:uid(),t,mode:'freeze',hold:3,fade:0.3,items:[],rev:0,clipId:''};
   else if(existing&&Math.abs(video.currentTime-tl.t)>0.001) video.currentTime=tl.t;
-  teleEd={id:tl.id,tele:tl,tool:(IPM.on&&!existing&&!tl.items.length)?'pen':'select',sel:null,color:teleColor,sw:teleSw,zone:null};
+  teleEd={id:tl.id,tele:tl,tool:(!existing&&!tl.items.length)?'pen':'select',sel:null,color:teleColor,sw:teleSw,zone:null};
   const st=layout.panels.draw;
   if(!st.placed&&!isNarrow()){
     const vr=$('#vwrap').getBoundingClientRect(), wr=ws.getBoundingClientRect();
@@ -7974,13 +7978,18 @@ $('#ceList').addEventListener('click',e=>{
   const tl=teles.find(x=>x.id===li.dataset.id); if(!tl) return;
   ce.sel=tl.id; ceSeekTo(tl.t,true); ceRender();
 });
-$('#ceNew').onclick=()=>{
-  if(!ce||!ce.v) return; const t=ce.v.currentTime;
+let ceRet=null;
+function ceDraw(open){
+  if(!ce||!ce.v) return; const id=ce.id, t=ce.v.currentTime;
   if(teleEd) closeTele();
-  video.currentTime=t; video.pause(); openTele(); ceFocusMain();
-  toast('Dibuja en la ventana principal y pulsa «Listo»: la anotación aparecerá en este clip.');
-};
-$('#ceEdit').onclick=()=>{ const tl=teles.find(x=>ce&&x.id===ce.sel); if(!tl) return; if(teleEd) closeTele(); openTele(tl); ceFocusMain(); };
+  ipLibBack=false; ceClose(); ceRet={id};
+  try{ video.currentTime=t; video.pause(); }catch(e){}
+  open();
+  toast('Dibuja y pulsa «Listo»: volverás al clip con la anotación.');
+}
+$('#ceNew').onclick=()=>ceDraw(()=>openTele());
+$('#ceEdit').onclick=()=>{ const tl=teles.find(x=>ce&&x.id===ce.sel); if(!tl) return; ceDraw(()=>openTele(tl)); };
+{ const _ct=closeTele; closeTele=function(na){ const had=!!teleEd; _ct(na); if(had&&ceRet){ const r=ceRet; ceRet=null; if(events.some(e=>e.id===r.id)) openClipEditor(r.id); } }; }
 $('#ceDel').onclick=()=>{ const tl=teles.find(x=>ce&&x.id===ce.sel); if(!tl) return; ce.sel=null; deleteTele(tl); };
 $('#ceType').addEventListener('change',e=>{ const tl=teles.find(x=>ce&&x.id===ce.sel); if(!tl) return; tl.mode=e.target.value; tl.rev++; commitTeleGlobal(); });
 $('#ceDurSel').addEventListener('change',e=>{ const tl=teles.find(x=>ce&&x.id===ce.sel); if(!tl) return; tl.hold=+e.target.value; tl.rev++; commitTeleGlobal(); });
