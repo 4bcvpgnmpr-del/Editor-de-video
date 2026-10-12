@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="claro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2430">
+<title>Panel del entrenador · ScoutFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --wood:#fdf8f2; --wood-line:#e4dcd0; --ink:#1b2430; --ink-soft:#5a6472;
+    --white:#ffffff; --suave:#f7f3ec; --orange:#e0602a; --orange-dark:#c44f1e;
+    --verde:#1f7a5a; --verde-suave:#eef7f2; --rojo:#b4470f; --rojo-suave:#fdf0ec;
+    --sombra:rgba(27,36,50,.10);
+  }
+  *{box-sizing:border-box;}
+  /* ---------- Equipo y accesos ---------- */
+  .sub{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin:20px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .asiento{border-radius:999px;padding:2px 10px;font-family:'Archivo',sans-serif;font-size:11.5px;font-weight:800;letter-spacing:0;text-transform:none;}
+  .asiento.jug{background:#fde9dc;color:#b9421a;} .asiento.ent{background:#dde9f6;color:#2b5a8a;}
+  .asientos{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .asientos .as{flex:1;min-width:120px;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700;}
+  .asientos .as b{display:block;font-family:'Archivo Black',sans-serif;font-weight:400;font-size:24px;line-height:1.1;}
+  .asientos .as.j{background:#fde9dc;color:#b9421a;} .asientos .as.e{background:#dde9f6;color:#2b5a8a;} .asientos .as.c{background:#e3f3ec;color:#1f7a5a;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-top:10px;cursor:pointer;}
+  .chk input{width:auto;margin:0;}
+  .acc-fila{display:grid;grid-template-columns:34px minmax(110px,1.2fr) minmax(130px,1.4fr) 26px;gap:8px;align-items:center;border:1px solid var(--wood-line);border-radius:12px;padding:7px 10px;margin-bottom:6px;background:var(--white);}
+  .acc-fila .dor{background:var(--ink);color:#fff;border-radius:8px;text-align:center;font-size:12px;font-weight:800;padding:3px 0;}
+  .acc-fila b{font-size:13px;overflow:hidden;text-overflow:ellipsis;}
+  .acc-fila input{padding:7px 9px;font-size:13.5px;}
+  .acc-fila .ok{color:#1f7a5a;font-weight:800;text-align:center;} .acc-fila .no{color:#c9961a;text-align:center;}
+  .acc-fila.guardado{border-color:#9fd3bd;background:#f2faf6;}
+  @media (max-width:560px){ .acc-fila{grid-template-columns:30px 1fr 22px;} .acc-fila input{grid-column:1 / -1;} }
+  .ent-fila{display:flex;align-items:center;gap:10px;border:1px solid var(--wood-line);border-radius:12px;padding:8px 12px;margin-bottom:6px;background:var(--white);font-size:13.5px;font-weight:700;}
+  .ent-fila span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .eq-fijo{display:flex;align-items:center;gap:12px;background:var(--suave);border:1.5px solid var(--wood-line);border-radius:12px;padding:10px 12px;}
+  .eq-fijo .ico{font-size:22px;} .eq-fijo small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft);}
+  .eq-fijo b{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:14px;}
+  details.pegar{margin-top:10px;border:1px dashed var(--wood-line);border-radius:12px;padding:10px 12px;}
+  details.pegar summary{cursor:pointer;font-weight:800;font-size:13px;color:var(--orange);}
+  [hidden]{display:none !important;}
+  body{margin:0;background:var(--wood);color:var(--ink);
+       font-family:'Archivo',system-ui,sans-serif;font-size:15px;line-height:1.5;}
+  h1,h2,h3{font-family:'Archivo Black',sans-serif;letter-spacing:-.3px;margin:0;}
+  .envoltorio{max-width:860px;margin:0 auto;padding:0 14px 70px;}
+
+  .barra{background:var(--ink);color:#fff;padding:14px 16px;margin-bottom:18px;}
+  .barra .dentro{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:12px;}
+  .barra .bola{width:28px;height:28px;border-radius:50%;background:var(--orange);flex:none;}
+  .barra b{font-family:'Archivo Black',sans-serif;font-size:17px;}
+  .barra .quien{margin-left:auto;font-size:12.5px;opacity:.75;}
+  .barra button{background:none;border:1.5px solid rgba(255,255,255,.3);color:#fff;
+    border-radius:18px;padding:5px 12px;font-family:inherit;font-size:12.5px;cursor:pointer;}
+
+  .caja{background:var(--white);border:1.5px solid var(--wood-line);border-radius:15px;
+        padding:18px;margin-bottom:16px;box-shadow:0 3px 12px var(--sombra);}
+  .caja h2{font-size:17px;margin-bottom:3px;}
+  .caja .expl{font-size:13px;color:var(--ink-soft);margin:0 0 14px;}
+
+  label{display:block;font-size:12px;font-weight:800;text-transform:uppercase;
+        letter-spacing:.07em;color:var(--ink-soft);margin:12px 0 5px;}
+  input, select, textarea{
+    width:100%;font-family:inherit;font-size:15px;padding:11px 12px;color:var(--ink);
+    border:1.5px solid var(--wood-line);border-radius:9px;background:var(--suave);
+  }
+  textarea{min-height:110px;resize:vertical;line-height:1.5;}
+  input:focus, select:focus, textarea:focus{outline:none;border-color:var(--orange);background:var(--white);}
+  .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media (max-width:620px){ .fila{grid-template-columns:1fr;} }
+
+  .boton{font-family:inherit;font-size:15px;font-weight:800;padding:12px 18px;border:0;
+         border-radius:9px;background:var(--orange);color:#fff;cursor:pointer;margin-top:14px;}
+  .boton:active{background:var(--orange-dark);}
+  .boton[disabled]{opacity:.5;cursor:default;}
+  .boton.gris{background:var(--ink);}
+  .boton.fina{padding:8px 13px;font-size:13px;margin-top:0;}
+  .boton.borrar{background:none;color:var(--rojo);border:1.5px solid var(--wood-line);}
+
+  .aviso{margin-top:12px;padding:11px 13px;border-radius:9px;font-size:14px;}
+  .aviso.ok{background:var(--verde-suave);border:1.5px solid #cfe6da;color:#14543d;}
+  .aviso.mal{background:var(--rojo-suave);border:1.5px solid #f0cdbe;color:#8a3608;}
+
+  .jugadoras{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px;}
+  .jug{display:flex;gap:10px;align-items:center;text-align:left;background:var(--white);
+       border:1.5px solid var(--wood-line);border-radius:11px;padding:10px 12px;
+       cursor:pointer;font-family:inherit;font-size:14px;color:var(--ink);width:100%;}
+  .jug.activa{border-color:var(--orange);background:var(--rojo-suave);}
+  .jug .ini{width:34px;height:34px;border-radius:50%;background:var(--suave);flex:none;
+            display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;
+            color:var(--ink-soft);}
+  .jug .n{min-width:0;}
+  .jug b{display:block;font-size:14px;line-height:1.2;}
+  .jug span{font-size:11.5px;color:var(--ink-soft);}
+  .jug .sincorreo{color:var(--rojo);font-weight:700;}
+
+  #cajaResultadosTest,#cajaEditorTest{scroll-margin-top:72px;}
+  .menu-panel{display:flex;gap:6px;margin:14px 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:0;z-index:20;background:var(--wood);padding:8px 0;border-bottom:1.5px solid var(--wood-line);}
+  .menu-panel button{flex:1 0 auto;white-space:nowrap;font-family:inherit;font-size:13.5px;font-weight:800;padding:10px 14px;border:1.5px solid var(--wood-line);background:var(--white);color:var(--ink-soft);border-radius:11px;cursor:pointer;}
+  .menu-panel button.activa{background:var(--orange);border-color:var(--orange);color:#fff;}
+  .pestanas{display:flex;gap:6px;margin:16px 0 14px;flex-wrap:wrap;}
+  .pestanas button{font-family:inherit;font-size:13.5px;font-weight:800;padding:9px 15px;
+    border:1.5px solid var(--wood-line);background:var(--white);color:var(--ink-soft);
+    border-radius:20px;cursor:pointer;}
+  .pestanas button.activa{background:var(--orange);border-color:var(--orange);color:#fff;}
+
+  .interruptores{display:flex;flex-direction:column;gap:9px;margin-top:4px;}
+  .sw{display:flex;align-items:center;gap:10px;margin:0;font-size:14.5px;
+      text-transform:none;letter-spacing:0;font-weight:600;color:var(--ink);cursor:pointer;}
+  .sw input{width:auto;accent-color:var(--orange);width:19px;height:19px;flex:none;}
+  .nube{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--suave);
+        border:1.5px solid var(--wood-line);border-radius:11px;padding:11px 13px;margin:4px 0 14px;}
+  .nube > div{flex:1;min-width:180px;}
+  .feb-fila{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
+            border:1.5px solid var(--wood-line);margin-bottom:7px;background:var(--suave);}
+  .feb-fila b{font-size:14px;flex:1;min-width:0;font-weight:700;}
+  .feb-fila .dor{font-size:11.5px;color:var(--ink-soft);width:26px;flex:none;}
+  .feb-fila.alta{background:var(--verde-suave);border-color:#cfe6da;}
+  .feb-fila button{font-family:inherit;font-size:12.5px;font-weight:800;padding:6px 12px;
+    border-radius:16px;border:1.5px solid var(--wood-line);background:var(--white);
+    color:var(--ink);cursor:pointer;white-space:nowrap;}
+  .feb-fila.alta button{background:var(--verde);border-color:var(--verde);color:#fff;}
+  .item{background:var(--suave);border:1.5px solid var(--wood-line);border-radius:11px;
+        padding:12px 14px;margin-bottom:9px;}
+  .item .cab{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
+  .item .cab b{font-size:14.5px;}
+  .item .cab span{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .item p{margin:5px 0 0;font-size:14px;white-space:pre-wrap;}
+  .item .acciones{margin-top:9px;display:flex;gap:8px;}
+  .leido{font-size:11.5px;color:var(--verde);font-weight:700;}
+  .sinleer{font-size:11.5px;color:var(--orange);font-weight:700;}
+  .vacio{color:var(--ink-soft);font-size:14px;padding:18px;text-align:center;
+         border:1.5px dashed var(--wood-line);border-radius:11px;}
+  .cargando{color:var(--ink-soft);padding:26px 0;text-align:center;}
+  .pie{font-size:12.5px;color:var(--ink-soft);text-align:center;margin-top:24px;}
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-tema="claro"]){
+      --wood:#161b22; --wood-line:#2b3341; --ink:#eef1f5; --ink-soft:#9aa5b4;
+      --white:#1d242e; --suave:#232b36; --verde-suave:#16302a; --rojo-suave:#33211a;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ENTRAR ============ -->
+<div id="pantallaEntrar" style="min-height:100svh;display:flex;align-items:center;">
+  <div class="envoltorio" style="width:100%;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--orange);"></div>
+      <b style="font-family:'Archivo Black',sans-serif;font-size:20px;">Panel del entrenador</b>
+    </div>
+    <div class="caja" style="max-width:420px;">
+      <h2>Entrar</h2>
+      <p class="expl">Con el correo que diste de alta como entrenador.</p>
+      <input type="email" id="correo" placeholder="tucorreo@ejemplo.com"
+             autocomplete="email" inputmode="email" autocapitalize="off">
+      <button class="boton" id="btnEntrar" style="width:100%;">Enviarme el enlace</button>
+      <div id="avisoEntrar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PANEL ============ -->
+<div id="pantallaPanel" hidden>
+  <div class="barra"><div class="dentro">
+    <div class="bola"></div><b>Panel</b>
+    <span class="quien" id="quien"></span>
+    <button id="btnSalir">Salir</button>
+  </div></div>
+
+  <div class="envoltorio">
+    <div id="avisoPermiso"></div>
+
+    <div class="menu-panel" id="menuPanel">
+      <button data-grupo="jugadoras" class="activa">👥 Jugadoras</button>
+      <button data-grupo="ven">📱 Lo que ven</button>
+      <button data-grupo="tests">📝 Tests</button>
+      <button data-grupo="enviado">📤 Enviado</button>
+      <button data-grupo="accesos">🔑 Equipo y accesos</button>
+    </div>
+
+    <div class="grupo-panel" data-grupo="ven" hidden>
+    <!-- Que temporada ven -->
+    <div class="caja">
+      <h2>Temporada que ven las jugadoras</h2>
+      <p class="expl">Las estadisticas que aparecen en su perfil. Util al principio de
+        temporada, cuando todavia no se ha jugado nada: les ensenas la del ano pasado.</p>
+      <select id="selTemporadaVen"></select>
+      <div id="avisoTemporada"></div>
+    </div>
+
+    <!-- Orden de la app de las jugadoras -->
+    <div class="caja">
+      <h2>Que ven primero y en que orden</h2>
+      <p class="expl">Ordena las pestañas de su app con las flechas. La primera que dejes visible es la que se
+        abre al entrar. Puedes ocultar las que no uses.</p>
+      <label>Pestañas</label>
+      <div id="ordenPestanas"></div>
+      <label style="margin-top:12px;">Orden de los apartados dentro de "El rival" y "Mi equipo"</label>
+      <div id="ordenSecciones"></div>
+      <label style="margin-top:12px;">Partido que ven en "Después del partido"</label>
+      <select id="selPartidoDespues"><option value="">El último partido jugado (automático)</option></select>
+      <div id="avisoPartido"></div>
+      <div id="avisoOrden"></div>
+    </div>
+
+    </div>
+
+    <div class="grupo-panel" data-grupo="tests" hidden>
+    <div class="caja" id="cajaListaTests">
+      <h2>Tests para las jugadoras</h2>
+      <p class="expl">Crea un test con muchas preguntas y decide cuántas le salen a cada jugadora: a cada una le tocan preguntas distintas, en distinto orden. Cada jugadora solo puede responderlo una vez, y aquí ves quién lo hizo, quién no y cuántas acertó.</p>
+      <div id="listaTests" class="cargando">Cargando...</div>
+      <button class="boton" id="btnNuevoTest">+ Nuevo test</button>
+      <div id="avisoTests"></div>
+    </div>
+    <div class="caja" id="cajaEditorTest" hidden>
+      <h2 id="tituloEditorTest">Nuevo test</h2>
+      <label>Título</label>
+      <input id="teTitulo" maxlength="80" placeholder="Por ejemplo: Defensa del pick and roll">
+      <label>Preguntas que le salen a cada jugadora</label>
+      <input id="teN" type="number" min="1" value="5" style="max-width:120px;">
+      <p class="expl" id="teAyudaN" style="margin:6px 0 0;"></p>
+      <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px;margin-top:14px;"><input type="checkbox" id="teCorr" checked style="width:auto;"> Al terminar, enseñarle qué falló y la respuesta correcta</label>
+      <label>Quién lo hace</label>
+      <select id="tePara"><option value="todas">Todas las jugadoras</option><option value="elegidas">Solo las que elija</option></select>
+      <div id="teElegidas" hidden style="margin-top:8px;"></div>
+      <div id="teBloqueo"></div>
+      <label>Preguntas</label>
+      <div id="tePreguntas"></div>
+      <div class="pestanas" style="margin:10px 0 0;"><button id="teAddP" class="activa" style="background:var(--ink);border-color:var(--ink);color:#fff;">+ Añadir pregunta</button></div>
+      <details class="pegar"><summary>Pegar varias preguntas de golpe</summary>
+        <p class="expl" style="margin:8px 0;">Una pregunta por bloque, con una línea en blanco entre bloques. La primera línea es la pregunta, las siguientes son las opciones y la correcta empieza por *.</p>
+        <textarea id="tePegar" rows="7" placeholder="¿Quién ayuda en el pick and roll?&#10;a) La que defiende al balón&#10;*b) La del lado débil&#10;c) Nadie&#10;&#10;¿Cuántos segundos tiene el ataque?&#10;a) 30&#10;*b) 24&#10;c) 20"></textarea>
+        <button class="boton fina gris" id="tePegarOk" type="button">Añadir esas preguntas</button>
+      </details>
+      <div class="pestanas" style="margin:16px 0 0;">
+        <button id="teGuardar" class="activa" style="background:var(--orange);border-color:var(--orange);color:#fff;">Guardar test</button>
+        <button id="teCancelar">Cancelar</button>
+      </div>
+      <div id="avisoEditorTest"></div>
+    </div>
+    <div class="caja" id="cajaResultadosTest" hidden></div>
+    </div>
+
+    <div class="grupo-panel" data-grupo="enviado" hidden>
+    <!-- Lo que ya has mandado -->
+    <div class="caja">
+      <h2>Lo que has enviado</h2>
+      <p class="expl">Scoutings de rivales y contenido de Mi equipo. Si quitas uno, deja de verse en la app de tus jugadoras.</p>
+      <div id="listaInformes" class="cargando">Cargando...</div>
+      <button class="boton fina gris" id="btnRefrescarInformes" style="margin-top:8px;">Actualizar la lista</button>
+    </div>
+
+    </div>
+
+    <div class="grupo-panel" data-grupo="accesos" hidden>
+    <!-- Equipo y accesos (asientos) -->
+    <div class="caja" id="cajaAccesos">
+      <h2>Equipo y accesos</h2>
+      <p class="expl">Trae tu plantilla completa de la FEB, pon el correo de cada jugadora y reparte los asientos.
+        Cada correo es con el que esa persona entra a su app.</p>
+      <div class="asientos" id="asientosResumen"></div>
+
+      <h3 class="sub">1 · Mi plantilla completa</h3>
+      <div class="eq-fijo" id="accEquipoVista">
+        <span class="ico">🏀</span>
+        <div style="flex:1;min-width:0;"><small>Tu equipo</small><b id="accEquipoNombre">Buscando...</b></div>
+        <button class="boton fina gris" id="btnAccCambiar" type="button">Cambiar</button>
+      </div>
+      <div id="accEquipoElegir" hidden style="margin-top:8px;">
+        <label style="margin-top:0;">Elige tu equipo</label>
+        <select id="accEquipo"><option value="">Cargando equipos...</option></select>
+      </div>
+      <label class="chk"><input type="checkbox" id="accAjustar" checked> Escribir los nombres como en las estadisticas de la FEB (APELLIDOS, NOMBRE)</label>
+      <button class="boton" id="btnAccTraer" style="margin-top:10px;">Traer mi plantilla completa</button>
+      <div id="avisoAcc"></div>
+
+      <h3 class="sub">2 · Correos de las jugadoras <span class="asiento jug" id="contJug"></span></h3>
+      <div id="accTabla" class="cargando">Cargando...</div>
+      <details class="pegar">
+        <summary>Pegar muchos correos de golpe</summary>
+        <p class="expl" style="margin:8px 0;">Una persona por linea: el nombre y el correo, en cualquier orden.
+          Ej: <i>Claudia Lado, claudia@correo.com</i></p>
+        <textarea id="accPegar" rows="5" placeholder="Claudia Lado, claudia@correo.com&#10;Maria Angulo maria@correo.com"></textarea>
+        <button class="boton fina" id="btnAccPegar" style="margin-top:8px;">Asignar correos</button>
+        <div id="avisoPegar"></div>
+      </details>
+
+      <h3 class="sub">3 · Asientos de entrenador <span class="asiento ent" id="contEnt"></span></h3>
+      <p class="expl" style="margin:0 0 8px;">Quien tenga asiento de entrenador entra a este panel y puede mandar y quitar cosas.
+        Las jugadoras solo ven su app. Con «⚙ Menús» eliges qué menús ve cada ayudante (de Entrenador y de Estadísticas); solo lee, no cambia nada.</p>
+      <div id="entLista" class="cargando">Cargando...</div>
+      <div class="fila" style="margin-top:8px;align-items:flex-end;">
+        <div><label style="margin-top:0;">Correo del entrenador</label><input id="entCorreo" type="email" placeholder="segundo.entrenador@correo.com"></div>
+        <div style="flex:none;"><button class="boton fina" id="btnEntAnadir">Dar asiento</button></div>
+      </div>
+      <div id="avisoEnt"></div>
+      <h3 class="sub" style="margin-top:22px;">4 · Planes, precios y ligas</h3>
+      <p class="expl" style="margin:0 0 8px;">Gratis: de muestra, máximo 5 jugadas, 5 ejercicios y 3 planes de entrenamiento. Pro: todo el Entrenador. Premium: Pro + Estadísticas (solo si su liga está automatizada). El precio es solo un texto que verán cuando algo esté bloqueado; el cobro lo haces tú.</p>
+      <div id="planesCfg"></div>
+      <div id="avisoPlanes"></div>
+    </div>
+
+    </div>
+
+    <div class="grupo-panel" data-grupo="jugadoras">
+    <!-- Lista de jugadoras -->
+    <div class="caja">
+      <h2>Tus jugadoras</h2>
+      <p class="expl">Elige una para escribirle, mandarle un video o ponerle objetivos.</p>
+      <div id="listaJugadoras" class="cargando">Cargando...</div>
+      <div class="pestanas" style="margin-bottom:0;">
+        <button id="btnNueva" class="activa" style="background:var(--ink);border-color:var(--ink);color:#fff;">+ Añadir jugadora</button>
+        <button id="btnImportar">Traer una plantilla de la FEB</button>
+      </div>
+    </div>
+
+    <!-- Alta manual -->
+    <div class="caja" id="cajaNueva" hidden>
+      <h2>Nueva jugadora</h2>
+      <p class="expl">El nombre tiene que llevar las mismas palabras que en la FEB,
+        asi la app encuentra sus estadisticas. El correo es con el que entrara.</p>
+      <div class="fila">
+        <div><label>Nombre</label><input id="nvNombre" placeholder="ANGULO QUINTANA, MARIA"></div>
+        <div><label>Equipo</label><input id="nvEquipo" placeholder="MARISCOS ANTON CORTEGADA"></div>
+      </div>
+      <div class="fila">
+        <div><label>Correo</label><input id="nvCorreo" type="email" placeholder="jugadora@correo.com"></div>
+        <div><label>Dorsal (opcional)</label><input id="nvDorsal" placeholder="7"></div>
+      </div>
+      <button class="boton" id="btnGuardarNueva">Guardar jugadora</button>
+      <div id="avisoNueva"></div>
+    </div>
+
+    <!-- Plantilla de la FEB: alta y baja de una en una -->
+    <div class="caja" id="cajaImportar" hidden>
+      <h2>Plantilla de la FEB</h2>
+      <p class="expl">Elige un equipo y da de alta a las que quieras, de una en una
+        o todas de golpe. El nombre viene ya escrito como lo escribe la FEB.</p>
+      <label>Equipo</label>
+      <select id="selEquipoFeb"><option value="">Cargando equipos...</option></select>
+      <div id="listaFeb" style="margin-top:14px;"></div>
+      <button class="boton" id="btnTraer">Dar de alta a todas</button>
+      <div id="avisoImportar"></div>
+    </div>
+
+    <!-- Ficha de la jugadora elegida -->
+    <div id="fichaJugadora" hidden>
+      <div class="caja">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="min-width:0;flex:1;">
+            <h2 id="tituloJugadora"></h2>
+            <p class="expl" id="subJugadora" style="margin-bottom:0;"></p>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="boton fina gris" id="btnVerComoElla"
+                    title="Abrir su perfil tal y como lo ve ella">Ver su perfil</button>
+            <button class="boton borrar fina" id="btnQuitarJugadora"
+                    title="Quitar a esta jugadora">Quitar</button>
+          </div>
+        </div>
+
+        <label>Correo con el que entra</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="edCorreo" type="email" placeholder="todavia sin correo">
+          <button class="boton fina gris" id="btnGuardarCorreo" style="white-space:nowrap;">Guardar</button>
+        </div>
+        <div id="avisoCorreo"></div>
+
+        <label style="margin-top:18px;">Que ve en su app</label>
+        <div class="interruptores">
+          <label class="sw"><input type="checkbox" id="swNumeros">
+            <span>Sus estadisticas de la FEB</span></label>
+          <label class="sw"><input type="checkbox" id="swPercentiles">
+            <span>Su comparacion con la liga</span></label>
+        </div>
+        <p class="expl" style="margin:7px 0 0;">Si apagas los dos, solo vera lo que le
+          mandes tu: mensajes, videos y objetivos.</p>
+        <div id="avisoVer"></div>
+
+        <div class="pestanas">
+          <button data-p="mensaje" class="activa">Mensaje</button>
+          <button data-p="clip">Video</button>
+          <button data-p="objetivo">Objetivo</button>
+        </div>
+
+        <div id="form-mensaje">
+          <label>Titulo</label>
+          <input id="msTitulo" placeholder="Tras el partido vs ...">
+          <label>Mensaje</label>
+          <textarea id="msTexto" placeholder="Lo que quieres que lea."></textarea>
+          <button class="boton" id="btnEnviarMensaje">Enviar mensaje</button>
+        </div>
+
+        <div id="form-clip" hidden>
+          <label>Titulo</label>
+          <input id="clTitulo" placeholder="Bloqueo directo, 2a parte">
+          <label>Enlace del video</label>
+          <input id="clUrl" placeholder="https://www.youtube.com/watch?v=...">
+          <p class="expl" style="margin:6px 0 0;">YouTube (subelo como <b>oculto</b>), Vimeo o Drive
+            compartido con "cualquiera con el enlace".</p>
+          <div class="fila">
+            <div><label>Empezar en el minuto (opcional)</label><input id="clMin" placeholder="12:30"></div>
+            <div><label>Nota (opcional)</label><input id="clNota" placeholder="Fijate en el cambio de ritmo"></div>
+          </div>
+          <button class="boton" id="btnEnviarClip">Enviar video</button>
+        </div>
+
+        <div id="form-objetivo" hidden>
+          <label>Objetivo</label>
+          <input id="obTexto" placeholder="Subir el acierto en tiros libres">
+          <div class="fila">
+            <div><label>Estadistica (opcional)</label><input id="obMetrica" placeholder="TL%"></div>
+            <div><label>Numero a alcanzar (opcional)</label><input id="obNumero" placeholder="70"></div>
+          </div>
+          <button class="boton" id="btnEnviarObjetivo">Poner objetivo</button>
+        </div>
+
+        <div id="avisoEnvio"></div>
+      </div>
+
+      <div class="caja">
+        <h2>Lo que ya le has mandado</h2>
+        <div id="historial" class="cargando">Cargando...</div>
+      </div>
+
+      <p class="expl" style="text-align:center;">El boton <b>Quitar</b> de arriba borra su ficha
+        y con ella sus mensajes, videos y objetivos. Si solo quieres que deje de entrar,
+        borra su correo en vez de quitarla.</p>
+      <div id="avisoQuitar"></div>
+    </div>
+    </div>
+
+    <p class="pie">Panel del entrenador · <span id="pieVersion"></span></p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURACION
+   ============================================================ */
+const CONFIG = {
+  SUPABASE_URL: "https://tizmzblksovdqqnlxpli.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpem16Ymxrc292ZHFxbmx4cGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NDQxMjMsImV4cCI6MjEwNjUyMDEyM30.eXScUQYTkSxtnNb4TO-FJUsdKpnkTk5z-1QLPjxHAGo",
+  SHEET_ID: "1xu9dPT5RYAcEsH0MYdBJbLNLW4u7ajXNF3Kr9GGBT94",
+  TEMPORADA: "_2026",
+};
+const VERSION = "2026-10-12t";
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t == null ? "" : t)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const fechaCorta = (iso) => {
+  try { return new Date(iso).toLocaleDateString("es-ES",
+    { day: "2-digit", month: "short", year: "numeric" }); } catch (e) { return ""; }
+};
+function avisar(donde, texto, tipo) {
+  $(donde).innerHTML = texto ? `<div class="aviso ${tipo}">${esc(texto)}</div>` : "";
+  if (texto && tipo === "ok") setTimeout(() => { $(donde).innerHTML = ""; }, 4000);
+}
+function aSegundos(txt) {
+  const v = String(txt || "").trim();
+  if (!v) return 0;
+  const p = v.split(":");
+  if (p.length === 2) return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+  const n = parseFloat(v.replace(",", "."));
+  return isNaN(n) ? 0 : Math.round(n * 60);
+}
+
+/* Lee una pestana del Google Sheet (para traer plantillas de la FEB) */
+function leerPestana(nombreTab) {
+  return new Promise((ok) => {
+    const tab = nombreTab + CONFIG.TEMPORADA;
+    const cb = "lf2cb_" + Math.random().toString(36).slice(2);
+    const limpiar = () => { delete window[cb]; if (g.parentNode) g.parentNode.removeChild(g); clearTimeout(r); };
+    window[cb] = (resp) => {
+      limpiar();
+      const t = resp && resp.table;
+      if (!t || !t.cols) return ok(null);
+      const cols = t.cols.map(c => (c.label || c.id || "").trim());
+      ok({ cols, filas: (t.rows || []).map(fila => {
+        const o = {};
+        cols.forEach((c, i) => {
+          const celda = fila.c && fila.c[i];
+          o[c] = celda ? (celda.f != null ? celda.f : (celda.v != null ? celda.v : "")) : "";
+        });
+        return o;
+      }) });
+    };
+    const g = document.createElement("script");
+    g.src = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq`
+      + `?tqx=out:json;responseHandler:${cb}&sheet=${encodeURIComponent(tab)}`;
+    g.onerror = () => { limpiar(); ok(null); };
+    const r = setTimeout(() => { limpiar(); ok(null); }, 15000);
+    document.head.appendChild(g);
+  });
+}
+
+/* ============================================================
+   ENTRAR
+   ============================================================ */
+let sb = null, jugadoras = [], elegida = null, plantillasFeb = null;
+
+async function pedirEnlace() {
+  const correo = $("correo").value.trim();
+  if (!correo || correo.indexOf("@") < 1) { avisar("avisoEntrar", "Escribe tu correo completo.", "mal"); return; }
+  const b = $("btnEntrar"); b.disabled = true; b.textContent = "Enviando...";
+  const { error } = await sb.auth.signInWithOtp({
+    email: correo, options: { emailRedirectTo: location.href.split("#")[0] } });
+  b.disabled = false; b.textContent = "Enviarme el enlace";
+  if (error) { avisar("avisoEntrar", "No se ha podido enviar: " + error.message, "mal"); return; }
+  avisar("avisoEntrar", "Listo. Abre el enlace del correo en este mismo aparato.", "ok");
+}
+
+async function salir() { if (sb) await sb.auth.signOut(); location.reload(); }
+
+async function entrar(sesion) {
+  $("pantallaEntrar").hidden = true;
+  $("pantallaPanel").hidden = false;
+  $("pieVersion").textContent = "v" + VERSION;
+  $("quien").textContent = (sesion.user && sesion.user.email) || "";
+
+  // ¿Este correo esta dado de alta como entrenador?
+  try {
+    const { data: pr } = await sb.from("ajustes").select("valor").eq("clave", "propietario").limit(1);
+    const prop = pr && pr.length ? String(pr[0].valor || "").toLowerCase() : "";
+    const yo = String((sesion.user && sesion.user.email) || "").toLowerCase();
+    if (prop && prop !== yo) {
+      $("pantallaPanel").innerHTML = `<div class="vacio" style="margin:30px 16px;">Este panel es solo para el entrenador principal. Tu asiento de ayudante te deja ver Inicio, Mi equipo y el rival en la app.</div>`;
+      return;
+    }
+  } catch (e) { /* si no se puede comprobar, sigue */ }
+  const { data: soy } = await sb.rpc("es_entrenador");
+  if (soy === false) {
+    $("avisoPermiso").innerHTML = `<div class="aviso mal">
+      Tu correo no esta dado de alta como entrenador, asi que no podras guardar nada.
+      Anadelo a la tabla <b>entrenadores</b> en Supabase.</div>`;
+  }
+  cargarJugadoras().then(cargarTestsPanel);
+  cargarTemporada().then(cargarSelectorPartido);
+  cargarOrdenApp();
+  cargarInformes();
+  prepararAccesos();
+  cargarEntrenadores();
+}
+
+/* Menu del panel: un grupo a la vez, y se acuerda del ultimo */
+function mostrarGrupoPanel(g) {
+  document.querySelectorAll(".grupo-panel").forEach(x => { x.hidden = x.getAttribute("data-grupo") !== g; });
+  document.querySelectorAll("#menuPanel button").forEach(b => b.classList.toggle("activa", b.getAttribute("data-grupo") === g));
+  try { localStorage.setItem("lf2_panel_grupo", g); } catch (e) { /* nada */ }
+}
+document.querySelectorAll("#menuPanel button").forEach(b => b.addEventListener("click", () => {
+  mostrarGrupoPanel(b.getAttribute("data-grupo"));
+  window.scrollTo({ top: 0, behavior: "instant" });
+}));
+(function () {
+  let g = "jugadoras";
+  try { g = localStorage.getItem("lf2_panel_grupo") || g; } catch (e) { /* nada */ }
+  if (!document.querySelector('.grupo-panel[data-grupo="' + g + '"]')) g = "jugadoras";
+  mostrarGrupoPanel(g);
+})();
+
+/* ============================================================
+   TEMPORADA QUE VEN
+   ============================================================ */
+const TEMPORADAS = [
+  { id: "2026", etiqueta: "2026/27 (la de ahora)" },
+  { id: "2025", etiqueta: "2025/26 (la pasada)" },
+];
+
+async function cargarTemporada() {
+  const sel = $("selTemporadaVen");
+  sel.innerHTML = TEMPORADAS.map(t =>
+    `<option value="${esc(t.id)}">${esc(t.etiqueta)}</option>`).join("");
+  const { data } = await sb.from("ajustes").select("*").eq("clave", "temporada").limit(1);
+  if (data && data.length) sel.value = data[0].valor || "2026";
+}
+
+/* Partido que ven las jugadoras en "Despues del partido" (uno solo, el que elijas) */
+async function cargarSelectorPartido() {
+  const sel = $("selPartidoDespues");
+  if (!sel) return;
+  try {
+    const nombre = await miEquipoGuardado();
+    const tv = $("selTemporadaVen").value || "2026";
+    const tab = "Resultados" + (tv === "2025" ? "" : "_" + tv);
+    const antes = CONFIG.TEMPORADA; CONFIG.TEMPORADA = (tv === "2025") ? "" : "_" + tv;
+    const res = await leerPestana("Resultados");
+    CONFIG.TEMPORADA = antes;
+    const { data } = await sb.from("ajustes").select("valor").eq("clave", "partido_despues").limit(1);
+    const actual = data && data.length ? String(data[0].valor || "") : "";
+    const filas = ((res && res.filas) || []).filter(r => r.PartidoID && r.Jugado === "Si" && nombre && (mismoEquipo(r.Local, nombre) || mismoEquipo(r.Visitante, nombre)));
+    const fechaOrd = (t) => { const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(String(t || "")); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : 0; };
+    filas.sort((a, b) => fechaOrd(b.Fecha) - fechaOrd(a.Fecha));
+    const vistos = new Set();
+    const unicas = filas.filter(r => { const k = r.Local + "|" + r.Visitante + "|" + r.Fecha; if (vistos.has(k)) return false; vistos.add(k); return true; });
+    sel.innerHTML = `<option value="">El último partido jugado (automático)</option>` + unicas.map(r =>
+      `<option value="${esc(String(r.PartidoID).trim())}">${r.Jornada ? "J" + esc(String(r.Jornada).replace(/\D/g, "") || r.Jornada) + " · " : ""}${esc(r.Local)} ${esc(r.Pts_Local)} - ${esc(r.Pts_Visitante)} ${esc(r.Visitante)} (${esc(r.Fecha)})</option>`).join("");
+    sel.value = actual;
+    if (sel.value !== actual) sel.value = "";
+    sel.onchange = async () => {
+      const { error } = await sb.from("ajustes").upsert({ clave: "partido_despues", valor: sel.value, actualizado: new Date().toISOString() });
+      avisar("avisoPartido", error ? "No se ha podido guardar: " + error.message : (sel.value ? "Guardado. Verán este partido." : "Guardado. Verán siempre el último partido jugado."), error ? "mal" : "ok");
+    };
+  } catch (e) { /* si falla, se queda el automatico */ }
+}
+
+async function guardarTemporada() {
+  const valor = $("selTemporadaVen").value;
+  const { error } = await sb.from("ajustes")
+    .upsert({ clave: "temporada", valor, actualizado: new Date().toISOString() });
+  if (error) {
+    avisar("avisoTemporada", "No se ha podido guardar: " + error.message
+      + " (¿has ejecutado el script del paso 4?)", "mal");
+    return;
+  }
+  const et = (TEMPORADAS.find(t => t.id === valor) || {}).etiqueta || valor;
+  avisar("avisoTemporada", "Guardado. Veran la temporada " + et + ".", "ok");
+}
+
+/* ============================================================
+   JUGADORAS
+   ============================================================ */
+async function cargarJugadoras() {
+  const caja = $("listaJugadoras");
+  const { data, error } = await sb.from("jugadoras").select("*").order("nombre");
+  if (error) { caja.innerHTML = `<div class="vacio">${esc(error.message)}</div>`; return; }
+  jugadoras = data || [];
+  if (!jugadoras.length) {
+    caja.className = "";
+    caja.innerHTML = `<div class="vacio">Todavia no hay ninguna. Empieza por traer tu plantilla completa en «Equipo y accesos».</div>`;
+    pintarAccesos();
+    return;
+  }
+  caja.className = "jugadoras";
+  caja.innerHTML = jugadoras.map(j => {
+    const ini = String(j.nombre || "?").replace(/[^A-Za-zÁÉÍÓÚÑ ]/g, "").trim().slice(0, 2).toUpperCase();
+    return `<button class="jug ${elegida && elegida.id === j.id ? "activa" : ""}" data-id="${esc(j.id)}">
+      <span class="ini">${esc(ini)}</span>
+      <span class="n"><b>${esc(j.nombre)}</b>
+        <span class="${j.email ? "" : "sincorreo"}">${esc(j.email || "sin correo")}</span></span>
+    </button>`;
+  }).join("");
+  caja.querySelectorAll(".jug").forEach(b =>
+    b.addEventListener("click", () => elegir(b.getAttribute("data-id"))));
+  pintarAccesos();
+}
+
+function elegir(id) {
+  elegida = jugadoras.find(j => String(j.id) === String(id)) || null;
+  if (!elegida) return;
+  $("fichaJugadora").hidden = false;
+  $("tituloJugadora").textContent = elegida.nombre;
+  $("subJugadora").textContent = elegida.equipo || "";
+  $("edCorreo").value = elegida.email || "";
+  $("swNumeros").checked = elegida.ver_numeros !== false;
+  $("swPercentiles").checked = elegida.ver_percentiles !== false;
+  avisar("avisoCorreo", "", "ok");
+  avisar("avisoVer", "", "ok");
+  cargarJugadoras();
+  cargarHistorial();
+  $("fichaJugadora").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function guardarCorreo() {
+  if (!elegida) return;
+  const correo = $("edCorreo").value.trim().toLowerCase();
+  const { error } = await sb.from("jugadoras").update({ email: correo || null }).eq("id", elegida.id);
+  if (error) { avisar("avisoCorreo", "No se ha podido guardar: " + error.message, "mal"); return; }
+  elegida.email = correo;
+  avisar("avisoCorreo", "Correo guardado. Ya puede entrar con el.", "ok");
+  cargarJugadoras();
+}
+
+async function guardarQueVe() {
+  if (!elegida) return;
+  const cambios = {
+    ver_numeros: $("swNumeros").checked,
+    ver_percentiles: $("swPercentiles").checked,
+  };
+  const { error } = await sb.from("jugadoras").update(cambios).eq("id", elegida.id);
+  if (error) {
+    avisar("avisoVer", "No se ha podido guardar: " + error.message
+      + " (¿has ejecutado el script del paso 2?)", "mal");
+    return;
+  }
+  Object.assign(elegida, cambios);
+  avisar("avisoVer", "Guardado. Lo vera la proxima vez que abra su app.", "ok");
+}
+
+async function guardarNueva() {
+  const nombre = $("nvNombre").value.trim();
+  if (!nombre) { avisar("avisoNueva", "Hace falta al menos el nombre.", "mal"); return; }
+  const fila = {
+    nombre, equipo: $("nvEquipo").value.trim() || null,
+    email: ($("nvCorreo").value.trim() || "").toLowerCase() || null,
+    dorsal: $("nvDorsal").value.trim() || null,
+  };
+  const { error } = await sb.from("jugadoras").insert(fila);
+  if (error) { avisar("avisoNueva", "No se ha podido guardar: " + error.message, "mal"); return; }
+  ["nvNombre", "nvEquipo", "nvCorreo", "nvDorsal"].forEach(i => { $(i).value = ""; });
+  avisar("avisoNueva", "Jugadora creada.", "ok");
+  cargarJugadoras();
+}
+
+/* ---------- Plantilla de la FEB: alta y baja de una en una ---------- */
+/* Se comparan las palabras ordenadas: "LADO SALGADO, CLAUDIA" y
+   "CLAUDIA LADO SALGADO" son la misma persona. */
+function claveNombre(t) {
+  return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.,]/g, " ").toUpperCase().split(/\s+/).filter(Boolean).sort().join(" ");
+}
+
+async function prepararImportar() {
+  const sel = $("selEquipoFeb");
+  if (!plantillasFeb) plantillasFeb = await leerPestana("Plantillas");
+  if (!plantillasFeb || !plantillasFeb.filas.length) {
+    sel.innerHTML = `<option value="">No hay plantillas en el Sheet todavia</option>`;
+    $("listaFeb").innerHTML = `<div class="vacio">El Sheet no tiene plantillas de esta temporada.</div>`;
+    return;
+  }
+  const equipos = [...new Set(plantillasFeb.filas.map(f => f.Equipo).filter(Boolean))].sort();
+  const previo = sel.value;
+  sel.innerHTML = equipos.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("");
+  if (previo && equipos.includes(previo)) sel.value = previo;
+  pintarListaFeb();
+}
+
+function pintarListaFeb() {
+  const equipo = $("selEquipoFeb").value;
+  const caja = $("listaFeb");
+  if (!equipo || !plantillasFeb) { caja.innerHTML = ""; return; }
+  const dadas = new Map(jugadoras.map(j => [claveNombre(j.nombre), j]));
+  const filas = plantillasFeb.filas.filter(f => f.Equipo === equipo && f.Jugadora);
+  if (!filas.length) { caja.innerHTML = `<div class="vacio">Ese equipo no tiene plantilla.</div>`; return; }
+
+  caja.innerHTML = filas.map(f => {
+    const ya = dadas.get(claveNombre(f.Jugadora));
+    return `<div class="feb-fila ${ya ? "alta" : ""}">
+      <span class="dor">${esc(f.Dorsal || "")}</span>
+      <b>${esc(f.Jugadora)}</b>
+      <button data-nombre="${esc(f.Jugadora)}" data-equipo="${esc(f.Equipo)}"
+              data-dorsal="${esc(f.Dorsal || "")}" data-id="${ya ? esc(ya.id) : ""}">
+        ${ya ? "Dada de alta" : "Dar de alta"}</button>
+    </div>`;
+  }).join("");
+
+  caja.querySelectorAll("button").forEach(b => b.addEventListener("click", () => alternarAlta(b)));
+}
+
+async function alternarAlta(boton) {
+  const id = boton.getAttribute("data-id");
+  const nombre = boton.getAttribute("data-nombre");
+  boton.disabled = true;
+
+  if (id) {
+    if (!confirm(`¿Quitar a ${nombre}?\n\nSe borran tambien sus mensajes, videos y objetivos.`)) {
+      boton.disabled = false; return;
+    }
+    const { error } = await sb.from("jugadoras").delete().eq("id", id);
+    if (error) { avisar("avisoImportar", "No se ha podido quitar: " + error.message, "mal"); boton.disabled = false; return; }
+    if (elegida && String(elegida.id) === String(id)) { elegida = null; $("fichaJugadora").hidden = true; }
+  } else {
+    const { error } = await sb.from("jugadoras").insert({
+      nombre, equipo: boton.getAttribute("data-equipo"),
+      dorsal: boton.getAttribute("data-dorsal") || null, email: null });
+    if (error) { avisar("avisoImportar", "No se ha podido dar de alta: " + error.message, "mal"); boton.disabled = false; return; }
+  }
+  await cargarJugadoras();
+  pintarListaFeb();
+}
+
+async function traerPlantilla() {
+  const equipo = $("selEquipoFeb").value;
+  if (!equipo || !plantillasFeb) return;
+  const b = $("btnTraer"); b.disabled = true; b.textContent = "Trayendo...";
+
+  // Se compara por palabras ordenadas: "LADO SALGADO, CLAUDIA" y
+  // "CLAUDIA LADO SALGADO" son la misma persona y no hay que duplicarla.
+  const clave = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.,]/g, " ").toUpperCase().split(/\s+/).filter(Boolean).sort().join(" ");
+  const yaHay = new Set(jugadoras.map(j => clave(j.nombre)));
+  const nuevas = plantillasFeb.filas
+    .filter(f => f.Equipo === equipo && f.Jugadora)
+    .filter(f => !yaHay.has(clave(f.Jugadora)))
+    .map(f => ({ nombre: f.Jugadora, equipo: f.Equipo, dorsal: f.Dorsal || null, email: null }));
+
+  if (!nuevas.length) {
+    b.disabled = false; b.textContent = "Traer esa plantilla";
+    avisar("avisoImportar", "Ya estaban todas creadas.", "ok");
+    return;
+  }
+  const { error } = await sb.from("jugadoras").insert(nuevas);
+  b.disabled = false; b.textContent = "Traer esa plantilla";
+  if (error) { avisar("avisoImportar", "No se ha podido: " + error.message, "mal"); return; }
+  avisar("avisoImportar", `${nuevas.length} jugadoras creadas. Ahora ponles el correo a las que vayan a entrar.`, "ok");
+  await cargarJugadoras();
+  pintarListaFeb();
+}
+
+/* ============================================================
+   EQUIPO Y ACCESOS: plantilla completa, correos y asientos
+   ============================================================ */
+let nombresEstadisticas = null;
+async function mapaNombresEstadisticas() {
+  if (nombresEstadisticas) return nombresEstadisticas;
+  nombresEstadisticas = new Map();
+  try {
+    const t = await leerPestana("Jugadoras");
+    ((t && t.filas) || []).forEach(f => { if (f.Jugador) nombresEstadisticas.set(claveNombre(f.Jugador), f.Jugador); });
+  } catch (e) { /* sin ranking todavia */ }
+  return nombresEstadisticas;
+}
+const correoValido = (c) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c);
+
+/* Mi equipo = el que el entrenador eligio en la web (se guarda en el navegador y, para otros aparatos, en la tabla ajustes) */
+const normEquipoPanel = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+  .replace(/[^A-Z0-9 ]+/g, " ").split(/\s+/).filter(w => w && !["CB", "BC", "CD", "CLUB", "BALONCESTO", "BASKET", "FEMENINO", "FEM", "SAD", "DE", "DEL", "LA", "EL", "LAS", "LOS"].includes(w)).join(" ");
+/* Dos nombres de equipo son el mismo aunque cambien tildes, "CB", abreviaturas o falten palabras */
+function mismoEquipo(a, b) {
+  const x = normEquipoPanel(a), y = normEquipoPanel(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [corto, largo] = x.length <= y.length ? [x, y] : [y, x];
+  if (corto.length >= 5 && ` ${largo} `.includes(` ${corto} `)) return true;
+  const A = new Set(x.split(" ").filter(w => w.length > 3));
+  return y.split(" ").filter(w => w.length > 3 && A.has(w)).length >= 2;
+}
+let equiposSheet = null;
+async function listaEquipos() {
+  // plantillas (con jugadoras) + equipos de las estadisticas, sin repetir
+  if (!equiposSheet) { const t = await leerPestana("Equipos"); equiposSheet = (t && t.filas) || []; }
+  const nombres = [];
+  const meter = (n) => { if (n && !nombres.some(e => mismoEquipo(e, n))) nombres.push(n); };
+  ((plantillasFeb && plantillasFeb.filas) || []).forEach(f => meter(f.Equipo));
+  equiposSheet.forEach(f => meter(f.Equipo));
+  return nombres.sort();
+}
+function equipoDePlantillas(nombre, lista) {
+  if (!nombre) return "";
+  const exacto = (lista || []).find(e => normEquipoPanel(e) === normEquipoPanel(nombre));
+  if (exacto) return exacto;
+  const parecidos = (lista || []).filter(e => mismoEquipo(e, nombre));
+  return parecidos.length === 1 ? parecidos[0] : (parecidos[0] || "");
+}
+async function miEquipoGuardado() {
+  let nombre = "";
+  try { nombre = localStorage.getItem("lf2_mi_equipo") || ""; } catch (e) { /* nada */ }
+  if (!nombre) {
+    const { data } = await sb.from("ajustes").select("valor").eq("clave", "mi_equipo").limit(1);
+    if (data && data.length) nombre = data[0].valor || "";
+  } else {
+    // se guarda tambien en la nube para tenerlo en otros aparatos
+    sb.from("ajustes").upsert({ clave: "mi_equipo", valor: nombre, actualizado: new Date().toISOString() }).then(() => {}, () => {});
+  }
+  return nombre;
+}
+async function resolverMiEquipo() {
+  const nombre = await miEquipoGuardado();
+  const lista = await listaEquipos();
+  const enPlantillas = equipoDePlantillas(nombre, lista);
+  const sel = $("accEquipo");
+  if (enPlantillas) {
+    sel.value = enPlantillas;
+    $("accEquipoNombre").textContent = enPlantillas;
+    $("accEquipoElegir").hidden = true;
+    return enPlantillas;
+  }
+  // No hay equipo elegido (o no esta en el Sheet): se pide una sola vez
+  $("accEquipoNombre").textContent = nombre ? nombre + " (no lo encuentro en el Sheet: elige abajo cual es)" : "Todavia no has elegido tu equipo";
+  $("accEquipoElegir").hidden = false;
+  return sel.value || "";
+}
+async function prepararAccesos() {
+  const sel = $("accEquipo");
+  if (!plantillasFeb) plantillasFeb = await leerPestana("Plantillas");
+  const equipos = await listaEquipos();
+  if (!equipos.length) {
+    sel.innerHTML = `<option value="">No hay equipos en el Sheet todavia</option>`;
+    $("accEquipoNombre").textContent = "No hay equipos en el Sheet todavia (ejecuta la actualizacion de la FEB)";
+    $("accEquipoElegir").hidden = true; return;
+  }
+  sel.innerHTML = `<option value="">Elige tu equipo (${equipos.length})...</option>` + equipos.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("");
+  await resolverMiEquipo();
+}
+
+function pintarAccesos() {
+  const caja = $("accTabla");
+  if (!caja) return;
+  caja.className = "";
+  const conCorreo = jugadoras.filter(j => j.email).length;
+  $("contJug").textContent = jugadoras.length + (jugadoras.length === 1 ? " jugadora" : " jugadoras");
+  $("asientosResumen").innerHTML = `
+    <div class="as j"><b>${jugadoras.length}</b>asientos de jugadora</div>
+    <div class="as c"><b>${conCorreo}</b>con correo puesto</div>
+    <div class="as e"><b id="resEnt">${entrenadoresCuenta === null ? "–" : entrenadoresCuenta}</b>asientos de entrenador</div>`;
+  if (!jugadoras.length) {
+    caja.innerHTML = `<div class="vacio">Todavia no hay jugadoras. Elige tu equipo arriba y pulsa «Traer mi plantilla completa».</div>`;
+    return;
+  }
+  caja.innerHTML = jugadoras.map(j => `<div class="acc-fila" data-id="${esc(j.id)}">
+      <span class="dor">${esc(j.dorsal || "–")}</span>
+      <b title="${esc(j.nombre)}">${esc(j.nombre)}</b>
+      <input type="email" value="${esc(j.email || "")}" placeholder="correo de ${esc(String(j.nombre).split(",").pop().trim().split(" ")[0] || "ella")}" autocomplete="off" autocapitalize="off">
+      <span class="${j.email ? "ok" : "no"}">${j.email ? "✓" : "○"}</span></div>`).join("");
+  caja.querySelectorAll(".acc-fila input").forEach(inp => inp.addEventListener("change", () => guardarCorreoFila(inp)));
+}
+
+async function guardarCorreoFila(inp) {
+  const fila = inp.closest(".acc-fila"), id = fila.getAttribute("data-id");
+  const correo = inp.value.trim().toLowerCase();
+  if (correo && !correoValido(correo)) { avisar("avisoAcc", "Ese correo no parece correcto: " + correo, "mal"); inp.focus(); return; }
+  const otra = correo && jugadoras.find(j => String(j.id) !== String(id) && (j.email || "").toLowerCase() === correo);
+  if (otra) { avisar("avisoAcc", `El correo ${correo} ya lo tiene ${otra.nombre}.`, "mal"); inp.focus(); return; }
+  const { error } = await sb.from("jugadoras").update({ email: correo || null }).eq("id", id);
+  if (error) { avisar("avisoAcc", "No se ha podido guardar: " + error.message, "mal"); return; }
+  const j = jugadoras.find(x => String(x.id) === String(id)); if (j) j.email = correo || null;
+  inp.value = correo;
+  fila.classList.add("guardado");
+  fila.querySelector("span:last-child").className = correo ? "ok" : "no";
+  fila.querySelector("span:last-child").textContent = correo ? "✓" : "○";
+  $("asientosResumen").querySelector(".as.c b").textContent = jugadoras.filter(x => x.email).length;
+  if (elegida && String(elegida.id) === String(id)) { elegida.email = correo || null; $("edCorreo").value = correo; }
+  setTimeout(() => fila.classList.remove("guardado"), 1600);
+}
+
+async function traerPlantillaCompleta() {
+  const equipo = (!$("accEquipoElegir").hidden && $("accEquipo").value) ? $("accEquipo").value : await resolverMiEquipo();
+  if (!equipo) { avisar("avisoAcc", "Elige primero tu equipo en la lista de arriba.", "mal"); $("accEquipoElegir").hidden = false; return; }
+  const b = $("btnAccTraer"); b.disabled = true; b.textContent = "Trayendo...";
+  const nombresEst = await mapaNombresEstadisticas();
+  const ajustar = $("accAjustar").checked;
+  const existentes = new Map(jugadoras.map(j => [claveNombre(j.nombre), j]));
+  let filas = plantillasFeb ? plantillasFeb.filas.filter(f => mismoEquipo(f.Equipo, equipo) && f.Jugadora) : [];
+  let origen = "plantilla";
+  if (!filas.length) {
+    // Sin plantilla en el Sheet: se usan las jugadoras que ya han jugado (salen en los rankings de la FEB)
+    const rk = await leerPestana("Jugadoras"), tiros = await leerPestana("Jugadoras_Tiros");
+    const dorsal = new Map(((tiros && tiros.filas) || []).map(f => [claveNombre(f.Jugador) + "|" + normEquipoPanel(f.Equipo), f.Dorsal]));
+    filas = ((rk && rk.filas) || []).filter(f => mismoEquipo(f.Equipo, equipo) && f.Jugador)
+      .map(f => ({ Equipo: equipo, Jugadora: f.Jugador, Dorsal: dorsal.get(claveNombre(f.Jugador) + "|" + normEquipoPanel(f.Equipo)) || "" }));
+    origen = "ranking";
+  }
+  if (!filas.length) {
+    avisar("avisoAcc", "No encuentro jugadoras de ese equipo en el Sheet todavia. Ejecuta la actualizacion de la FEB y vuelve a probar.", "mal");
+    b.disabled = false; b.textContent = "Traer mi plantilla completa"; return;
+  }
+  const nuevas = [], arreglar = [];
+  filas.forEach(f => {
+    const bueno = (ajustar && nombresEst.get(claveNombre(f.Jugadora))) || f.Jugadora;
+    const ya = existentes.get(claveNombre(f.Jugadora));
+    if (ya) { if (ajustar && ya.nombre !== bueno) arreglar.push({ id: ya.id, nombre: bueno }); }
+    else nuevas.push({ nombre: bueno, equipo: f.Equipo, dorsal: f.Dorsal || null, email: null });
+  });
+  let creadas = 0, renombradas = 0;
+  if (nuevas.length) {
+    const { error } = await sb.from("jugadoras").insert(nuevas);
+    if (error) { avisar("avisoAcc", "No se ha podido crear la plantilla: " + error.message, "mal"); b.disabled = false; b.textContent = "Traer mi plantilla completa"; return; }
+    creadas = nuevas.length;
+  }
+  for (const a of arreglar) {
+    const { error } = await sb.from("jugadoras").update({ nombre: a.nombre }).eq("id", a.id);
+    if (!error) renombradas++;
+  }
+  b.disabled = false; b.textContent = "Traer mi plantilla completa";
+  const partes = [];
+  if (creadas) partes.push(`${creadas} jugadoras creadas`);
+  if (renombradas) partes.push(`${renombradas} nombres corregidos`);
+  const nota = origen === "ranking" ? " (tu equipo aun no tiene plantilla en el Sheet: he traido a las que ya han jugado; vuelve a pulsar cuando se actualice)" : "";
+  avisar("avisoAcc", (partes.length ? partes.join(" · ") + ". Ahora pon el correo de cada una." : "Ya estaban todas y con el nombre correcto.") + nota, "ok");
+  await cargarJugadoras();
+}
+
+function asignarCorreosPegados() {
+  const texto = $("accPegar").value.split(/\n+/).map(l => l.trim()).filter(Boolean);
+  if (!texto.length) { avisar("avisoPegar", "Pega al menos una linea.", "mal"); return; }
+  const fichas = jugadoras.map(j => ({ j, tokens: new Set(claveNombre(j.nombre).split(" ").filter(t => t.length > 1)) }));
+  const hechos = [], sinNombre = [], dudas = [];
+  const pendientes = [];
+  texto.forEach(linea => {
+    const m = linea.match(/[^\s,;<>]+@[^\s,;<>]+\.[^\s,;<>]+/);
+    if (!m) { sinNombre.push(linea); return; }
+    const correo = m[0].toLowerCase();
+    const palabras = claveNombre(linea.replace(m[0], "")).split(" ").filter(t => t.length > 1);
+    if (!palabras.length) { sinNombre.push(linea); return; }
+    const puntua = fichas.map(f => ({ f, n: palabras.filter(p => f.tokens.has(p)).length })).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
+    if (!puntua.length) { sinNombre.push(linea); return; }
+    if (puntua.length > 1 && puntua[0].n === puntua[1].n) { dudas.push(linea); return; }
+    pendientes.push({ j: puntua[0].f.j, correo });
+  });
+  if (!pendientes.length) {
+    avisar("avisoPegar", "No he podido relacionar ninguna linea con una jugadora. Revisa los nombres.", "mal"); return;
+  }
+  (async () => {
+    for (const p of pendientes) {
+      if (!correoValido(p.correo)) { sinNombre.push(p.correo); continue; }
+      const { error } = await sb.from("jugadoras").update({ email: p.correo }).eq("id", p.j.id);
+      if (!error) { p.j.email = p.correo; hechos.push(p.j.nombre); }
+    }
+    pintarAccesos();
+    let msg = `${hechos.length} correos asignados.`;
+    if (dudas.length) msg += ` Dudosas (nombre que encaja con varias): ${dudas.join(" | ")}.`;
+    if (sinNombre.length) msg += ` Sin identificar: ${sinNombre.join(" | ")}.`;
+    avisar("avisoPegar", msg, hechos.length ? "ok" : "mal");
+  })();
+}
+
+/* ---------- asientos de entrenador ---------- */
+let ligasAuto = [], preciosPlan = {}, permisosAyu = {}, legadoAyu = [], entrenadoresCuenta = null, colCorreoEntrenador = "email";
+async function cargarEntrenadores() {
+  const caja = $("entLista");
+  const { data, error } = await sb.from("entrenadores").select("*");
+  caja.className = "";
+  if (error) {
+    caja.innerHTML = `<div class="vacio">No se puede ver la lista de entrenadores (${esc(error.message)}).
+      Ejecuta una vez <b>entrenadores_asientos.sql</b> en Supabase.</div>`;
+    entrenadoresCuenta = null; $("contEnt").textContent = ""; pintarAccesos(); return;
+  }
+  const filas = data || [];
+  await cargarPermisosAyu(); pintarPlanesCfg();
+  if (filas[0]) colCorreoEntrenador = ("email" in filas[0]) ? "email" : (Object.keys(filas[0]).find(k => /mail|correo/i.test(k)) || "email");
+  entrenadoresCuenta = filas.length;
+  $("contEnt").textContent = filas.length + (filas.length === 1 ? " entrenador" : " entrenadores");
+  const yo = ($("quien").textContent || "").toLowerCase();
+  caja.innerHTML = filas.length ? filas.map(f => {
+    const c = String(f[colCorreoEntrenador] || "");
+    return `<div class="ent-fila"><span>${esc(c)}${c.toLowerCase() === yo ? " · tu" : ""}</span>
+      ${c.toLowerCase() === yo ? "" : `<button class="boton fina" data-perm="${esc(c)}" style="white-space:nowrap;">⚙ Menús · ${esc(resumenPermisos(c))}</button><button class="boton borrar fina" data-correo="${esc(c)}">Quitar</button>`}</div>`;
+  }).join("") : `<div class="vacio">No hay ningun entrenador en la lista.</div>`;
+  caja.querySelectorAll("button[data-correo]").forEach(b => b.addEventListener("click", () => quitarEntrenador(b.getAttribute("data-correo"))));
+  caja.querySelectorAll("button[data-perm]").forEach(b => b.addEventListener("click", () => abrirPermisos(b.getAttribute("data-perm"))));
+  pintarAccesos();
+}
+const PLANES_APP = { gratis: { n: "Gratis", e: ["jugadas", "ejercicios", "planes"], s: [] }, pro: { n: "Pro", e: ["jugadas", "playbooks", "ejercicios", "planes", "equipos", "libro", "mini", "video", "imagen", "audio", "partido"], s: [] }, premium: { n: "Premium", e: ["jugadas", "playbooks", "ejercicios", "planes", "equipos", "libro", "mini", "video", "imagen", "audio", "partido"], s: ["inicio", "mi-equipo", "clasificacion", "equipos", "jugadoras", "rankings", "estadisticas", "quintetos", "fichajes", "comparador", "resultados", "records", "informes"] } };
+const MENUS_E = [["jugadas", "Jugadas"], ["playbooks", "Playbooks"], ["ejercicios", "Ejercicios"], ["planes", "Planes de entrenamiento"], ["equipos", "Quintetos y equipos"], ["libro", "Libro de partidos"], ["mini", "Mini basket"], ["video", "Vídeos"], ["imagen", "Imágenes"], ["audio", "Audio"], ["partido", "🏀 Modo partido (pizarra, marcador, estadísticas)"]];
+const MENUS_S = [["inicio", "Inicio"], ["mi-equipo", "Mi equipo"], ["clasificacion", "Clasificación"], ["equipos", "Equipos"], ["jugadoras", "Jugadoras"], ["rankings", "Rankings"], ["estadisticas", "Estadísticas"], ["quintetos", "Quintetos"], ["fichajes", "Fichajes"], ["comparador", "Comparador"], ["resultados", "Resultados"], ["records", "Récords"], ["informes", "Informes"]];
+async function cargarPermisosAyu() {
+  permisosAyu = {}; legadoAyu = [];
+  try {
+    const r = await sb.from("ajustes").select("clave,valor").in("clave", ["permisos_ayudantes", "ayudantes_partido", "ligas_auto", "planes_precio"]);
+    const f = {}; (r.data || []).forEach(x => { f[x.clave] = x.valor; });
+    try { permisosAyu = JSON.parse(f.permisos_ayudantes || "{}") || {}; } catch (e) { permisosAyu = {}; }
+    legadoAyu = String(f.ayudantes_partido || "").toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
+    legadoAyu.forEach(c => { if (!permisosAyu[c]) permisosAyu[c] = { e: ["partido"], s: [] }; });
+    try { ligasAuto = JSON.parse(f.ligas_auto || "[]") || []; } catch (e) { ligasAuto = []; } try { preciosPlan = JSON.parse(f.planes_precio || "{}") || {}; } catch (e) { preciosPlan = {}; }
+  } catch (e) { /* nada */ }
+}
+function pintarPlanesCfg() {
+  const c = document.getElementById("planesCfg"); if (!c) return;
+  c.innerHTML = `<div class="fila" style="gap:8px;flex-wrap:wrap;">${Object.keys(PLANES_APP).map(k => `<div style="min-width:120px;"><label style="margin-top:0;">${PLANES_APP[k].n} · precio</label><input data-precio="${k}" placeholder="${k === "gratis" ? "0 €" : k === "pro" ? "9 €/mes" : "19 €/mes"}" value="${esc(preciosPlan[k] || "")}"></div>`).join("")}</div>
+    <label>Ligas con estadísticas automáticas (las que tienes cargadas en la hoja)</label>
+    <div id="ligasLista">${ligasAuto.length ? ligasAuto.map((l, i) => `<div class="ent-fila"><span>${esc(l.nombre)}</span><button class="boton borrar fina" data-ligax="${i}">Quitar</button></div>`).join("") : '<div class="vacio">Todavía no hay ninguna liga.</div>'}</div>
+    <div class="fila" style="margin-top:8px;align-items:flex-end;"><div><input id="ligaNueva" placeholder="Ej. Liga Femenina 2"></div><div style="flex:none;"><button class="boton fina" id="ligaAdd">Añadir liga</button></div></div>`;
+  c.querySelectorAll("[data-precio]").forEach(i => i.addEventListener("change", async () => { preciosPlan[i.dataset.precio] = i.value.trim(); const { error } = await sb.from("ajustes").upsert({ clave: "planes_precio", valor: JSON.stringify(preciosPlan), actualizado: new Date().toISOString() }); avisar("avisoPlanes", error ? "No se ha podido guardar: " + error.message : "Precio guardado.", error ? "mal" : "ok"); }));
+  const guardaLigas = async () => { const { error } = await sb.from("ajustes").upsert({ clave: "ligas_auto", valor: JSON.stringify(ligasAuto), actualizado: new Date().toISOString() }); avisar("avisoPlanes", error ? "No se ha podido guardar: " + error.message : "Ligas guardadas.", error ? "mal" : "ok"); pintarPlanesCfg(); };
+  c.querySelectorAll("[data-ligax]").forEach(b => b.addEventListener("click", () => { ligasAuto.splice(Number(b.dataset.ligax), 1); guardaLigas(); }));
+  document.getElementById("ligaAdd").addEventListener("click", () => { const n = document.getElementById("ligaNueva").value.trim(); if (!n) return; const id = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); if (!id || ligasAuto.some(l => l.id === id)) return; ligasAuto.push({ id, nombre: n }); guardaLigas(); });
+}
+function resumenPermisos(c) {
+  const q = permisosAyu[String(c).toLowerCase()]; if (!q) return "ayudante normal";
+  if (q.plan && PLANES_APP[q.plan]) return "plan " + PLANES_APP[q.plan].n;
+  if (q.e.length === 1 && q.e[0] === "partido" && !q.s.length) return "solo modo partido";
+  const n = q.e.length + q.s.length; return n ? n + (n === 1 ? " menú" : " menús") : "sin menús";
+}
+async function guardarPermisosAyu() {
+  const { error } = await sb.from("ajustes").upsert({ clave: "permisos_ayudantes", valor: JSON.stringify(permisosAyu), actualizado: new Date().toISOString() });
+  if (error) return error;
+  if (legadoAyu.length) { await sb.from("ajustes").upsert({ clave: "ayudantes_partido", valor: "", actualizado: new Date().toISOString() }); legadoAyu = []; }
+  return null;
+}
+function abrirPermisos(correo) {
+  const c = correo.toLowerCase(), q = permisosAyu[c] || { e: [], s: [] };
+  let m = document.getElementById("modPerm"); if (m) m.remove();
+  m = document.createElement("div"); m.id = "modPerm"; m.style.cssText = "position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px;";
+  const grupo = (tit, k, lista, sel) => `<h4 style="margin:12px 0 6px;font-size:13px;opacity:.7;">${tit}</h4><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;">${lista.map(([id, t]) => `<label style="display:flex;gap:8px;align-items:center;background:#f4f1ea;border-radius:10px;padding:10px;font-weight:700;font-size:14px;"><input type="checkbox" data-k="${k}" value="${id}" ${sel.includes(id) ? "checked" : ""}> ${t}</label>`).join("")}</div>`;
+  m.innerHTML = `<div style="background:#fff;border-radius:16px;padding:16px;width:min(720px,100%);max-height:100%;overflow:auto;"><h3 style="margin:0 0 4px;">Menús de ${esc(correo)}</h3><p style="margin:0;font-size:13px;opacity:.75;">Marca lo que puede ver. Solo lee: no puede cambiar nada. Se ve igual que tú, pero solo con esos menús.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"><button class="boton fina" data-pre="partido">Solo modo partido</button><button class="boton fina" data-pre="todo">Todo</button><button class="boton fina" data-pre="nada">Ninguno</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center;"><label style="font-weight:700;font-size:13px;">Plan <select id="pmPlan" style="margin-left:4px;"><option value="">Personalizado</option>${Object.keys(PLANES_APP).map(k => `<option value="${k}" ${q.plan === k ? "selected" : ""}>${PLANES_APP[k].n}</option>`).join("")}</select></label><label style="font-weight:700;font-size:13px;">Liga con estadísticas <select id="pmLiga" style="margin-left:4px;"><option value="">— ninguna —</option>${ligasAuto.map(l => `<option value="${esc(l.id)}" ${q.liga === l.id ? "selected" : ""}>${esc(l.nombre)}</option>`).join("")}</select></label></div>
+    <p style="margin:6px 0 0;font-size:12px;opacity:.7;">Las estadísticas solo se activan con plan Premium y una liga automatizada. Si cambias el plan se marcan sus menús; luego puedes ajustarlos.</p>
+    ${grupo("ENTRENADOR", "e", MENUS_E, q.e)}${grupo("ESTADÍSTICAS", "s", MENUS_S, q.s)}
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:14px;"><span><button class="boton borrar fina" id="pmQuita">Quitar permisos</button> <button class="boton fina" id="pmVer" style="background:#2b6cb0;color:#fff;">👁 Ver como este ayudante</button></span><span><button class="boton fina" id="pmNo">Cancelar</button> <button class="boton" id="pmOk">Guardar</button></span></div></div>`;
+  document.body.appendChild(m);
+  const marcar = (e, s) => m.querySelectorAll("input[data-k]").forEach(i => { i.checked = (i.dataset.k === "e" ? e : s).includes(i.value); });
+  document.getElementById("pmPlan").onchange = (ev) => { const pl = PLANES_APP[ev.target.value]; if (pl) marcar(pl.e, pl.s); };
+  m.querySelectorAll("[data-pre]").forEach(b => b.onclick = () => { document.getElementById("pmPlan").value = ""; const p = b.dataset.pre; marcar(p === "partido" ? ["partido"] : p === "todo" ? MENUS_E.map(x => x[0]) : [], p === "todo" ? MENUS_S.map(x => x[0]) : []); });
+  m.addEventListener("pointerdown", (ev) => { if (ev.target === m) m.remove(); });
+  document.getElementById("pmNo").onclick = () => m.remove();
+  document.getElementById("pmVer").onclick = () => {
+    const e = [...m.querySelectorAll('input[data-k="e"]:checked')].map(i => i.value), sv = [...m.querySelectorAll('input[data-k="s"]:checked')].map(i => i.value);
+    if (!e.length && !sv.length) { avisar("avisoEnt", "Marca algún menú para ver cómo queda.", "mal"); return; }
+    const plan = document.getElementById("pmPlan").value, liga = document.getElementById("pmLiga").value; let s2 = sv, lock = null;
+    if (plan) { if (plan !== "premium") { if (sv.length) lock = "plan"; s2 = []; } else if (sv.length && !ligasAuto.some(l => l.id === liga)) { lock = "liga"; s2 = []; } }
+    if (!e.length && !s2.length) { avisar("avisoEnt", "Con ese plan no queda ningún menú que ver.", "mal"); return; }
+    try { sessionStorage.setItem("sf_ver_como", JSON.stringify({ e, s: s2, plan, lock, precios: preciosPlan })); } catch (x) { /* nada */ }
+    location.href = s2.length ? "index.html" : "entrenador.html";
+  };
+  document.getElementById("pmOk").onclick = async () => {
+    permisosAyu[c] = { e: [...m.querySelectorAll('input[data-k="e"]:checked')].map(i => i.value), s: [...m.querySelectorAll('input[data-k="s"]:checked')].map(i => i.value), plan: document.getElementById("pmPlan").value, liga: document.getElementById("pmLiga").value };
+    const er = await guardarPermisosAyu(); m.remove();
+    if (er) { avisar("avisoEnt", "No se ha podido guardar: " + er.message, "mal"); await cargarPermisosAyu(); return; }
+    avisar("avisoEnt", `Guardado: ${c} → ${resumenPermisos(c)}.`, "ok"); cargarEntrenadores();
+  };
+  document.getElementById("pmQuita").onclick = async () => {
+    delete permisosAyu[c]; const er = await guardarPermisosAyu(); m.remove();
+    if (er) { avisar("avisoEnt", "No se ha podido guardar: " + er.message, "mal"); await cargarPermisosAyu(); return; }
+    avisar("avisoEnt", `${c} vuelve a ser ayudante normal.`, "ok"); cargarEntrenadores();
+  };
+}
+async function anadirEntrenador() {
+  const correo = $("entCorreo").value.trim().toLowerCase();
+  if (!correoValido(correo)) { avisar("avisoEnt", "Escribe un correo completo.", "mal"); return; }
+  const { error } = await sb.from("entrenadores").insert({ [colCorreoEntrenador]: correo });
+  if (error) { avisar("avisoEnt", "No se ha podido dar el asiento: " + error.message + ". Si es un tema de permisos, ejecuta entrenadores_asientos.sql en Supabase.", "mal"); return; }
+  $("entCorreo").value = "";
+  avisar("avisoEnt", `Listo: ${correo} ya puede entrar al panel con ese correo.`, "ok");
+  cargarEntrenadores();
+}
+async function quitarEntrenador(correo) {
+  if (!confirm(`¿Quitar el asiento de entrenador a ${correo}?`)) return;
+  const { error } = await sb.from("entrenadores").delete().eq(colCorreoEntrenador, correo);
+  if (error) { avisar("avisoEnt", "No se ha podido quitar: " + error.message, "mal"); return; }
+  cargarEntrenadores();
+}
+
+/* ============================================================
+   ORDEN DE LA APP DE LAS JUGADORAS (se guarda en la tabla ajustes)
+   ============================================================ */
+const PESTANAS_APP = [
+  { id: "inicio", t: "Inicio" }, { id: "numeros", t: "Mis numeros" }, { id: "mensajes", t: "Mensajes" }, { id: "clips", t: "Videos" },
+  { id: "rival", t: "El rival" }, { id: "equipo", t: "Mi equipo" }, { id: "despues", t: "Después del partido" }, { id: "jugadas", t: "Jugadas" },
+  { id: "tests", t: "Tests" },
+];
+const SECCIONES_APP = [
+  { id: "pdf", t: "Playbook en PDF" }, { id: "jugadas", t: "Jugadas / playbook" }, { id: "datos", t: "Datos del equipo" },
+  { id: "partidos", t: "Ultimos partidos" }, { id: "estilo", t: "Como juegan" }, { id: "mapa", t: "Mapa de tiro del equipo" },
+  { id: "jugadoras", t: "Jugadoras a vigilar" }, { id: "plantilla", t: "Plantilla" }, { id: "mejores", t: "Mejores y peores" },
+  { id: "videos", t: "Videos" }, { id: "texto", t: "Textos (puntos fuertes, claves...)" },
+];
+let ordenApp = { pestanas: PESTANAS_APP.map(p => p.id), ocultas: [], secciones: SECCIONES_APP.map(p => p.id) };
+
+function completarOrden(lista, base) {
+  const ids = base.map(b => b.id);
+  const ok = (lista || []).filter(i => ids.includes(i));
+  return ok.concat(ids.filter(i => !ok.includes(i)));
+}
+async function cargarOrdenApp() {
+  try {
+    const { data } = await sb.from("ajustes").select("valor").eq("clave", "orden_app").limit(1);
+    if (data && data.length && data[0].valor) {
+      const o = JSON.parse(data[0].valor);
+      ordenApp.pestanas = completarOrden(o.pestanas, PESTANAS_APP);
+      ordenApp.secciones = completarOrden(o.secciones, SECCIONES_APP);
+      ordenApp.ocultas = (o.ocultas || []).filter(i => PESTANAS_APP.some(p => p.id === i));
+    }
+  } catch (e) { /* se queda el orden de partida */ }
+  pintarOrdenApp();
+}
+function pintarOrdenApp() {
+  const fila = (lista, base, clave, conOcultar) => lista.map((id, n) => {
+    const nombre = (base.find(b => b.id === id) || {}).t || id;
+    const oculta = conOcultar && ordenApp.ocultas.includes(id);
+    return `<div class="item" style="display:flex;align-items:center;gap:8px;padding:8px 10px;${oculta ? "opacity:.5;" : ""}">
+      <b style="flex:1;">${esc(nombre)}</b>
+      ${conOcultar ? `<label class="sw" style="margin:0;"><input type="checkbox" data-vis="${esc(id)}" ${oculta ? "" : "checked"}> <span>Visible</span></label>` : ""}
+      <button class="boton fina gris" data-mov="${clave}|${esc(id)}|-1" ${n === 0 ? "disabled" : ""}>↑</button>
+      <button class="boton fina gris" data-mov="${clave}|${esc(id)}|1" ${n === lista.length - 1 ? "disabled" : ""}>↓</button></div>`;
+  }).join("");
+  $("ordenPestanas").innerHTML = fila(ordenApp.pestanas, PESTANAS_APP, "pestanas", true);
+  $("ordenSecciones").innerHTML = fila(ordenApp.secciones, SECCIONES_APP, "secciones", false);
+  document.querySelectorAll("[data-mov]").forEach(b => b.addEventListener("click", () => {
+    const [clave, id, d] = b.getAttribute("data-mov").split("|");
+    const l = ordenApp[clave], i = l.indexOf(id), j = i + Number(d);
+    if (j < 0 || j >= l.length) return;
+    [l[i], l[j]] = [l[j], l[i]];
+    pintarOrdenApp(); guardarOrdenApp();
+  }));
+  document.querySelectorAll("[data-vis]").forEach(c => c.addEventListener("change", () => {
+    const id = c.getAttribute("data-vis");
+    ordenApp.ocultas = ordenApp.ocultas.filter(x => x !== id);
+    if (!c.checked) ordenApp.ocultas.push(id);
+    if (ordenApp.ocultas.length >= PESTANAS_APP.length) { ordenApp.ocultas = []; }
+    pintarOrdenApp(); guardarOrdenApp();
+  }));
+}
+async function guardarOrdenApp() {
+  const { error } = await sb.from("ajustes").upsert({
+    clave: "orden_app", valor: JSON.stringify(ordenApp), actualizado: new Date().toISOString() });
+  if (error) { avisar("avisoOrden", "No se ha podido guardar: " + error.message, "mal"); return; }
+  avisar("avisoOrden", "Guardado. Lo veran asi la proxima vez que abran la app.", "ok");
+}
+
+/* ============================================================
+   TESTS PARA LAS JUGADORAS
+   ============================================================ */
+let TESTS = [], INTENTOS = [], TE = null;
+const nidT = () => "q" + Math.random().toString(36).slice(2, 9);
+const noSql = (e) => e && /relation .*tests|schema cache|does not exist|Could not find/i.test(e.message || "");
+
+async function cargarTestsPanel() {
+  const caja = $("listaTests"); if (!caja) return;
+  const r1 = await sb.from("tests").select("*").order("creado", { ascending: false });
+  if (r1.error) {
+    caja.className = ""; $("btnNuevoTest").hidden = true;
+    caja.innerHTML = `<div class="vacio">${noSql(r1.error) ? "Falta un paso: ejecuta el archivo <b>tests.sql</b> una vez en Supabase &gt; SQL Editor y recarga." : esc(r1.error.message)}</div>`;
+    return;
+  }
+  $("btnNuevoTest").hidden = false;
+  TESTS = r1.data || [];
+  const r2 = await sb.from("test_intentos").select("id,test_id,jugadora_id,aciertos,total,terminado");
+  INTENTOS = r2.data || [];
+  caja.className = "";
+  if (!TESTS.length) { caja.innerHTML = `<div class="vacio">Todavía no has creado ningún test.</div>`; return; }
+  caja.innerHTML = TESTS.map(t => {
+    const dest = t.jugadoras ? jugadoras.filter(j => t.jugadoras.includes(String(j.id))) : jugadoras;
+    const hechos = INTENTOS.filter(i => i.test_id === t.id && i.terminado && dest.some(j => String(j.id) === i.jugadora_id)).length;
+    const bank = (t.preguntas || []).length;
+    return `<div class="item" style="padding:12px;">
+      <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
+        <b style="flex:1;min-width:160px;">${esc(t.titulo)}</b>
+        <span style="font-size:12px;font-weight:800;color:${t.abierto ? "var(--verde)" : "var(--ink-soft)"};">${t.abierto ? "ABIERTO" : "CERRADO"}</span></div>
+      <div style="font-size:13px;color:var(--ink-soft);margin:4px 0 8px;">${bank} preguntas en total · a cada una le salen ${Math.min(t.n_preguntas, bank)} · han respondido <b>${hechos} de ${dest.length}</b></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="boton fina" data-tr="${t.id}">Ver resultados</button>
+        <button class="boton fina gris" data-te="${t.id}">Editar</button>
+        <button class="boton fina gris" data-ta="${t.id}">${t.abierto ? "Cerrar" : "Abrir"}</button>
+        <button class="boton borrar fina" data-tb="${t.id}">Borrar</button></div></div>`;
+  }).join("");
+  caja.querySelectorAll("[data-tr]").forEach(b => b.addEventListener("click", () => verResultadosTest(b.getAttribute("data-tr"))));
+  caja.querySelectorAll("[data-te]").forEach(b => b.addEventListener("click", () => abrirEditorTest(b.getAttribute("data-te"))));
+  caja.querySelectorAll("[data-ta]").forEach(b => b.addEventListener("click", async () => {
+    const t = TESTS.find(x => x.id === b.getAttribute("data-ta"));
+    const { error } = await sb.from("tests").update({ abierto: !t.abierto }).eq("id", t.id);
+    if (error) { avisar("avisoTests", "No se ha podido cambiar: " + error.message, "mal"); return; }
+    cargarTestsPanel();
+  }));
+  caja.querySelectorAll("[data-tb]").forEach(b => b.addEventListener("click", async () => {
+    const t = TESTS.find(x => x.id === b.getAttribute("data-tb"));
+    if (!confirm(`¿Borrar el test «${t.titulo}»?\n\nSe borran también las respuestas de todas las jugadoras. No se puede deshacer.`)) return;
+    const { error } = await sb.from("tests").delete().eq("id", t.id);
+    if (error) { avisar("avisoTests", "No se ha podido borrar: " + error.message, "mal"); return; }
+    $("cajaResultadosTest").hidden = true;
+    cargarTestsPanel();
+  }));
+}
+
+function abrirEditorTest(id) {
+  const t = id ? TESTS.find(x => x.id === id) : null;
+  const empezado = t ? INTENTOS.some(i => i.test_id === t.id) : false;
+  TE = {
+    id: t ? t.id : null, titulo: t ? t.titulo : "", n: t ? t.n_preguntas : 5,
+    corr: t ? t.mostrar_correccion : true,
+    para: t && t.jugadoras ? "elegidas" : "todas",
+    sel: new Set(t && t.jugadoras ? t.jugadoras : []),
+    preguntas: t ? JSON.parse(JSON.stringify(t.preguntas || [])) : [{ id: nidT(), texto: "", opciones: ["", "", "", ""], correcta: 0 }],
+    bloqueado: empezado
+  };
+  $("tituloEditorTest").textContent = t ? "Editar test" : "Nuevo test";
+  $("cajaEditorTest").hidden = false; $("cajaResultadosTest").hidden = true;
+  $("teTitulo").value = TE.titulo; $("teN").value = TE.n; $("teCorr").checked = TE.corr; $("tePara").value = TE.para;
+  pintarEditorTest();
+  $("cajaEditorTest").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function pintarEditorTest() {
+  $("teElegidas").hidden = TE.para !== "elegidas";
+  $("teElegidas").innerHTML = jugadoras.map(j => `<label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px;margin:4px 0;"><input type="checkbox" data-tj="${esc(j.id)}" style="width:auto;" ${TE.sel.has(String(j.id)) ? "checked" : ""}> ${esc(j.nombre)}</label>`).join("") || `<div class="vacio">Aún no hay jugadoras.</div>`;
+  $("teElegidas").querySelectorAll("[data-tj]").forEach(c => c.addEventListener("change", () => {
+    const k = c.getAttribute("data-tj"); if (c.checked) TE.sel.add(k); else TE.sel.delete(k);
+  }));
+  $("teBloqueo").innerHTML = TE.bloqueado
+    ? `<div class="aviso mal" style="margin-top:12px;">Hay jugadoras que ya han empezado este test, así que las preguntas no se pueden cambiar (se descuadrarían sus respuestas). Puedes cambiar el título, quién lo hace y abrirlo o cerrarlo. Para otras preguntas, crea un test nuevo.</div>` : "";
+  const dis = TE.bloqueado ? "disabled" : "";
+  $("tePreguntas").innerHTML = TE.preguntas.map((p, i) => `<div class="item" style="padding:12px;margin-bottom:10px;">
+    <div style="display:flex;gap:8px;align-items:center;"><b>${i + 1}.</b>
+      <textarea rows="2" data-pt="${i}" placeholder="Escribe la pregunta" ${dis} style="flex:1;">${esc(p.texto)}</textarea>
+      <button class="boton fina gris" data-pdel="${i}" ${dis} title="Quitar la pregunta" style="margin:0;">✕</button></div>
+    <div style="font-size:12px;color:var(--ink-soft);margin:8px 0 4px;">Opciones · marca la correcta</div>
+    ${p.opciones.map((o, k) => `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+      <input type="radio" name="co${i}" data-pc="${i}|${k}" ${p.correcta === k ? "checked" : ""} ${dis} style="width:auto;">
+      <input data-po="${i}|${k}" value="${esc(o)}" placeholder="Opción ${k + 1}" ${dis} style="flex:1;">
+      <button class="boton fina gris" data-pod="${i}|${k}" ${dis || p.opciones.length <= 2 ? "disabled" : ""} style="margin:0;">✕</button></div>`).join("")}
+    <button class="boton fina gris" data-poa="${i}" ${dis || p.opciones.length >= 6 ? "disabled" : ""}>+ Opción</button></div>`).join("");
+  const q = $("tePreguntas");
+  q.querySelectorAll("[data-pt]").forEach(x => x.addEventListener("input", () => { TE.preguntas[+x.getAttribute("data-pt")].texto = x.value; ayudaN(); }));
+  q.querySelectorAll("[data-po]").forEach(x => x.addEventListener("input", () => { const [i, k] = x.getAttribute("data-po").split("|").map(Number); TE.preguntas[i].opciones[k] = x.value; }));
+  q.querySelectorAll("[data-pc]").forEach(x => x.addEventListener("change", () => { const [i, k] = x.getAttribute("data-pc").split("|").map(Number); TE.preguntas[i].correcta = k; }));
+  q.querySelectorAll("[data-pdel]").forEach(x => x.addEventListener("click", () => { TE.preguntas.splice(+x.getAttribute("data-pdel"), 1); pintarEditorTest(); }));
+  q.querySelectorAll("[data-poa]").forEach(x => x.addEventListener("click", () => { TE.preguntas[+x.getAttribute("data-poa")].opciones.push(""); pintarEditorTest(); }));
+  q.querySelectorAll("[data-pod]").forEach(x => x.addEventListener("click", () => {
+    const [i, k] = x.getAttribute("data-pod").split("|").map(Number); const p = TE.preguntas[i];
+    p.opciones.splice(k, 1); if (p.correcta === k) p.correcta = 0; else if (p.correcta > k) p.correcta--;
+    pintarEditorTest();
+  }));
+  $("teAddP").disabled = TE.bloqueado; $("tePegarOk").disabled = TE.bloqueado;
+  ayudaN();
+}
+function ayudaN() {
+  const total = TE.preguntas.filter(p => p.texto.trim()).length, n = parseInt($("teN").value, 10) || 0;
+  $("teAyudaN").textContent = total
+    ? (n >= total ? `Tienes ${total} preguntas: a todas les saldrán las mismas, solo cambia el orden. Para que les toquen preguntas distintas, escribe más preguntas que las que salen a cada una.`
+                  : `Tienes ${total} preguntas: a cada jugadora le saldrán ${n} elegidas al azar, y las opciones también cambian de orden.`)
+    : "";
+}
+
+function parsePegado(t) {
+  return String(t || "").split(/\n\s*\n/).map(b => b.split("\n").map(x => x.trim()).filter(Boolean)).filter(l => l.length >= 3).map(l => {
+    let correcta = 0;
+    const ops = l.slice(1).map((x, i) => { const m = /^\*\s*/.test(x); x = x.replace(/^\*\s*/, "").replace(/^[a-fA-F][.)]\s*/, ""); if (m) correcta = i; return x; });
+    return { id: nidT(), texto: l[0].replace(/^\d+[.)]\s*/, ""), opciones: ops, correcta };
+  });
+}
+
+async function guardarTest() {
+  const titulo = $("teTitulo").value.trim();
+  if (!titulo) { avisar("avisoEditorTest", "Ponle un título.", "mal"); return; }
+  const n = parseInt($("teN").value, 10);
+  let preguntas = TE.preguntas;
+  if (!TE.bloqueado) {
+    preguntas = [];
+    for (let i = 0; i < TE.preguntas.length; i++) {
+      const p = TE.preguntas[i];
+      if (!p.texto.trim() && p.opciones.every(o => !o.trim())) continue;   // la vacía se ignora
+      if (!p.texto.trim()) { avisar("avisoEditorTest", `A la pregunta ${i + 1} le falta el texto.`, "mal"); return; }
+      const ops = [], corr = p.opciones[p.correcta];
+      if (!(corr || "").trim()) { avisar("avisoEditorTest", `En la pregunta ${i + 1} la opción correcta está vacía.`, "mal"); return; }
+      let nc = 0; p.opciones.forEach((o, k) => { if (o.trim()) { if (k === p.correcta) nc = ops.length; ops.push(o.trim()); } });
+      if (ops.length < 2) { avisar("avisoEditorTest", `La pregunta ${i + 1} necesita al menos 2 opciones.`, "mal"); return; }
+      preguntas.push({ id: p.id, texto: p.texto.trim(), opciones: ops, correcta: nc });
+    }
+    if (!preguntas.length) { avisar("avisoEditorTest", "Añade al menos una pregunta.", "mal"); return; }
+  }
+  if (!(n >= 1)) { avisar("avisoEditorTest", "Pon cuántas preguntas le salen a cada jugadora (1 o más).", "mal"); return; }
+  if (n > preguntas.length) { avisar("avisoEditorTest", `Has escrito ${preguntas.length} preguntas, así que no pueden salir ${n}. Baja el número o añade más preguntas.`, "mal"); return; }
+  TE.para = $("tePara").value;
+  if (TE.para === "elegidas" && !TE.sel.size) { avisar("avisoEditorTest", "Elige al menos una jugadora.", "mal"); return; }
+  const fila = { titulo, n_preguntas: n, mostrar_correccion: $("teCorr").checked, jugadoras: TE.para === "elegidas" ? [...TE.sel] : null };
+  if (!TE.bloqueado) fila.preguntas = preguntas;
+  const r = TE.id ? await sb.from("tests").update(fila).eq("id", TE.id) : await sb.from("tests").insert(fila);
+  if (r.error) { avisar("avisoEditorTest", "No se ha podido guardar: " + r.error.message, "mal"); return; }
+  $("cajaEditorTest").hidden = true;
+  avisar("avisoTests", TE.id ? "Test guardado." : "Test creado. Las jugadoras lo ven ya en su pestaña Tests.", "ok");
+  await cargarTestsPanel();
+}
+
+async function verResultadosTest(id) {
+  const t = TESTS.find(x => x.id === id); if (!t) return;
+  const caja = $("cajaResultadosTest");
+  caja.hidden = false; $("cajaEditorTest").hidden = true;
+  caja.innerHTML = `<div class="cargando">Cargando...</div>`;
+  const { data, error } = await sb.from("test_intentos").select("*").eq("test_id", id);
+  if (error) { caja.innerHTML = `<div class="vacio">${esc(error.message)}</div>`; return; }
+  const ints = data || [];
+  const dest = t.jugadoras ? jugadoras.filter(j => t.jugadoras.includes(String(j.id))) : jugadoras;
+  const de = (j) => ints.find(i => i.jugadora_id === String(j.id));
+  const hechas = dest.filter(j => { const i = de(j); return i && i.terminado; });
+  const enCurso = dest.filter(j => { const i = de(j); return i && !i.terminado; });
+  const sin = dest.filter(j => !de(j));
+  const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+  const totA = hechas.reduce((s, j) => s + (de(j).aciertos || 0), 0), totT = hechas.reduce((s, j) => s + (de(j).total || 0), 0);
+  const fila = (j, estado) => {
+    const i = de(j);
+    let der = "";
+    if (estado === "hecho") der = `<b style="color:${pct(i.aciertos, i.total) >= 50 ? "var(--verde)" : "var(--rojo)"};">${i.aciertos} ✓ · ${i.total - i.aciertos} ✗</b> <span style="color:var(--ink-soft);font-size:12px;">de ${i.total} · ${esc(fechaCorta(i.terminado))}</span>`;
+    else if (estado === "curso") der = `<span style="color:var(--ink-soft);">Empezó, no ha enviado</span>`;
+    else der = `<span style="color:var(--rojo);font-weight:800;">Sin hacer</span>`;
+    return `<div class="item" style="display:flex;align-items:center;gap:8px;padding:8px 10px;flex-wrap:wrap;">
+      <b style="flex:1;min-width:130px;">${esc(j.nombre)}</b><span>${der}</span>
+      ${i ? `<button class="boton fina gris" data-reset="${i.id}" title="Borra su respuesta para que pueda repetirlo" style="margin:0;">Reiniciar</button>` : ""}</div>`;
+  };
+  // por pregunta: cuántas veces salió y cuántas se acertó
+  const est = {};
+  hechas.forEach(j => {
+    const i = de(j), r = i.respuestas || {};
+    (i.servidas || []).forEach(s => {
+      const q = (t.preguntas || []).find(p => p.id === s.id); if (!q) return;
+      const e = est[q.id] || (est[q.id] = { q, v: 0, ok: 0 }); e.v++;
+      if (r[q.id] !== null && r[q.id] !== undefined && Number(r[q.id]) === Number(q.correcta)) e.ok++;
+    });
+  });
+  const dif = Object.values(est).sort((a, b) => (a.ok / a.v) - (b.ok / b.v) || b.v - a.v);
+  caja.innerHTML = `<h2>${esc(t.titulo)}</h2>
+    <p class="expl" style="margin-bottom:10px;">Han respondido <b>${hechas.length} de ${dest.length}</b>${hechas.length ? ` · acierto medio <b>${pct(totA, totT)}%</b> (${totA} de ${totT})` : ""}.${enCurso.length ? ` ${enCurso.length} lo han empezado sin enviar.` : ""}</p>
+    ${sin.length ? `<label>Sin hacer (${sin.length})</label>${sin.map(j => fila(j, "sin")).join("")}` : ""}
+    ${enCurso.length ? `<label>Empezado, sin enviar (${enCurso.length})</label>${enCurso.map(j => fila(j, "curso")).join("")}` : ""}
+    ${hechas.length ? `<label>Hecho (${hechas.length})</label>${hechas.slice().sort((a, b) => (de(b).aciertos / (de(b).total || 1)) - (de(a).aciertos / (de(a).total || 1))).map(j => fila(j, "hecho")).join("")}` : ""}
+    ${dif.length ? `<label style="margin-top:16px;">Preguntas, de la más fallada a la menos</label>${dif.map(e => `<div class="item" style="padding:8px 10px;"><div style="font-size:14px;">${esc(e.q.texto)}</div><div style="font-size:12.5px;color:var(--ink-soft);margin-top:3px;">Acertada ${pct(e.ok, e.v)}% · ${e.ok} de ${e.v} jugadoras a las que les salió · correcta: ${esc(e.q.opciones[e.q.correcta])}</div></div>`).join("")}` : ""}
+    <div class="pestanas" style="margin:14px 0 0;"><button id="trCerrar">Volver a la lista</button></div><div id="avisoResultados"></div>`;
+  $("trCerrar").addEventListener("click", () => { caja.hidden = true; });
+  caja.querySelectorAll("[data-reset]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("¿Borrar su respuesta para que pueda hacer el test otra vez?")) return;
+    const { error } = await sb.from("test_intentos").delete().eq("id", b.getAttribute("data-reset"));
+    if (error) { avisar("avisoResultados", "No se ha podido reiniciar: " + error.message, "mal"); return; }
+    await cargarTestsPanel(); verResultadosTest(id);
+  }));
+  caja.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("btnNuevoTest").addEventListener("click", () => abrirEditorTest(null));
+$("teAddP").addEventListener("click", () => { TE.preguntas.push({ id: nidT(), texto: "", opciones: ["", "", "", ""], correcta: 0 }); pintarEditorTest(); });
+$("tePegarOk").addEventListener("click", () => {
+  const nuevas = parsePegado($("tePegar").value);
+  if (!nuevas.length) { avisar("avisoEditorTest", "No he encontrado preguntas. Cada bloque necesita la pregunta y al menos 2 opciones.", "mal"); return; }
+  TE.preguntas = TE.preguntas.filter(p => p.texto.trim() || p.opciones.some(o => o.trim())).concat(nuevas);
+  $("tePegar").value = ""; pintarEditorTest(); avisar("avisoEditorTest", nuevas.length + " preguntas añadidas. Revisa que la correcta esté bien marcada.", "ok");
+});
+$("tePara").addEventListener("change", () => { TE.para = $("tePara").value; pintarEditorTest(); });
+$("teN").addEventListener("input", ayudaN);
+$("teGuardar").addEventListener("click", guardarTest);
+$("teCancelar").addEventListener("click", () => { $("cajaEditorTest").hidden = true; });
+
+/* ============================================================
+   LO QUE HAS ENVIADO (con opcion de quitarlo)
+   ============================================================ */
+async function cargarInformes() {
+  const caja = $("listaInformes");
+  const { data, error } = await sb.from("informes").select("*").order("fecha", { ascending: false });
+  caja.className = "";
+  if (error) { caja.innerHTML = `<div class="vacio">${esc(error.message)}</div>`; return; }
+  if (!data || !data.length) { caja.innerHTML = `<div class="vacio">Todavia no has mandado ninguno.</div>`; return; }
+  caja.innerHTML = data.map(i => `<div class="item">
+    <div class="cab"><b>${esc(i.titulo)}</b><span>${esc(fechaCorta(i.fecha))}</span></div>
+    <p style="font-size:13px;color:var(--ink-soft);">
+      ${i.rival === "__MI_EQUIPO__" ? "Mi equipo" : "Rival"} · ${esc(i.partido || "")}${i.partido ? " · " : ""}${(i.secciones || []).length} apartados</p>
+    <div class="acciones"><button class="boton fina borrar" data-informe="${esc(i.id)}">Quitarlo</button></div>
+  </div>`).join("");
+  caja.querySelectorAll("[data-informe]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("¿Quitar esto? Tus jugadoras dejaran de verlo.")) return;
+    const id = b.getAttribute("data-informe");
+    const inf = data.find(x => String(x.id) === id);
+    const { error: e2 } = await sb.from("informes").delete().eq("id", id);
+    if (e2) { alert("No se ha podido quitar: " + e2.message); return; }
+    // si llevaba PDF subido, se borra tambien el archivo
+    try {
+      const rutas = [];
+      (inf && inf.secciones || []).forEach(sc => (sc.archivos || []).forEach(a => {
+        const m = String(a.url || "").match(/\/object\/public\/playbooks\/(.+)$/);
+        if (m) rutas.push(decodeURIComponent(m[1]));
+      }));
+      if (rutas.length) await sb.storage.from("playbooks").remove(rutas);
+    } catch (e) { /* el envio ya esta quitado */ }
+    cargarInformes();
+  }));
+}
+
+/* ============================================================
+   ENVIAR COSAS
+   ============================================================ */
+async function enviarMensaje() {
+  if (!elegida) return;
+  const texto = $("msTexto").value.trim();
+  if (!texto) { avisar("avisoEnvio", "Escribe el mensaje.", "mal"); return; }
+  const { error } = await sb.from("mensajes").insert({
+    jugadora_id: elegida.id, titulo: $("msTitulo").value.trim() || null, texto });
+  if (error) { avisar("avisoEnvio", "No se ha podido enviar: " + error.message, "mal"); return; }
+  $("msTitulo").value = ""; $("msTexto").value = "";
+  avisar("avisoEnvio", "Mensaje enviado. Le saldra con aviso de nuevo.", "ok");
+  cargarHistorial();
+}
+
+async function enviarClip() {
+  if (!elegida) return;
+  const url = $("clUrl").value.trim();
+  if (!url) { avisar("avisoEnvio", "Pega el enlace del video.", "mal"); return; }
+  const { error } = await sb.from("clips").insert({
+    jugadora_id: elegida.id, titulo: $("clTitulo").value.trim() || null, url,
+    nota: $("clNota").value.trim() || null, segundos: aSegundos($("clMin").value) });
+  if (error) { avisar("avisoEnvio", "No se ha podido enviar: " + error.message, "mal"); return; }
+  ["clTitulo", "clUrl", "clMin", "clNota"].forEach(i => { $(i).value = ""; });
+  avisar("avisoEnvio", "Video enviado.", "ok");
+  cargarHistorial();
+}
+
+async function enviarObjetivo() {
+  if (!elegida) return;
+  const texto = $("obTexto").value.trim();
+  if (!texto) { avisar("avisoEnvio", "Escribe el objetivo.", "mal"); return; }
+  const num = parseFloat(String($("obNumero").value).replace(",", "."));
+  const { error } = await sb.from("objetivos").insert({
+    jugadora_id: elegida.id, texto, metrica: $("obMetrica").value.trim() || null,
+    objetivo: isNaN(num) ? null : num });
+  if (error) { avisar("avisoEnvio", "No se ha podido guardar: " + error.message, "mal"); return; }
+  ["obTexto", "obMetrica", "obNumero"].forEach(i => { $(i).value = ""; });
+  avisar("avisoEnvio", "Objetivo puesto.", "ok");
+  cargarHistorial();
+}
+
+async function quitarJugadora() {
+  if (!elegida) return;
+  const nombre = elegida.nombre;
+  if (!confirm(`¿Quitar a ${nombre}?\n\nSe borran tambien sus mensajes, videos y objetivos. No se puede deshacer.`)) return;
+  const { error } = await sb.from("jugadoras").delete().eq("id", elegida.id);
+  if (error) { avisar("avisoQuitar", "No se ha podido quitar: " + error.message, "mal"); return; }
+  elegida = null;
+  $("fichaJugadora").hidden = true;
+  await cargarJugadoras();
+  if (!$("cajaImportar").hidden) pintarListaFeb();
+  avisar("avisoImportar", `${nombre} ya no esta.`, "ok");
+}
+
+/* ============================================================
+   HISTORIAL
+   ============================================================ */
+async function cargarHistorial() {
+  if (!elegida) return;
+  const caja = $("historial");
+  caja.className = "cargando"; caja.textContent = "Cargando...";
+  const [ms, cl, ob] = await Promise.all([
+    sb.from("mensajes").select("*").eq("jugadora_id", elegida.id).order("fecha", { ascending: false }),
+    sb.from("clips").select("*").eq("jugadora_id", elegida.id).order("fecha", { ascending: false }),
+    sb.from("objetivos").select("*").eq("jugadora_id", elegida.id).order("fecha", { ascending: false }),
+  ]);
+  const trozos = [];
+  const bloque = (titulo, filas, pinta) => {
+    if (!filas || !filas.length) return;
+    trozos.push(`<h3 style="font-size:14px;margin:14px 0 8px;">${esc(titulo)}</h3>`
+      + filas.map(pinta).join(""));
+  };
+
+  bloque("Mensajes", ms.data, m => `<div class="item">
+    <div class="cab"><b>${esc(m.titulo || "Mensaje")}</b>
+      <span>${m.leido_el ? `<span class="leido">leido</span>` : `<span class="sinleer">sin leer</span>`}
+        · ${esc(fechaCorta(m.fecha))}</span></div>
+    <p>${esc(m.texto)}</p>
+    <div class="acciones"><button class="boton fina borrar" data-borrar="mensajes" data-id="${esc(m.id)}">Borrar</button></div>
+  </div>`);
+
+  bloque("Videos", cl.data, c => `<div class="item">
+    <div class="cab"><b>${esc(c.titulo || "Video")}</b><span>${esc(fechaCorta(c.fecha))}</span></div>
+    <p style="font-size:13px;color:var(--ink-soft);word-break:break-all;">${esc(c.url)}</p>
+    ${c.nota ? `<p>${esc(c.nota)}</p>` : ""}
+    <div class="acciones"><button class="boton fina borrar" data-borrar="clips" data-id="${esc(c.id)}">Borrar</button></div>
+  </div>`);
+
+  bloque("Objetivos", ob.data, o => `<div class="item">
+    <div class="cab"><b>${esc(o.texto)}</b><span>${esc(fechaCorta(o.fecha))}</span></div>
+    ${o.metrica ? `<p style="font-size:13px;color:var(--ink-soft);">${esc(o.metrica)}${o.objetivo != null ? " → " + esc(o.objetivo) : ""}</p>` : ""}
+    <div class="acciones"><button class="boton fina borrar" data-borrar="objetivos" data-id="${esc(o.id)}">Borrar</button></div>
+  </div>`);
+
+  caja.className = "";
+  caja.innerHTML = trozos.length ? trozos.join("")
+    : `<div class="vacio">Todavia no le has mandado nada.</div>`;
+  caja.querySelectorAll("[data-borrar]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("¿Borrar esto? No se puede deshacer.")) return;
+    await sb.from(b.getAttribute("data-borrar")).delete().eq("id", b.getAttribute("data-id"));
+    cargarHistorial();
+  }));
+}
+
+/* ============================================================
+   BOTONES
+   ============================================================ */
+$("btnEntrar").addEventListener("click", pedirEnlace);
+$("correo").addEventListener("keydown", e => { if (e.key === "Enter") pedirEnlace(); });
+$("btnSalir").addEventListener("click", salir);
+$("btnGuardarNueva").addEventListener("click", guardarNueva);
+$("btnGuardarCorreo").addEventListener("click", guardarCorreo);
+$("btnQuitarJugadora").addEventListener("click", quitarJugadora);
+$("btnVerComoElla").addEventListener("click", () => {
+  if (!elegida) return;
+  // Se abre en otra pestaña para no perder lo que estes escribiendo aqui
+  window.open("jugadoras.html?ver=" + encodeURIComponent(elegida.id), "_blank", "noopener");
+});
+$("selTemporadaVen").addEventListener("change", guardarTemporada);
+$("btnTraer").addEventListener("click", traerPlantilla);
+$("selEquipoFeb").addEventListener("change", pintarListaFeb);
+$("btnRefrescarInformes").addEventListener("click", cargarInformes);
+$("btnAccTraer").addEventListener("click", traerPlantillaCompleta);
+$("btnAccPegar").addEventListener("click", asignarCorreosPegados);
+$("btnEntAnadir").addEventListener("click", anadirEntrenador);
+$("btnAccCambiar").addEventListener("click", () => { $("accEquipoElegir").hidden = !$("accEquipoElegir").hidden; });
+$("accEquipo").addEventListener("change", async () => {
+  const e = $("accEquipo").value;
+  if (!e) return;
+  $("accEquipoNombre").textContent = e;
+  try { localStorage.setItem("lf2_mi_equipo", e); } catch (x) { /* nada */ }
+  sb.from("ajustes").upsert({ clave: "mi_equipo", valor: e, actualizado: new Date().toISOString() }).then(() => {}, () => {});
+  $("accEquipoElegir").hidden = true;
+});
+$("swNumeros").addEventListener("change", guardarQueVe);
+$("swPercentiles").addEventListener("change", guardarQueVe);
+$("btnEnviarMensaje").addEventListener("click", enviarMensaje);
+$("btnEnviarClip").addEventListener("click", enviarClip);
+$("btnEnviarObjetivo").addEventListener("click", enviarObjetivo);
+
+$("btnNueva").addEventListener("click", () => {
+  $("cajaNueva").hidden = !$("cajaNueva").hidden;
+  $("cajaImportar").hidden = true;
+});
+$("btnImportar").addEventListener("click", async () => {
+  $("cajaImportar").hidden = !$("cajaImportar").hidden;
+  $("cajaNueva").hidden = true;
+  if (!$("cajaImportar").hidden) prepararImportar();
+});
+document.querySelectorAll(".pestanas [data-p]").forEach(b => {
+  b.addEventListener("click", () => {
+    const p = b.getAttribute("data-p");
+    document.querySelectorAll(".pestanas [data-p]").forEach(x => x.classList.toggle("activa", x === b));
+    ["mensaje", "clip", "objetivo"].forEach(n => { $("form-" + n).hidden = (n !== p); });
+  });
+});
+
+/* ============================================================
+   ARRANQUE
+   ============================================================ */
+(async function arrancar() {
+  if (!window.supabase || !window.supabase.createClient) {
+    avisar("avisoEntrar", "No se ha podido cargar la conexion. Comprueba tu internet.", "mal");
+    return;
+  }
+  sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON);
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) { entrar(data.session); return; }
+  sb.auth.onAuthStateChange((ev, ses) => {
+    if (ses && $("pantallaPanel").hidden) entrar(ses);
+  });
+})();
+</script>
+</body>
+</html>
