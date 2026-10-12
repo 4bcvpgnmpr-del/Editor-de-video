@@ -4374,6 +4374,18 @@ function selectEv(id){
 /* =====================================================================
    ETIQUETAR
    ===================================================================== */
+const PAUSETAG={get:()=>lsGet('bbtag.pauseTag')||'desc',set:v=>lsSet('bbtag.pauseTag',v),by:false};
+window.__pauseTag=PAUSETAG;
+function autoPauseTag(cat){
+  try{
+    if(PAUSETAG.get()!=='desc'||!video||video.paused||video.ended) return;
+    const has=(cfg.descs||[]).some(g=>g&&g.items&&g.items.length&&descApplies(g,cat));
+    if(!has) return;
+    video.pause(); PAUSETAG.by=true;
+  }catch(e){}
+}
+try{ video.addEventListener('play',()=>{ PAUSETAG.by=false; }); }catch(e){}
+function autoResumeTag(){ if(!PAUSETAG.by) return; PAUSETAG.by=false; try{ if(video.paused){ const r=video.play(); if(r&&r.catch) r.catch(er=>{ window.__playErr=String(er); }); } }catch(e){} }
 function tagBtn(b){
   if(!b) return;
   if(!hasVideo){toast('Abre primero un vídeo para poder etiquetar.');return;}
@@ -4384,7 +4396,7 @@ function tagBtn(b){
   const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team,player,period,video:videoName,note:'',cat:b.group,phase:PH.cur});
   events.push(ev); sortEvents();
   selectedId=ev.id;
-  commit(); renderDetail(); flash(b.id);
+  commit(); renderDetail(); flash(b.id); autoPauseTag(b.group);
 }
 codes.addEventListener('click',e=>{
   const el=e.target.closest('.code'); if(!el) return;
@@ -4439,9 +4451,9 @@ codes.addEventListener('click',e=>{
 function tagFor(b,k,n,t){
   const dur=video.duration||0, start=Math.max(0,t-(b.pre||0)); let end=Math.min(dur,t+(b.post||0)); if(end-start<0.5) end=Math.min(dur,start+0.5);
   const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team:k,player:String(n),period,video:videoName,note:'',cat:b.group,phase:PH.cur});
-  events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); return ev;
+  events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); autoPauseTag(b.group); return ev;
 }
-function closePlayerPicker(){ const o=document.getElementById('plPick'); if(o) o.remove(); }
+function closePlayerPicker(){ const o=document.getElementById('plPick'); if(o){ o.remove(); autoResumeTag(); } }
 function openPlayerPicker(k,n){
   if(!hasVideo){ toast('Abre primero un vídeo para poder etiquetar.'); return; }
   closePlayerPicker();
@@ -7114,6 +7126,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
      '<div class="st-h">Botonera</div><div class="st-g">'+
        row('Tamaño de los botones','<span style="flex:none;display:flex;gap:6px;align-items:center">'+btn('stBbS','A−')+'<b id="stBbV" style="min-width:42px;text-align:center">'+Math.round(bbScale*100)+'%</b>'+btn('stBbB','A+')+'</span>')+
        row('Abrir descriptores al pulsar una categoría',sw('stAd',adOn),'Pensado para iPad y pantalla grande')+
+       row('Al etiquetar, parar el vídeo','<select id="stPT"><option value="desc"'+(window.__pauseTag&&window.__pauseTag.get()==='desc'?' selected':'')+'>Si tiene descriptores</option><option value="never"'+(window.__pauseTag&&window.__pauseTag.get()==='never'?' selected':'')+'>Nunca</option></select>','Si la categoría no tiene descriptores, el vídeo sigue. Al cerrar los descriptores continúa solo')+
        row('Tecla para cambiar de botonera','<input id="stSetKey" readonly style="width:64px;text-align:center;font-weight:700" value="'+esc(window.__setKey?(window.__setKey.get()==='`'?'º':(window.__setKey.get()||'—').toUpperCase()):'')+'" title="Haz clic y pulsa la tecla">','Haz clic y pulsa una letra o número. Pasa a la siguiente (con Mayús, a la anterior). Borrar = ninguna')+
        row('Editar botones y sets',btn('stBe','Abrir'))+
        (ipReal?'':row('Interfaz','<select id="stMode">'+opt(['auto','ipad','pc'],IPM.mode,v=>({auto:'Automática',ipad:'Modo iPad',pc:'Modo ordenador'}[v]))+'</select>'))+
@@ -7157,6 +7170,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     $('stHudSz').onchange=e=>window.__hud.set('size',+e.target.value);
     $('stHudSec').onchange=e=>window.__hud.set('secs',+e.target.value);
     { const ke=$('stSetKey'); if(ke) ke.onkeydown=e=>{ e.preventDefault(); e.stopPropagation(); if(e.key==='Tab'||e.key==='Escape') return; if(e.key==='Backspace'||e.key==='Delete'){ window.__setKey.set(''); ke.value='—'; return; } let v=e.code==='Backquote'?'`':(e.key.length===1?e.key:''); if(!v) return; window.__setKey.set(v); ke.value=v==='`'?'º':v.toUpperCase(); const clash=cfg.buttons.find(x=>x.key&&x.key.toLowerCase()===v.toLowerCase()); if(clash) toast('Ojo: «'+clash.label+'» también usa esa tecla; ahora cambiará de botonera.'); }; }
+    { const pt=$('stPT'); if(pt) pt.onchange=e=>window.__pauseTag.set(e.target.value); }
     on('stBe',()=>{ dlg.close(); openIpBe(); });
     on('stHelp',()=>{ dlg.close(); window.openHelp&&window.openHelp(); });
     const sm=$('stMode'); if(sm) sm.onchange=e=>{ IPM.set(e.target.value); ipApply(IPM.on); toast('Interfaz cambiada.'); };
@@ -7482,6 +7496,17 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   bt.onclick=()=>full(!document.body.classList.contains('vfull'));
   const x=document.createElement('button'); x.id='vfX'; x.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>'; x.setAttribute('aria-label','Salir de pantalla completa'); document.body.appendChild(x); x.onclick=()=>full(false);
   document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&document.body.classList.contains('vfull')){ document.body.classList.remove('vfull'); setTimeout(()=>{try{layoutTele();}catch(er){} apply();},80);} });
+})();
+
+/* ===== Pausar al etiquetar + guardar proyecto en pantalla completa ===== */
+(function(){
+  let was=document.body.classList.contains('lowOn');
+  new MutationObserver(()=>{ const now=document.body.classList.contains('lowOn'); if(was&&!now) setTimeout(autoResumeTag,250); was=now; }).observe(document.body,{attributes:true,attributeFilter:['class']});
+  const sv=document.createElement('button'); sv.id='vfSave'; sv.title='Guardar proyecto'; sv.setAttribute('aria-label','Guardar proyecto'); sv.textContent='💾';
+  const css=document.createElement('style');
+  css.textContent='#vfSave{display:none}body.ipad.vfull #vfSave{display:block;position:fixed;left:130px;top:calc(10px + env(safe-area-inset-top,0px));z-index:90;min-width:48px;min-height:48px;border-radius:24px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:20px}body.ipad.fzMin #vfSave{display:none!important}';
+  document.head.appendChild(css); document.body.appendChild(sv);
+  sv.onclick=()=>{ const b=document.getElementById('bJson'); if(b) b.click(); };
 })();
 
 /* ===== iPad: sala de análisis ===== */
