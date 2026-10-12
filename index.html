@@ -7189,6 +7189,31 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   window.__hud={get:()=>Object.assign({},H),set:(k,v)=>{ H[k]=v; save(); last=''; render(); },render};
 })();
 
+/* ===== Barra superior limpia: «⋯ Más» ===== */
+(function(){
+  const bar=document.querySelector('.top-actions'); if(!bar) return;
+  const IDS=['bCloud','bTeams','bMatch','bLink','bHelp','bLive','bCfg','bProd','bMode','bLayout'];
+  const more=document.createElement('button'); more.className='btn ico'; more.id='bMore'; more.title='Más opciones'; more.setAttribute('aria-label','Más opciones'); more.setAttribute('aria-haspopup','true'); more.textContent='⋯';
+  const menu=document.createElement('div'); menu.id='moreMenu'; menu.hidden=true; menu.setAttribute('role','menu');
+  const css=document.createElement('style');
+  css.textContent='#moreMenu{position:fixed;z-index:2147482000;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 12px 34px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:2px}'+
+   '#moreMenu[hidden]{display:none}'+
+   '#moreMenu .btn{display:flex!important;align-items:center;text-align:left;width:100%;justify-content:flex-start!important;background:transparent;border:0;padding:9px 12px!important;font-size:14px!important;min-height:40px;border-radius:9px;gap:12px!important;color:var(--text)}'+
+   '#moreMenu .btn:hover{background:var(--panel2)}#moreMenu .btn .ic{width:24px;text-align:center;font-size:17px}'+
+   '#moreMenu .btn .tx{display:inline!important;font-size:14px!important}#moreMenu .btn[hidden]{display:none}';
+  document.head.appendChild(css); document.body.appendChild(menu);
+  bar.appendChild(more);
+  function adopt(){ IDS.forEach(id=>{ const b=document.getElementById(id); if(b&&b.parentNode!==menu) menu.appendChild(b); }); }
+  adopt(); new MutationObserver(adopt).observe(bar,{childList:true});
+  function place(){ const r=more.getBoundingClientRect(); menu.style.top=(r.bottom+6)+'px'; menu.style.right=Math.max(8,innerWidth-r.right)+'px'; menu.style.left='auto'; }
+  function close(){ menu.hidden=true; more.setAttribute('aria-expanded','false'); }
+  more.addEventListener('click',e=>{ e.stopPropagation(); if(menu.hidden){ place(); menu.hidden=false; more.setAttribute('aria-expanded','true'); } else close(); });
+  menu.addEventListener('click',e=>{ if(e.target.closest('button')) setTimeout(close,0); });
+  document.addEventListener('click',e=>{ if(!menu.hidden&&!menu.contains(e.target)&&e.target!==more) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!menu.hidden) close(); });
+  addEventListener('resize',close);
+})();
+
 /* ===== esconder línea de tiempo y bloque de análisis (ordenador) ===== */
 (function(){
   const tl=document.querySelector('.tl'), tg=document.getElementById('tlTg'), ft=document.querySelector('#pEvents .foot'), fg=document.getElementById('ftTg');
