@@ -979,6 +979,10 @@ body.ipad #pEvents .foot #ipLibMore{min-height:48px;border-radius:12px}
 body.ipad #pEvents .list .ev{min-height:60px}
 body.ipad #pEvents .list .ev .acts button{min-width:42px;min-height:42px}
 /* iPad: editor de clip con el vídeo grande */
+#pClip .p-body.ce{display:flex;flex-direction:column;min-height:0;overflow:auto}
+#pClip .p-body.ce>*:not(.ce-vwrap){flex:none}
+#pClip .ce-vwrap{flex:1 1 320px;aspect-ratio:auto;max-height:none;min-height:240px;height:auto}
+body:not(.ipad) #pClip .ce-note{height:58px;min-height:0;resize:none}
 body.ipad #pClip .p-body.ce{display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"ti ri" "vi ri" "ct ri" "tr ri";gap:8px 14px;flex:1 1 auto;min-height:0;height:calc(100vh - 100px);overflow:hidden;padding:10px 14px}
 body.ipad #pClip .ce-title{grid-area:ti}
 body.ipad #pClip .ce-vwrap{grid-area:vi;aspect-ratio:auto;max-height:none;height:100%;min-height:0}
