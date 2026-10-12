@@ -1104,6 +1104,18 @@ body.ipad .dk-only{display:none!important}
 .center:fullscreen .main{padding:0}
 .center:fullscreen #vwrap{flex:1;min-height:0;max-height:none;height:auto}
 .center:fullscreen #tlWrap,.center:fullscreen .tl{display:none}
+#pClip:fullscreen{background:var(--bg,#111);width:100vw!important;height:100vh!important;max-width:none!important;display:flex;flex-direction:column;position:static!important;inset:auto!important}
+#pClip:fullscreen .p-head,#pClip:fullscreen .ce-title,#pClip:fullscreen .ce-list,#pClip:fullscreen .ce-name,#pClip:fullscreen .ce-note{display:none!important}
+#pClip:fullscreen .p-body.ce,body.ipad #pClip:fullscreen .p-body.ce{display:flex!important;flex-direction:column;height:100vh;padding:8px 12px;gap:6px;overflow:hidden;grid-template-columns:none}
+#pClip:fullscreen .ce-vwrap{flex:1 1 auto;height:auto!important;max-height:none!important;aspect-ratio:auto!important;min-height:0}
+#pClip:fullscreen .ce-side{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;overflow:visible}
+#pClip:fullscreen .ce-ann{border:0;padding:0;margin-left:auto}
+#pClip:fullscreen .ce-ann .ce-ah{padding:0}
+#pClip:fullscreen .ce-ctl,#pClip:fullscreen .ce-trim,#pClip:fullscreen .ce-side{flex:none}
+body.ipad #pClip:fullscreen .ce-times,body.ipad #pClip:fullscreen .ce-ann{grid-column:auto}
+/* home: borrar proyecto */
+#ipHome .hm-d{position:absolute;left:8px;top:8px;z-index:2;min-width:38px;min-height:38px;border-radius:19px;border:0;background:rgba(0,0,0,.65);color:#ff7a7a;font-size:17px;padding:0}
+body.ipad #bTgBot{display:none!important}
 </style>
 </head>
 <body>
@@ -1123,6 +1135,7 @@ body.ipad .dk-only{display:none!important}
       <button class="btn ico" id="bUndo" title="Deshacer (Ctrl/Cmd+Z)" aria-label="Deshacer" disabled>↶</button>
       <button class="btn ico" id="bRedo" title="Rehacer (Ctrl/Cmd+Mayús+Z)" aria-label="Rehacer" disabled>↷</button>
       <span class="tsep"></span>
+      <button class="btn ico" id="bTgBot" title="Mostrar u ocultar la botonera" aria-label="Mostrar u ocultar la botonera">👁</button>
       <button class="btn" id="bCfg" title="Editar botonera"><span class="ic">⚙</span><span class="tx">Botonera</span></button>
       <button class="btn" id="bProd" aria-pressed="false" title="Mesa de producción: playlists y dibujos"><span class="ic">🎬</span><span class="tx">Producción</span></button>
       <button class="btn" id="bMode" title="Cambiar entre modo iPad y modo ordenador"><span class="ic">📱</span><span class="tx">iPad</span></button>
@@ -6410,7 +6423,16 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   const getRec=()=>{ try{ const a=JSON.parse(lsGet(RK)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } };
   function renderRec(){
     const a=getRec(), el=$h('hmRec');
-    el.innerHTML=a.length?a.map((r,i)=>'<button class="hm-c" data-i="'+i+'"><div class="th" style="'+(r.th?'background-image:url('+r.th+')':'')+'">'+(r.th?'':'🎬')+'</div>'+(r.n?'<em>'+r.n+' clips</em>':'')+'<b>'+esc(r.name)+'</b><small>'+new Date(r.at).toLocaleDateString()+'</small></button>').join(''):'<p style="opacity:.6;grid-column:1/-1;margin:0">Aún no hay vídeos recientes. Abre uno para empezar.</p>';
+    el.innerHTML=a.length?a.map((r,i)=>'<div class="hm-w" style="position:relative"><span class="hm-d" data-del="'+i+'" role="button" aria-label="Eliminar proyecto" title="Eliminar proyecto">🗑</span><button class="hm-c" style="width:100%" data-i="'+i+'"><div class="th" style="'+(r.th?'background-image:url('+r.th+')':'')+'">'+(r.th?'':'🎬')+'</div>'+(r.n?'<em>'+r.n+' clips</em>':'')+'<b>'+esc(r.name)+'</b><small>'+new Date(r.at).toLocaleDateString()+'</small></button></div>').join(''):'<p style="opacity:.6;grid-column:1/-1;margin:0">Aún no hay vídeos recientes. Abre uno para empezar.</p>';
+    el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async e=>{
+      e.stopPropagation(); const r=a[+b.dataset.del]; if(!r) return;
+      if(!confirm('¿Eliminar el proyecto «'+r.name+'»?\nSe borran sus etiquetas, clips y dibujos y el vídeo guardado en este dispositivo.')) return;
+      try{ localStorage.removeItem('bbtag.project.'+r.key); }catch(er){}
+      try{ await vdbTx('readwrite',st=>st.delete(r.key)); }catch(er){}
+      try{ lsSet(RK,JSON.stringify(getRec().filter(x=>x.key!==r.key))); }catch(er){}
+      if(videoKey===r.key){ videoKey=null; events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[]; selectedId=null; try{ renderAll(); }catch(er){} }
+      renderRec(); toast('Proyecto eliminado.');
+    });
     el.querySelectorAll('.hm-c').forEach(b=>b.onclick=async()=>{
       const r=a[+b.dataset.i]; let found=null;
       try{ found=(await vidList()).find(v=>v.key===r.key); }catch(e){}
@@ -6443,6 +6465,10 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   b.onclick=tgl;
   document.addEventListener('keydown',e=>{ if((e.key==='f'||e.key==='F')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')&&hasVideo&&!document.body.classList.contains('vfull')&&!document.body.classList.contains('ipad')){ e.preventDefault(); tgl(); } });
   new MutationObserver(()=>{ const v=document.body.classList.contains('vfull'); if(was&&!v&&tmp){ tmp=false; IPM.set(prev); ipApply(false); } was=v; }).observe(document.body,{attributes:true,attributeFilter:['class']});
+})();
+
+(function(){ const b=document.getElementById('bTgBot'); if(!b) return;
+  b.onclick=()=>{ const st=layout.panels.tags; st.vis=!st.vis; applyLayout(); saveLayout(); b.setAttribute('aria-pressed',String(!st.vis)); };
 })();
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
@@ -7934,7 +7960,7 @@ $('#ceLoop').onclick=()=>{ if(!ce) return; ce.loop=!ce.loop; ceRender(); };
 $('#ceSeek').addEventListener('pointerdown',()=>{ if(ce) ce.seekDrag=true; });
 $('#ceSeek').addEventListener('pointerup',()=>{ if(ce) ce.seekDrag=false; });
 $('#ceSeek').addEventListener('input',e=>{ const ev=ceEv(); if(!ev) return; ceSeekTo(ev.start+(+e.target.value)/1000*(ev.end-ev.start),true); });
-$('#ceFull').onclick=()=>{ try{ const w=$('#ceVwrap'); if(w.ownerDocument.fullscreenElement) w.ownerDocument.exitFullscreen(); else w.requestFullscreen(); }catch(e){} };
+$('#ceFull').onclick=()=>{ try{ const pn=$('#pClip'), d=pn.ownerDocument; if(d.fullscreenElement) d.exitFullscreen(); else pn.requestFullscreen().catch(()=>{}); }catch(e){} };
 $('#ceSetStart').onclick=ceSetStart; $('#ceSetEnd').onclick=ceSetEnd;
 $('#ceStart').addEventListener('change',e=>{ const ev=ceEv(); if(!ev) return; const t=parseTime(e.target.value); if(!isFinite(t)||t>=ev.end-0.2){e.target.value=fmt(ev.start,true);return;} ceSetRange(t,null); commit(); ceSeekTo(ev.start,true); });
 $('#ceEnd').addEventListener('change',e=>{ const ev=ceEv(); if(!ev) return; const t=parseTime(e.target.value); if(!isFinite(t)||t<=ev.start+0.2||t>(video.duration||Infinity)){e.target.value=fmt(ev.end,true);return;} ceSetRange(null,t); commit(); ceSeekTo(ev.end-0.05,true); });
