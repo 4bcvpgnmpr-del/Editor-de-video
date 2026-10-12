@@ -3855,6 +3855,25 @@ $('#dstrip').addEventListener('click',e=>{bbItemClick(e,false);});
 $('#dstrip').addEventListener('contextmenu',e=>{if(e.target.closest('.dchip,.pchip')){e.preventDefault();bbItemClick(e,true);}});
 function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg)); lsSet('bbtag.cts',String(Date.now())); if(window.__clC) window.__clC(); try{ teamSync(); }catch(e){} }
 function normStint(x){ if(!x||!Array.isArray(x.players)||!isFinite(x.from)) return null; return {id:x.id||uid(),team:x.team==='R'?'R':'L',players:x.players.map(String),from:+x.from,to:(x.to==null||!isFinite(x.to))?null:+x.to}; }
+/* ---- partes del mismo partido ---- */
+const PART={pending:null};
+function partsOthers(){
+  const out=[]; if(!matchMeta||!matchMeta.gid) return out;
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue; const key=k.slice(14); if(key===videoKey) continue;
+    const o=JSON.parse(localStorage.getItem(k)||'null'); if(o&&o.meta&&o.meta.gid===matchMeta.gid) out.push({key,part:o.meta.part||0,events:(Array.isArray(o.events)?o.events:[]).filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(normEvent)}); } }catch(e){}
+  return out.sort((a,b)=>a.part-b.part);
+}
+function partsMerged(){ let all=events.slice(); partsOthers().forEach(o=>{ all=all.concat(o.events); }); return all; }
+function startNextPart(){
+  if(!hasVideo||!videoKey){ toast('Abre primero el vídeo de la primera parte.'); return; }
+  if(!matchMeta) matchMeta={date:'',L:null,R:null};
+  if(!matchMeta.gid){ matchMeta.gid=uid(); matchMeta.part=1; }
+  const n=Math.max(matchMeta.part||1,...partsOthers().map(o=>o.part||0))+1;
+  matchApply(true); saveProject();
+  PART.pending={meta:JSON.parse(JSON.stringify(Object.assign({},matchMeta,{part:n}))),n};
+  toast('Elige el vídeo de la parte '+n+'. Se guardan los equipos y la botonera; las etiquetas van aparte.');
+  $('#fileVideo').click();
+}
 function saveProject(){if(videoKey){ lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals,meta:matchMeta})); lsSet('bbtag.pts.'+videoKey,String(Date.now())); titleSet(videoKey); if(window.__clQ) window.__clQ(); }}
 /* ---- equipos guardados y datos del partido ---- */
 function teamsGet(){ try{ const a=JSON.parse(lsGet('bbtag.teams')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
@@ -3870,7 +3889,7 @@ function matchApply(render){
     if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
     ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(rp); } });
   } else if(baseTeams){ try{ const b=JSON.parse(baseTeams); cfg.teamNames=b.teamNames; cfg.rosters=b.rosters; }catch(e){} baseTeams=null; }
-  const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')):videoName;
+  const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')+(matchMeta.gid&&matchMeta.part?' · Parte '+matchMeta.part:'')):videoName;
   if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} try{ renderCodes(); renderDescStrip(); renderTimeline(); }catch(e){} }
 }
 function teamSync(){
@@ -4880,6 +4899,9 @@ video.addEventListener('loadedmetadata',()=>{
   try{
     restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
   }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];matchMeta=null;}
+  if(PART.pending){ const pd=PART.pending; PART.pending=null;
+    if(!restored){ matchMeta=JSON.parse(JSON.stringify(pd.meta)); matchApply(false); period=pd.n>=2?(pd.n===2?'3C':period):period; saveProject(); setTimeout(()=>toast('Parte '+pd.n+' lista. Seguimos con '+matchTitle(matchMeta)+'.'),400); }
+    else toast('Ese vídeo ya tenía etiquetas: se abre como estaba.'); }
   selectedId=null; sel=null; zoom=1; teleEd=null; freeze=null; plCur=null; $('#fbadge').hidden=true; teleKey='';
   filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';
   fpsAuto=25; renderFps(); lastT=-1;
@@ -6030,7 +6052,7 @@ function baseName(){return (videoName||'partido').replace(/\.[^.]+$/,'').replace
 const num=n=>n.toFixed(1).replace('.',',');
 
 /* ===== ESTADÍSTICAS (tabla cruzada de etiquetas) ===== */
-const ST={rows:'action',cols:'period',val:'n',team:'all'};
+const ST={rows:'action',cols:'period',val:'n',team:'all',all:false};
 const ST_DIM={action:'Acción',player:'Jugador/a',team:'Equipo',period:'Periodo'};
 function stKey(e,d){
   if(d==='action') return e.btnId||('x:'+e.label);
@@ -6069,6 +6091,11 @@ function stApply(rk,ck){
   renderFilters(); renderList(); renderTimeline();
 }
 function openStats(){
+  const oth=(ST.all&&matchMeta&&matchMeta.gid)?partsOthers():[];
+  if(oth.length){ const keep=events; events=partsMerged(); try{ return openStats0(oth.length+1); } finally{ events=keep; } }
+  return openStats0(0);
+}
+function openStats0(np){
   if(!events.length){toast('Todavía no hay etiquetas.');return;}
   const sel=(id,cur,opts)=>'<select id="'+id+'" style="padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text)">'+opts.map(o=>'<option value="'+o[0]+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
   const dims=Object.keys(ST_DIM).map(k=>[k,ST_DIM[k]]);
@@ -6088,14 +6115,14 @@ function openStats(){
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
     '<label style="font-size:12.5px">Filas '+sel('stR',ST.rows,dims)+'</label><label style="font-size:12.5px">Columnas '+sel('stC',ST.cols,dims)+'</label>'+
     '<label style="font-size:12.5px">Equipo '+sel('stT',ST.team,[['all','Todos'],['L',teamName('L')],['R',teamName('R')]])+'</label>'+
-    '<label style="font-size:12.5px">Valor '+sel('stV',ST.val,[['n','Nº de clips'],['p','Puntos']])+'</label></div>'+
+    '<label style="font-size:12.5px">Valor '+sel('stV',ST.val,[['n','Nº de clips'],['p','Puntos']])+'</label>'+((matchMeta&&matchMeta.gid&&partsOthers().length)?'<label style="font-size:12.5px">Ver '+sel('stA',ST.all?'1':'0',[['0','Esta parte'],['1','Partido completo ('+(partsOthers().length+1)+' partes)']])+'</label>':'')+'</div>'+
     '<div style="overflow:auto;max-height:55vh;border:1px solid var(--line);border-radius:10px">'+(D.n?tbl:'<p style="padding:12px;color:var(--muted)">Sin datos para ese equipo.</p>')+'</div>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" id="stCsv">Descargar CSV</button><button class="btn" id="stNo">Cerrar</button></div>');
   d.firstElementChild.style.width='min(980px,100%)';
-  const re=()=>{ST.rows=d.querySelector('#stR').value;ST.cols=d.querySelector('#stC').value;ST.team=d.querySelector('#stT').value;ST.val=d.querySelector('#stV').value;openStats();};
-  ['#stR','#stC','#stT','#stV'].forEach(i=>d.querySelector(i).onchange=re);
+  const re=()=>{{const sa=d.querySelector('#stA'); if(sa) ST.all=sa.value==='1';} ST.rows=d.querySelector('#stR').value;ST.cols=d.querySelector('#stC').value;ST.team=d.querySelector('#stT').value;ST.val=d.querySelector('#stV').value;openStats();};
+  ['#stR','#stC','#stT','#stV','#stA'].forEach(i=>{ const el=d.querySelector(i); if(el) el.onchange=re; });
   d.querySelector('#stNo').onclick=expClose;
-  d.querySelectorAll('[data-r]').forEach(el=>el.onclick=()=>{ expClose(); stApply(el.dataset.r,el.dataset.c!==undefined?el.dataset.c:null); });
+  d.querySelectorAll('[data-r]').forEach(el=>el.onclick=()=>{ if(np){ toast('En «Partido completo» no se pueden abrir clips: elige «Esta parte».'); return; } expClose(); stApply(el.dataset.r,el.dataset.c!==undefined?el.dataset.c:null); });
   d.querySelector('#stCsv').onclick=()=>{
     const q=x=>'"'+String(x).replace(/"/g,'""')+'"';
     const rows=[[ST_DIM[ST.rows]+' \\ '+ST_DIM[ST.cols]].concat(D.ck.map(c=>D.cl[c]),['Total']).map(q).join(';')];
@@ -7262,7 +7289,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 /* ===== Barra superior limpia: «⋯ Más» ===== */
 (function(){
   const bar=document.querySelector('.top-actions'); if(!bar) return;
-  const IDS=['bCloud','bTeams','bMatch','bLink','bHelp','bLive','bCfg','bProd','bMode','bLayout'];
+  const IDS=['bCloud','bTeams','bMatch','bPart','bLink','bHelp','bLive','bCfg','bProd','bMode','bLayout'];
   const more=document.createElement('button'); more.className='btn ico'; more.id='bMore'; more.title='Más opciones'; more.setAttribute('aria-label','Más opciones'); more.setAttribute('aria-haspopup','true'); more.textContent='⋯';
   const menu=document.createElement('div'); menu.id='moreMenu'; menu.hidden=true; menu.setAttribute('role','menu');
   const css=document.createElement('style');
@@ -7282,6 +7309,77 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   document.addEventListener('click',e=>{ if(!menu.hidden&&!menu.contains(e.target)&&e.target!==more) close(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!menu.hidden) close(); });
   addEventListener('resize',close);
+})();
+
+/* ===== Otra parte del partido ===== */
+(function(){
+  const bar=document.querySelector('.top-actions'); if(!bar) return;
+  const b=document.createElement('button'); b.className='btn'; b.id='bPart'; b.title='Abrir otra parte del mismo partido (2ª parte, prórroga…)'; b.innerHTML='<span class="ic">➕</span><span class="tx">Otra parte</span>';
+  b.onclick=startNextPart; bar.appendChild(b);
+  const m=document.getElementById('moreMenu'); if(m) m.appendChild(b);
+})();
+
+/* ===== Cortes de otro partido en el montaje ===== */
+(function(){
+  const get=async key=>{ try{ return await vdbTx('readonly',st=>st.get(key)); }catch(e){ return null; } };
+  const fileOf=v=>new File([v.blob],v.name,{type:v.type||'video/mp4'});
+  async function autoLink(){
+    let ch=false;
+    for(const x of externals){ if(extFiles[x.id]||!x.fname) continue; const v=await get(x.fname+'|'+x.size); if(v&&v.blob){ extFiles[x.id]=fileOf(v); ch=true; } }
+    if(ch){ try{ renderAll(); }catch(e){} }
+  }
+  video.addEventListener('loadedmetadata',()=>{ setTimeout(autoLink,300); });
+  const q=(k)=>{ try{ return JSON.parse(localStorage.getItem('bbtag.project.'+k)||'null'); }catch(e){ return null; } };
+  async function openOther(){
+    let p=curPl();
+    if(!p){ p={id:uid(),name:'Montaje',folder:'',items:[]}; playlists.push(p); plCur=p.id; }
+    let vids=[]; try{ vids=await vidList(); }catch(e){}
+    const T=titlesGet();
+    const games=vids.filter(v=>v.key!==videoKey).map(v=>{ const o=q(v.key); const n=o&&Array.isArray(o.events)?o.events.length:0; return {key:v.key,name:v.name,n,title:(T[v.key]&&T[v.key].t)||v.name,date:(T[v.key]&&T[v.key].d)||''}; }).filter(g=>g.n>0);
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Cortes de otro partido</h3><div id="otB"></div>');
+    d.firstElementChild.style.width='min(720px,100%)';
+    const B=d.querySelector('#otB');
+    const btn='padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);text-align:left;cursor:pointer;font-size:14px';
+    function step1(){
+      B.innerHTML='<p class="hint" style="margin:0 0 10px">Elige un partido guardado en «Mis vídeos» para traer sus cortes a la playlist «'+esc(p.name)+'».</p>'+
+        (games.length?'<div style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto">'+games.map((g,i)=>'<button data-g="'+i+'" style="'+btn+'"><b>'+esc(g.title)+'</b>'+(g.date?' · '+esc(matchDate(g.date)):'')+'<br><span style="color:var(--muted);font-size:12.5px">'+g.n+' cortes · '+esc(g.name)+'</span></button>').join('')+'</div>':
+        '<p style="color:var(--muted)">No hay otros partidos con cortes. Abre el otro partido (se guarda solo en «Mis vídeos»), etiquétalo y vuelve aquí.</p>')+
+        '<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="otNo">Cerrar</button></div>';
+      B.querySelector('#otNo').onclick=expClose;
+      B.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>step2(games[+b.dataset.g]));
+    }
+    function step2(g){
+      const o=q(g.key), evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).sort((a,b)=>a.t-b.t);
+      const cats=[...new Set(evs.map(e=>evName(e)))].sort((a,b)=>a.localeCompare(b));
+      const sel=new Set(evs.map(e=>e.id)); let cf='';
+      const vis=()=>evs.filter(e=>!cf||evName(e)===cf);
+      function draw(){
+        const v=vis();
+        B.innerHTML='<p class="hint" style="margin:0 0 8px"><b>'+esc(g.title)+'</b> · elige los cortes que quieres traer.</p>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><select id="otC" style="padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text)"><option value="">Todas las categorías</option>'+cats.map(c=>'<option'+(c===cf?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select><button class="mini" id="otAll">Marcar los visibles</button><button class="mini" id="otNone">Quitar los visibles</button></div>'+
+          '<div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px">'+v.map(e=>'<label style="display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer"><input type="checkbox" data-e="'+esc(e.id)+'"'+(sel.has(e.id)?' checked':'')+'><span style="width:8px;height:22px;border-radius:3px;background:'+safeColor(info(e).color||e.color)+'"></span><span style="flex:1;min-width:0"><b>'+esc(evName(e))+'</b> <span style="color:var(--muted);font-size:12.5px">'+fmt(e.t)+' · '+esc(e.period)+' · '+esc(e.team==='R'?(matchTitleSide(o,'R')):matchTitleSide(o,'L'))+(e.player?' · #'+esc(e.player):'')+'</span></span></label>').join('')+'</div>'+
+          '<div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px;flex-wrap:wrap"><button class="btn" id="otBack">‹ Otros partidos</button><button class="btn primary" id="otAdd">Añadir '+sel.size+' cortes</button></div>';
+        B.querySelector('#otC').onchange=e=>{ cf=e.target.value; draw(); };
+        B.querySelector('#otAll').onclick=()=>{ vis().forEach(e=>sel.add(e.id)); draw(); };
+        B.querySelector('#otNone').onclick=()=>{ vis().forEach(e=>sel.delete(e.id)); draw(); };
+        B.querySelectorAll('[data-e]').forEach(c=>c.onchange=()=>{ if(c.checked) sel.add(c.dataset.e); else sel.delete(c.dataset.e); B.querySelector('#otAdd').textContent='Añadir '+sel.size+' cortes'; });
+        B.querySelector('#otBack').onclick=step1;
+        B.querySelector('#otAdd').onclick=async()=>{
+          const pick=evs.filter(e=>sel.has(e.id)); if(!pick.length){ toast('Marca al menos un corte.'); return; }
+          const v=await get(g.key); if(!v||!v.blob){ toast('No se encuentra ese vídeo en «Mis vídeos».'); return; }
+          const f=fileOf(v);
+          pick.forEach(e=>{ const x=normExt({name:(evName(e)+' · '+fmt(e.t)+' · '+g.title).slice(0,60),fname:v.name,size:v.size,from:e.start,to:e.end}); externals.push(x); extFiles[x.id]=f; p.items.push('x:'+x.id); });
+          expClose(); commit(); toast(pick.length+' cortes de «'+g.title+'» añadidos a «'+p.name+'».');
+        };
+      }
+      draw();
+    }
+    step1();
+  }
+  function matchTitleSide(o,k){ const m=o&&o.meta; return (m&&m[k]&&m[k].name)||(k==='L'?'Local':'Rival'); }
+  const host=document.getElementById('plExtV'); if(!host) return;
+  const b=document.createElement('button'); b.className='mini'; b.id='plOther'; b.title='Traer cortes de otro partido guardado'; b.textContent='＋ Cortes de otro partido';
+  host.after(b); b.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; openOther(); };
 })();
 
 /* ===== esconder línea de tiempo y bloque de análisis (ordenador) ===== */
