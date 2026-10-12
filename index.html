@@ -6142,7 +6142,7 @@ function parseRoster(txt){
   });
 });
 function openCfg(){dmsg('');renderCfg();renderRosters();dlg.showModal();}
-$('#bCfg').onclick=openCfg;
+$('#bCfg').onclick=()=>openIpBe();
 $('#dClose').onclick=()=>dlg.close();
 dlg.addEventListener('click',e=>{if(e.target===dlg) dlg.close();});
 
@@ -6913,7 +6913,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     on('stBbS',()=>{ document.getElementById('bbSmaller').click(); $('stBbV').textContent=Math.round(bbScale*100)+'%'; });
     on('stBbB',()=>{ document.getElementById('bbBigger').click(); $('stBbV').textContent=Math.round(bbScale*100)+'%'; });
     $('stAd').onchange=e=>{ if(window.__autoDesc&&window.__autoDesc.get()!==e.target.checked) window.__autoDesc.toggle(); };
-    on('stBe',()=>{ dlg.close(); document.getElementById('bCfg').click(); });
+    on('stBe',()=>{ dlg.close(); openIpBe(); });
     const sm=$('stMode'); if(sm) sm.onchange=e=>{ IPM.set(e.target.value); ipApply(IPM.on); toast('Interfaz cambiada.'); };
     on('stLib',()=>{ dlg.close(); DLGDOC=null; openLib(); });
     on('stDelV',async()=>{ if(!confirm('¿Borrar los '+vids.length+' vídeos guardados en este dispositivo?\nLas marcas y los clips se conservan; tendrás que volver a abrir el archivo del partido.')) return; try{ for(const v of vids) await vdbTx('readwrite',st=>st.delete(v.key)); }catch(e){} toast('Vídeos borrados.'); render(); });
@@ -7171,7 +7171,7 @@ function openIpBe(newBtn){
     o.innerHTML='<div class="be-h"><button class="be-x" id="beX" aria-label="Cerrar">✕</button><b>Editar botonera</b>'+
       '<select id="beSet" aria-label="Conjunto"><option value="*"'+(IPS.set==='*'?' selected':'')+'>Todos los botones</option>'+sets.map(s=>'<option value="'+esc(s)+'"'+(IPS.set===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select>'+
       '<button class="be-m" id="beSetNew">＋ Conjunto</button><button class="be-m" id="beSetRen"'+(IPS.set==='*'?' disabled':'')+'>✎</button><button class="be-m" id="beSetDel"'+(IPS.set==='*'||sets.length<2?' disabled':'')+'>🗑</button>'+
-      '<span class="sp"></span><button class="be-done" id="beDone">Hecho</button></div>'+
+      '<span class="sp"></span><button class="be-m" id="beDesc" title="Editar los descriptores (resultado, defensa…)">Descriptores</button><button class="be-done" id="beDone">Hecho</button></div>'+
       '<div class="be-b"><div class="be-l" id="beList">'+list.map(x=>'<div class="be-row'+(x.id===IPS.sel?' sel':'')+'" data-id="'+esc(x.id)+'"><i style="background:'+safeColor(x.color)+'"></i><span class="be-t"><b>'+esc(x.label||'Sin nombre')+'</b><small>'+esc(sub(x))+'</small></span><span class="be-g" data-grip title="Arrastra para ordenar">≡</span></div>').join('')+
         '<button class="be-new" id="beNew">＋ Nueva categoría</button></div>'+
       '<div class="be-f">'+(b?
@@ -7187,6 +7187,7 @@ function openIpBe(newBtn){
         :'<p class="hint" style="padding:24px">No hay categorías en este conjunto. Pulsa «＋ Nueva categoría».</p>')+'</div></div>';
     const g=s=>o.querySelector(s);
     g('#beX').onclick=g('#beDone').onclick=closeIpBe;
+    g('#beDesc').onclick=()=>{ closeIpBe(); openCfg(); const t=document.querySelector('#cfgTabs [data-ctab=desc]'); if(t) t.click(); };
     g('#beSet').onchange=e=>{IPS.set=e.target.value;lsSet('bbtag.ipset',IPS.set);IPS.sel=null;render();};
     g('#beSetNew').onclick=()=>{ const n=(prompt('Nombre del conjunto (p. ej. Ataque, Defensa)')||'').trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
     g('#beSetRen').onclick=()=>{ const old=IPS.set, n=(prompt('Nuevo nombre del conjunto',old)||'').trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
