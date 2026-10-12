@@ -1053,6 +1053,16 @@ body.ipad.vfull:not(.ctlOn):not(.fz) #ipScrub,body.ipad.vfull:not(.ctlOn):not(.f
 body.ipad.vfull #ipScrub,body.ipad.vfull .transport{transition:opacity .25s}
 body.ipad.ovl #tgTags{display:none!important}
 body.ipad.vfull #tgTags{left:68px!important;right:auto!important;top:calc(14px + env(safe-area-inset-top,0px))!important}
+
+body.ipad.pj.port #ipPj{top:auto;left:0;right:0;bottom:0;width:auto;height:38vh;border-right:0;border-top:1px solid #2a2a2a}
+body.ipad.pj.port #ws{padding:0;height:calc(100vh - 54px - 38vh)}
+body.ipad.pj.port .pj-cats{max-height:34%}
+body.ipad.pj.vfull #ws,body.ipad.pj.vfull.port #ws{padding:0;height:auto}
+body.ipad.pj.vfull:not(.pjShow) #ipPj{display:none}
+body.ipad.pj.vfull #ipPj{top:0;z-index:80;background:rgba(14,14,14,.94)}
+body.ipad.pj.vfull.port #ipPj{top:auto}
+body.ipad.pj.vfull #ipScrub,body.ipad.pj.vfull .transport{right:0}
+body.ipad.pj:not(.vfull) #tgTags{display:none!important}
 </style>
 </head>
 <body>
@@ -6363,7 +6373,7 @@ function ipFzSync(){
 
   (function(){ const b=document.getElementById('tgTags'); if(!b) return;
     function pos(){ try{ const d=document.getElementById('dockR'); if(d&&!document.body.classList.contains('hideTags')&&d.offsetParent){ const r=d.getBoundingClientRect(); const st=document.documentElement.style; st.setProperty('--tgT',(r.top+6)+'px'); st.setProperty('--tgL',(r.left+10)+'px'); st.setProperty('--tgR','auto'); } }catch(e){} }
-    b.onclick=()=>{ document.body.classList.toggle('hideTags'); };
+    b.onclick=()=>{ const B=document.body; if(B.classList.contains('pj')&&B.classList.contains('vfull')) B.classList.toggle('pjShow'); else B.classList.toggle('hideTags'); };
     setInterval(pos,800); pos();
   })();
   $$('fzOk').onclick=()=>closeTele();
