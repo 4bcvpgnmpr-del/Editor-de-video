@@ -4011,11 +4011,16 @@ function setQuickNext(){
   const ps=cfg.pages||[]; if(ps.length<2||typeof IPS==='undefined'||!IPS) return;
   const i=ps.indexOf(IPS.set); setQuickGo(ps[(i+1)%ps.length]);
 }
+const SETKEY={get:()=>{ const v=lsGet('bbtag.setkey'); return v==null?'`':v; },set:v=>lsSet('bbtag.setkey',v)};
+window.__setKey=SETKEY;
 document.addEventListener('keydown',e=>{
-  if(e.code!=='Backquote'||e.ctrlKey||e.metaKey||e.altKey) return;
+  const k=SETKEY.get(); if(!k||e.ctrlKey||e.metaKey||e.altKey) return;
+  const hit=(k==='`'||k==='º')?(e.code==='Backquote'):(e.key&&e.key.toLowerCase()===k.toLowerCase());
+  if(!hit) return;
   const t=e.target; if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable)) return;
-  e.preventDefault(); setQuickNext();
-});
+  e.preventDefault(); e.stopImmediatePropagation();
+  const ps=cfg.pages||[]; if(e.shiftKey&&ps.length>1&&typeof IPS!=='undefined'&&IPS){ const i=ps.indexOf(IPS.set); setQuickGo(ps[(i-1+ps.length)%ps.length]); } else setQuickNext();
+},true);
 function renderCodes(){
   const ipSelEl=document.getElementById('ipSetSel');
   if(ipSelEl&&typeof IPS!=='undefined'){ ipSelEl.innerHTML='<option value="*">Todos</option>'+cfg.pages.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join(''); if(IPS.set!=='*'&&!cfg.pages.includes(IPS.set)) IPS.set='*'; ipSelEl.value=IPS.set; }
@@ -7109,6 +7114,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
      '<div class="st-h">Botonera</div><div class="st-g">'+
        row('Tamaño de los botones','<span style="flex:none;display:flex;gap:6px;align-items:center">'+btn('stBbS','A−')+'<b id="stBbV" style="min-width:42px;text-align:center">'+Math.round(bbScale*100)+'%</b>'+btn('stBbB','A+')+'</span>')+
        row('Abrir descriptores al pulsar una categoría',sw('stAd',adOn),'Pensado para iPad y pantalla grande')+
+       row('Tecla para cambiar de botonera','<input id="stSetKey" readonly style="width:64px;text-align:center;font-weight:700" value="'+esc(window.__setKey?(window.__setKey.get()==='`'?'º':(window.__setKey.get()||'—').toUpperCase()):'')+'" title="Haz clic y pulsa la tecla">','Haz clic y pulsa una letra o número. Pasa a la siguiente (con Mayús, a la anterior). Borrar = ninguna')+
        row('Editar botones y sets',btn('stBe','Abrir'))+
        (ipReal?'':row('Interfaz','<select id="stMode">'+opt(['auto','ipad','pc'],IPM.mode,v=>({auto:'Automática',ipad:'Modo iPad',pc:'Modo ordenador'}[v]))+'</select>'))+
      '</div>'+
@@ -7150,6 +7156,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     $('stHudPos').onchange=e=>window.__hud.set('pos',e.target.value);
     $('stHudSz').onchange=e=>window.__hud.set('size',+e.target.value);
     $('stHudSec').onchange=e=>window.__hud.set('secs',+e.target.value);
+    { const ke=$('stSetKey'); if(ke) ke.onkeydown=e=>{ e.preventDefault(); e.stopPropagation(); if(e.key==='Tab'||e.key==='Escape') return; if(e.key==='Backspace'||e.key==='Delete'){ window.__setKey.set(''); ke.value='—'; return; } let v=e.code==='Backquote'?'`':(e.key.length===1?e.key:''); if(!v) return; window.__setKey.set(v); ke.value=v==='`'?'º':v.toUpperCase(); const clash=cfg.buttons.find(x=>x.key&&x.key.toLowerCase()===v.toLowerCase()); if(clash) toast('Ojo: «'+clash.label+'» también usa esa tecla; ahora cambiará de botonera.'); }; }
     on('stBe',()=>{ dlg.close(); openIpBe(); });
     on('stHelp',()=>{ dlg.close(); window.openHelp&&window.openHelp(); });
     const sm=$('stMode'); if(sm) sm.onchange=e=>{ IPM.set(e.target.value); ipApply(IPM.on); toast('Interfaz cambiada.'); };
