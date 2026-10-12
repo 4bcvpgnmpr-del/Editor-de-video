@@ -1636,9 +1636,10 @@ async function cargarTests() {
   if (modoVistaPrevia) { caja.innerHTML = `<div class="vacio">Los tests los ve y responde cada jugadora desde su cuenta.</div>`; return; }
   const { data, error } = await sb.rpc("tests_mios");
   if (error) {
-    // si el entrenador todavia no ha activado los tests, la pestaña no aparece
-    if (btn) { btn.dataset.sinTests = "1"; if (!btn.classList.contains("activa")) btn.hidden = true; }
-    caja.innerHTML = `<div class="vacio">Ahora mismo no se pueden cargar los tests.</div>`;
+    const falta = /Could not find|schema cache|does not exist/i.test(error.message || "");
+    caja.innerHTML = `<div class="vacio">${falta
+      ? "Los tests todavía no están activados. Dile al entrenador que ejecute el archivo <b>tests.sql</b> en Supabase."
+      : "No se han podido cargar los tests.<br><small>" + esc(error.message || "") + "</small>"}</div>`;
     return;
   }
   const lista = data || [];
