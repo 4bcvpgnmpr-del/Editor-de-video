@@ -3744,9 +3744,9 @@ function bbItemClick(e,forceEdit){
 }
 $('#dstrip').addEventListener('click',e=>{bbItemClick(e,false);});
 $('#dstrip').addEventListener('contextmenu',e=>{if(e.target.closest('.dchip,.pchip')){e.preventDefault();bbItemClick(e,true);}});
-function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg));}
+function saveCfg(){lsSet('bbtag.config',JSON.stringify(cfg)); lsSet('bbtag.cts',String(Date.now())); if(window.__clC) window.__clC();}
 function normStint(x){ if(!x||!Array.isArray(x.players)||!isFinite(x.from)) return null; return {id:x.id||uid(),team:x.team==='R'?'R':'L',players:x.players.map(String),from:+x.from,to:(x.to==null||!isFinite(x.to))?null:+x.to}; }
-function saveProject(){if(videoKey) lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals}));}
+function saveProject(){if(videoKey){ lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals})); lsSet('bbtag.pts.'+videoKey,String(Date.now())); if(window.__clQ) window.__clQ(); }}
 function normEvent(x){
   return {id:x.id||uid(),btnId:String(x.btnId||''),label:String(x.label||''),color:safeColor(x.color),pts:+x.pts||0,
     t:+x.t,start:+x.start,end:+x.end,team:x.team==='R'?'R':'L',player:String(x.player==null?'':x.player),
@@ -4603,12 +4603,7 @@ function loadFile(file,fromLib){
   $('#videoName').textContent=file.name;
   lastFile=file;
 }
-video.addEventListener('loadedmetadata',()=>{
-  hasVideo=true;
-  $('#empty').hidden=true;
-  let restored=0;
-  try{
-    const o=JSON.parse(lsGet('bbtag.project.'+videoKey)||'null');
+function applyProjectObj(o){
     events=(o&&Array.isArray(o.events))?o.events.filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(normEvent):[];
     markers=(o&&Array.isArray(o.markers))?o.markers.filter(m=>m&&isFinite(m.t)).map(m=>({id:m.id||uid(),t:+m.t,text:String(m.text||'Marcador')})):[];
     stints=(o&&Array.isArray(o.stints))?o.stints.map(normStint).filter(Boolean):[];
@@ -4616,13 +4611,22 @@ video.addEventListener('loadedmetadata',()=>{
     playlists=(o&&Array.isArray(o.playlists))?o.playlists.map(normPl):[];
     covers=(o&&Array.isArray(o.covers))?o.covers.map(normCover):[];
     externals=(o&&Array.isArray(o.externals))?o.externals.map(normExt):[];
-    restored=events.length;
+    var restored=events.length;
+    return restored;
+}
+video.addEventListener('loadedmetadata',()=>{
+  hasVideo=true;
+  $('#empty').hidden=true;
+  let restored=0;
+  try{
+    restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
   }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];}
   selectedId=null; sel=null; zoom=1; teleEd=null; freeze=null; plCur=null; $('#fbadge').hidden=true; teleKey='';
   filters.team='all';filters.period='all';filters.player='';filters.q='';filters.cats.clear();filters.descs.clear();filters.types.clear();filters.star=false;filters.phase='';$('#fQ').value='';
   fpsAuto=25; renderFps(); lastT=-1;
   sortEvents(); renderAll(); histInit(); lastW=tlScroll.clientWidth;
   if(restored) toast('Se recuperaron '+restored+' etiquetas de este vídeo.');
+  if(window.__cloudPull) window.__cloudPull();
 });
 video.addEventListener('error',()=>{
   if(!video.getAttribute('src')) return;
@@ -6445,6 +6449,143 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     if(document.getElementById('pTags').classList.contains('editing')) return;
     setTimeout(()=>document.body.classList.add('lowOn'),30);
   });
+})();
+
+/* ===== NUBE (Supabase): sincroniza marcas, clips, dibujos y botonera entre dispositivos. El vídeo NO se sube. ===== */
+(function(){
+  const CL={url:'',key:'',s:null}; let APPLY=false;
+  try{ const o=JSON.parse(lsGet('bbtag.cloud')||'null'); if(o) Object.assign(CL,o); }catch(e){}
+  const save=()=>lsSet('bbtag.cloud',JSON.stringify({url:CL.url,key:CL.key,s:CL.s}));
+  const on=()=>!!(CL.url&&CL.key&&CL.s);
+  const num=k=>+lsGet(k)||0;
+  async function auth(path,body){
+    const r=await fetch(CL.url+'/auth/v1/'+path,{method:'POST',headers:{apikey:CL.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.msg||j.error_description||j.error||('Error '+r.status));
+    return j;
+  }
+  function sess(j){ CL.s={at:j.access_token,rt:j.refresh_token,exp:Date.now()+((j.expires_in||3600)*1000)-60000,uid:(j.user&&j.user.id)||(CL.s&&CL.s.uid),email:(j.user&&j.user.email)||(CL.s&&CL.s.email)}; save(); }
+  async function tok(){ if(!CL.s) throw new Error('Sin sesión'); if(Date.now()>CL.s.exp){ sess(await auth('token?grant_type=refresh_token',{refresh_token:CL.s.rt})); } return CL.s.at; }
+  async function rest(path,opt){
+    const t=await tok(); opt=opt||{};
+    const r=await fetch(CL.url+'/rest/v1/'+path,{method:opt.method||'GET',body:opt.body,headers:Object.assign({apikey:CL.key,Authorization:'Bearer '+t,'Content-Type':'application/json'},opt.headers||{})});
+    const tx=await r.text();
+    if(!r.ok){ let m=tx; try{ m=JSON.parse(tx).message||tx; }catch(e){} throw new Error(String(m).slice(0,200)||('Error '+r.status)); }
+    return tx?JSON.parse(tx):null;
+  }
+  const upsert=row=>rest('video_projects?on_conflict=user_id,key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(Object.assign({user_id:CL.s.uid},row))});
+  async function pushProject(key){
+    const raw=lsGet('bbtag.project.'+key); if(!raw) return;
+    const o=JSON.parse(raw), ts=num('bbtag.pts.'+key)||Date.now();
+    await upsert({key,name:key.split('|')[0],n:(o.events||[]).length,ts,data:o});
+    lsSet('bbtag.psy.'+key,String(ts));
+  }
+  async function pushCfg(){ const ts=num('bbtag.cts'); if(!ts) return; await upsert({key:'__config__',name:'Botonera',n:0,ts,data:cfg}); lsSet('bbtag.csy',String(ts)); }
+  /* cola de subida con espera */
+  const dirty=new Set(); let qT=null, cDirty=false;
+  async function flush(){
+    if(!on()) return; const keys=[...dirty]; dirty.clear(); const c=cDirty; cDirty=false;
+    try{ for(const k of keys) await pushProject(k); if(c) await pushCfg(); setSt('ok'); }
+    catch(e){ keys.forEach(k=>dirty.add(k)); if(c) cDirty=true; setSt('err',e.message); }
+  }
+  const later=()=>{ clearTimeout(qT); qT=setTimeout(flush,2500); setSt('pend'); };
+  window.__clQ=()=>{ if(!on()||APPLY||!videoKey) return; dirty.add(videoKey); later(); };
+  window.__clC=()=>{ if(!on()||APPLY) return; cDirty=true; later(); };
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&(dirty.size||cDirty)) flush(); });
+  /* estado visible en el botón */
+  let stMsg='';
+  function setSt(k,m){
+    stMsg=k==='ok'?'Sincronizado':k==='pend'?'Pendiente de subir…':k==='err'?('No se pudo sincronizar: '+m):'';
+    const b=document.getElementById('bCloud'); if(b){ b.title='Nube · '+(on()?stMsg||CL.s.email:'sin conectar'); const ic=b.querySelector('.ic'); if(ic) ic.textContent=k==='err'?'⚠':'☁'; }
+    const e=document.getElementById('clSt'); if(e) e.textContent=stMsg;
+  }
+  /* al abrir un vídeo: bajar o subir según lo más reciente */
+  window.__cloudPull=async function(){
+    if(!on()||!videoKey) return; const key=videoKey;
+    try{
+      const rows=await rest('video_projects?select=ts,data&key=eq.'+encodeURIComponent(key)+'&limit=1');
+      if(key!==videoKey) return;
+      const r=rows&&rows[0], lts=num('bbtag.pts.'+key), psy=num('bbtag.psy.'+key), hasLocal=!!lsGet('bbtag.project.'+key);
+      if(r&&(!hasLocal||r.ts>psy&&r.ts>lts||(r.ts>psy&&lts>psy&&confirm('Hay cambios nuevos en la nube y en este dispositivo.\nAceptar = usar la versión de la nube.\nCancelar = conservar la de este dispositivo.')))){
+        if(teleEd) return;
+        APPLY=true;
+        try{ lsSet('bbtag.project.'+key,JSON.stringify(r.data)); lsSet('bbtag.pts.'+key,String(r.ts)); lsSet('bbtag.psy.'+key,String(r.ts));
+          const n=applyProjectObj(r.data); selectedId=null; sortEvents(); renderAll(); histInit(); toast('Proyecto actualizado desde la nube ('+n+' etiquetas).'); }
+        finally{ APPLY=false; }
+      } else if(hasLocal&&(!r||lts>r.ts)){ await pushProject(key); }
+      setSt('ok');
+    }catch(e){ setSt('err',e.message); }
+  };
+  async function pullCfg(){
+    if(!on()) return;
+    try{
+      const rows=await rest('video_projects?select=ts,data&key=eq.__config__&limit=1'); const r=rows&&rows[0];
+      const cts=num('bbtag.cts'), csy=num('bbtag.csy');
+      if(r&&r.ts>csy&&r.ts>cts&&r.data&&Array.isArray(r.data.pages)){
+        APPLY=true;
+        try{ cfg=migrateCfg(r.data); lsSet('bbtag.config',JSON.stringify(cfg)); lsSet('bbtag.cts',String(r.ts)); lsSet('bbtag.csy',String(r.ts)); if(!cfg.pages.includes(page)) page=cfg.pages[0]; renderAll(); toast('Botonera actualizada desde la nube.'); }
+        finally{ APPLY=false; }
+      } else if(cts>(r?r.ts:0)) await pushCfg();
+    }catch(e){ setSt('err',e.message); }
+  }
+  async function pushAll(){
+    const keys=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('bbtag.project.')===0) keys.push(k.slice(14)); } }catch(e){}
+    let n=0; for(const k of keys){ if(num('bbtag.pts.'+k)>num('bbtag.psy.'+k)||!num('bbtag.psy.'+k)){ if(!num('bbtag.pts.'+k)) lsSet('bbtag.pts.'+k,String(Date.now())); await pushProject(k); n++; } }
+    if(!num('bbtag.cts')) lsSet('bbtag.cts',String(Date.now()));
+    await pushCfg(); return n;
+  }
+  /* ----- diálogo ----- */
+  const dlg=document.createElement('dialog'); dlg.id='dlgCloud'; dlg.className='sm';
+  dlg.innerHTML='<div class="dlg-h"><h2>Nube</h2><button class="btn" id="clX">Cerrar</button></div><div class="dlg-b" id="clB"></div><div class="dlg-f"><span class="msg" id="clM" role="alert"></span><span id="clSt" style="font-size:12.5px;color:var(--muted)"></span></div>';
+  document.body.appendChild(dlg);
+  const M=t=>{ const e=document.getElementById('clM'); if(e) e.textContent=t||''; };
+  const fmtD=ts=>{ try{ return new Date(ts).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}); }catch(e){ return ''; } };
+  const css='width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font-size:15px';
+  async function render(){
+    const B=document.getElementById('clB'); M('');
+    if(!on()){
+      B.innerHTML='<p style="margin:0;color:var(--muted);font-size:13.5px">Entra con tu cuenta para tener tus marcas, clips, dibujos y botonera en todos tus dispositivos. El vídeo no se sube: lo abres en cada dispositivo.</p>'+
+        '<label style="font-size:12.5px;color:var(--muted)">Dirección del proyecto Supabase<input id="clU" style="'+css+'" placeholder="https://xxxx.supabase.co" value="'+esc(CL.url)+'" autocapitalize="off" autocorrect="off"></label>'+
+        '<label style="font-size:12.5px;color:var(--muted)">Clave pública (anon)<input id="clK" style="'+css+'" placeholder="eyJ…" value="'+esc(CL.key)+'" autocapitalize="off" autocorrect="off"></label>'+
+        '<label style="font-size:12.5px;color:var(--muted)">Correo<input id="clE" type="email" style="'+css+'" autocomplete="email" autocapitalize="off"></label>'+
+        '<label style="font-size:12.5px;color:var(--muted)">Contraseña<input id="clP" type="password" style="'+css+'" autocomplete="current-password"></label>'+
+        '<div style="display:flex;gap:8px"><button class="btn primary" id="clIn">Entrar</button><button class="btn" id="clUp">Crear cuenta</button></div>';
+      const go=async mode=>{
+        CL.url=document.getElementById('clU').value.trim().replace(/\/+$/,''); CL.key=document.getElementById('clK').value.trim();
+        const em=document.getElementById('clE').value.trim(), pw=document.getElementById('clP').value;
+        if(!/^https:\/\//.test(CL.url)||!CL.key||!em||!pw){ M('Rellena la dirección, la clave, el correo y la contraseña.'); return; }
+        M('Conectando…');
+        try{
+          const j=await auth(mode==='up'?'signup':'token?grant_type=password',{email:em,password:pw});
+          if(!j.access_token){ save(); M('Cuenta creada. Confirma el correo que te han enviado y pulsa «Entrar».'); return; }
+          sess(j); toast('Conectado a la nube.'); await render(); await pullCfg();
+          if(videoKey) window.__cloudPull();
+        }catch(e){ M(e.message); }
+      };
+      document.getElementById('clIn').onclick=()=>go('in'); document.getElementById('clUp').onclick=()=>go('up');
+      return;
+    }
+    B.innerHTML='<div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><div><b>'+esc(CL.s.email||'')+'</b><div style="font-size:12.5px;color:var(--muted)">Sesión iniciada</div></div><button class="btn" id="clOut">Salir</button></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="clSync">Sincronizar ahora</button></div>'+
+      '<div style="font:700 13px var(--f-head);letter-spacing:.04em;color:var(--muted)">PROYECTOS EN LA NUBE</div><div id="clL" style="display:flex;flex-direction:column;gap:8px"><span style="color:var(--muted);font-size:13px">Cargando…</span></div>';
+    document.getElementById('clOut').onclick=()=>{ CL.s=null; save(); setSt(''); render(); };
+    document.getElementById('clSync').onclick=async()=>{ M('Sincronizando…'); try{ const n=await pushAll(); await pullCfg(); if(videoKey) await window.__cloudPull(); M(''); setSt('ok'); toast('Sincronizado ('+n+' proyectos subidos).'); render(); }catch(e){ M(e.message); } };
+    try{
+      const rows=(await rest('video_projects?select=key,name,n,ts&key=neq.__config__&order=ts.desc'))||[];
+      const L=document.getElementById('clL');
+      L.innerHTML=rows.length?rows.map((r,i)=>'<div style="display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px"><div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">'+esc(r.name)+'</div><div style="font-size:12px;color:var(--muted)">'+r.n+' etiquetas · '+fmtD(r.ts)+'</div></div><button class="btn" data-o="'+i+'">Abrir</button><button class="btn danger" data-d="'+i+'" aria-label="Borrar de la nube">🗑</button></div>').join(''):'<span style="color:var(--muted);font-size:13px">Aún no hay proyectos. Abre un vídeo y etiqueta: se suben solos.</span>';
+      L.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{ const r=rows[+b.dataset.o]; dlg.close(); toast('Elige el vídeo «'+r.name+'» para cargar sus marcas.'); document.getElementById('fileVideo').click(); });
+      L.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{ const r=rows[+b.dataset.d]; if(!confirm('¿Borrar «'+r.name+'» de la nube?\nEn este dispositivo se conserva.')) return; try{ await rest('video_projects?key=eq.'+encodeURIComponent(r.key),{method:'DELETE'}); lsSet('bbtag.psy.'+r.key,'0'); render(); }catch(e){ M(e.message); } });
+    }catch(e){ const L=document.getElementById('clL'); if(L) L.innerHTML=''; M(/video_projects/.test(e.message)?'Falta crear la tabla en Supabase (archivo SQL).':e.message); }
+  }
+  document.getElementById('clX').onclick=()=>dlg.close();
+  window.openCloud=()=>{ dlg.showModal(); render(); };
+  /* botones de acceso */
+  const bc=document.getElementById('bCfg');
+  if(bc){ const b=document.createElement('button'); b.className='btn'; b.id='bCloud'; b.title='Nube'; b.innerHTML='<span class="ic">☁</span><span class="tx">Nube</span>'; bc.parentNode.insertBefore(b,bc); b.onclick=window.openCloud; }
+  const g=document.querySelector('#ipHome .hm-g');
+  if(g){ const t=document.createElement('button'); t.className='hm-t'; t.id='hmCloud'; t.innerHTML='<i style="background:#4ad0ff"></i><span>Nube<small>Sincronizar iPad y ordenador</small></span>'; t.onclick=window.openCloud; g.appendChild(t); }
+  if(on()){ setSt(''); pullCfg(); }
 })();
 
 document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle('libMore');
