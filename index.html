@@ -3687,7 +3687,7 @@ const MANUAL='__manual';
 const DI=(g,l)=>({id:g+'_'+l.toLowerCase().replace(/[^a-z0-9]+/g,''),label:l,key:''});
 const DESC_DEFAULTS=[
   {id:'dres',name:'Resultado',color:'#3FBF7F',multi:false,scope:[],items:['Canasta','Fallo','Falta','Pérdida'].map(l=>DI('dres',l))},
-  {id:'ddef',name:'Defensa rival',color:'#9AA7FF',multi:false,scope:[],items:['Individual','Zona','Presión'].map(l=>DI('ddef',l))},
+  {id:'ddef',name:'Defensa rival',color:'#9AA7FF',multi:false,scope:['Defensa'],items:['Individual','Zona','Presión'].map(l=>DI('ddef',l))},
   {id:'dval',name:'Valoración',color:'#F5C542',multi:false,scope:[],items:['Bueno','Mejorable','Error'].map(l=>DI('dval',l))}
 ];
 const phOk=x=>(typeof x==='string'&&x.indexOf('data:image/')===0&&x.length<80000)?x:'';
@@ -3722,7 +3722,7 @@ function migrateCfg(o){
     const a=o.pages.filter(x=>!pt[x]), b=o.pages.filter(x=>pt[x]); if(a.length) o.pages=a.concat(b); else { o.pgType={}; } }
   if(!Array.isArray(o.descs)) o.descs=v0<3?JSON.parse(JSON.stringify(DESC_DEFAULTS)):[];
   o.descs=o.descs.filter(g=>g&&g.id).map(g=>({id:String(g.id),name:String(g.name||'Descriptores'),color:safeColor(g.color),multi:!!g.multi,
-    scope:[],
+    scope:Array.isArray(g.scope)?g.scope.map(String):[],
     items:(Array.isArray(g.items)?g.items:[]).filter(it=>it&&it.id).map(it=>({id:String(it.id),label:String(it.label||''),key:String(it.key||'').toLowerCase().slice(0,1)}))}));
   return o;
 }
@@ -3785,7 +3785,13 @@ function playerOpts(ev){
 const descGroup=id=>cfg.descs.find(g=>g.id===id);
 function descLabel(o){const g=descGroup(o.d), it=g&&g.items.find(x=>x.id===o.i);return {g:g?g.name:o.g,l:it?it.label:o.l,color:g?g.color:'#8CA0B3'};}
 const descText=ev=>ev.desc.map(o=>descLabel(o).l).filter(Boolean).join(' · ');
-const descApplies=(g,cat)=>!g.scope.length||g.scope.includes(cat);
+const descApplies=(g,cat,page)=>!g.scope.length||g.scope.includes(cat)||(!!page&&g.scope.includes('set:'+page));
+const evPage=ev=>{ const b=btnById(ev&&ev.btnId); return b?(b.page||cfg.pages[0]):''; };
+const descForEv=ev=>cfg.descs.filter(g=>g.items.length&&(!ev||descApplies(g,info(ev).group,evPage(ev))));
+const scopeOpts=()=>[['','Todas'] ].concat((cfg.pages||[]).filter(x=>!isPlSet(x)).map(x=>['set:'+x,'Botonera: '+x])).concat((cfg.cats||[]).map(c=>['c:'+c,c]));
+const scopeOn=(g,k)=>k===''?!g.scope.length:(k.indexOf('c:')===0?g.scope.includes(k.slice(2)):g.scope.includes(k));
+function scopeToggle(g,k){ if(k===''){ g.scope=[]; return; } const v=k.indexOf('c:')===0?k.slice(2):k; const i=g.scope.indexOf(v); if(i>=0) g.scope.splice(i,1); else g.scope.push(v); }
+const scopeHTML=(g,cls)=>'<div class="'+(cls||'')+'" data-scope style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0"><span style="font-size:12.5px;color:var(--muted)">Aparece en:</span>'+scopeOpts().map(o=>'<button type="button" class="mini" data-sc="'+esc(o[0])+'" aria-pressed="'+scopeOn(g,o[0])+'" style="'+(scopeOn(g,o[0])?'background:var(--accent);color:#fff;border-color:var(--accent)':'')+'">'+esc(o[1])+'</button>').join('')+'</div>';
 function descByKey(k){for(const g of cfg.descs){const it=g.items.find(x=>x.key&&x.key===k); if(it) return {g,it};}return null;}
 function keyOwner(k,exceptId){
   const b=cfg.buttons.find(x=>x.key===k&&x.id!==exceptId); if(b) return '«'+b.label+'»';
@@ -3800,7 +3806,7 @@ function toggleDesc(ev,gid,iid){
   commit(); renderDetail(); renderDescStrip();
 }
 function descChipsHTML(ev,off){
-  const gs=cfg.descs.filter(g=>g.items.length);
+  const gs=descForEv(ev);
   if(!gs.length) return '<p class="hint" style="margin:0">No hay descriptores. Créalos en «Editar botonera».</p>';
   return gs.map(g=>'<div class="dg" style="--c:'+safeColor(g.color)+'"><span class="dgn">'+esc(g.name)+'</span><span class="dchips">'+
     g.items.map(it=>{const on=ev.desc.some(o=>o.d===g.id&&o.i===it.id);
@@ -3812,7 +3818,7 @@ function renderDescStrip(){
   const box=$('#dstrip'); if(!box) return;
   const ev=events.find(e=>e.id===selectedId);
   const cur=ev?'<span>Clip: <b>'+esc(evName(ev))+'</b> · '+fmt(ev.t)+'</span>':'<span>Pulsa una categoría para crear un clip</span>';
-  const gs=cfg.descs.filter(g=>g.items.length);
+  const gs=descForEv(ev);
   let h='<div class="bb-sh bb-h"><b>Descriptores</b>'+cur+'<button class="bb-ib bb-add" id="bbAddDesc" title="Nuevo descriptor" aria-label="Nuevo descriptor">+</button></div>';
   h+=gs.length?gs.map(g=>'<div class="dgrp2" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'"><span class="dgl">'+esc(g.name)+'</span><div class="dflat">'+
       g.items.map(it=>{const on=!!ev&&ev.desc.some(o=>o.d===g.id&&o.i===it.id);
@@ -4102,6 +4108,12 @@ function renderCatSel(){
 }
 $('#fCat').onchange=e=>{const v=e.target.value; filters.types.clear(); if(v!=='all'&&v!=='__multi') filters.types.add(v); e.target.blur(); renderFilters(); renderList(); renderTimeline();};
 function renderList(){
+  const _l=document.getElementById('list'); let _sc=_l; while(_sc&&_sc!==document.body){ const cs=getComputedStyle(_sc); if(/(auto|scroll)/.test(cs.overflowY)&&_sc.scrollHeight>_sc.clientHeight) break; _sc=_sc.parentElement; }
+  const _top=_sc&&_sc!==document.body?_sc.scrollTop:0;
+  renderList0();
+  if(_sc&&_sc!==document.body&&_top) _sc.scrollTop=_top;
+}
+function renderList0(){
   renderCatSel();
   const f=sortedFiltered();
   $('#cnt').textContent=f.length+' de '+events.length;
@@ -4395,10 +4407,10 @@ function selectEv(id){
    ===================================================================== */
 const PAUSETAG={get:()=>lsGet('bbtag.pauseTag')||'desc',set:v=>lsSet('bbtag.pauseTag',v),by:false};
 window.__pauseTag=PAUSETAG;
-function autoPauseTag(cat){
+function autoPauseTag(b){
   try{
     if(PAUSETAG.get()!=='desc'||!video||video.paused||video.ended) return;
-    const has=(cfg.descs||[]).some(g=>g&&g.items&&g.items.length&&descApplies(g,cat));
+    const has=(cfg.descs||[]).some(g=>g&&g.items&&g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]));
     if(!has) return;
     video.pause(); PAUSETAG.by=true;
   }catch(e){}
@@ -4415,7 +4427,7 @@ function tagBtn(b){
   const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team,player,period,video:videoName,note:'',cat:b.group,phase:PH.cur});
   events.push(ev); sortEvents();
   selectedId=ev.id;
-  commit(); renderDetail(); flash(b.id); autoPauseTag(b.group);
+  commit(); renderDetail(); flash(b.id); autoPauseTag(b);
 }
 codes.addEventListener('click',e=>{
   const el=e.target.closest('.code'); if(!el) return;
@@ -4470,7 +4482,7 @@ codes.addEventListener('click',e=>{
 function tagFor(b,k,n,t){
   const dur=video.duration||0, start=Math.max(0,t-(b.pre||0)); let end=Math.min(dur,t+(b.post||0)); if(end-start<0.5) end=Math.min(dur,start+0.5);
   const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team:k,player:String(n),period,video:videoName,note:'',cat:b.group,phase:PH.cur});
-  events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); autoPauseTag(b.group); return ev;
+  events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); autoPauseTag(b); return ev;
 }
 function closePlayerPicker(){ const o=document.getElementById('plPick'); if(o){ o.remove(); autoResumeTag(); } }
 function openPlayerPicker(k,n){
@@ -4487,11 +4499,11 @@ function openPlayerPicker(k,n){
     o.querySelectorAll('[data-b]').forEach(x=>x.onclick=()=>{
       const b=btnById(x.dataset.b); if(!b) return;
       ev=tagFor(b,k,p.n,t0); flash(b.id);
-      if(cfg.descs.some(g=>g.items.length)) stepDesc(b); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
+      if(cfg.descs.some(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]))) stepDesc(b); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
     });
   }
   function stepDesc(b){
-    const gs=cfg.descs.filter(g=>g.items.length);
+    const gs=cfg.descs.filter(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]));
     o.innerHTML='<div class="pk">'+head+'<div class="pk-s">'+esc(b.label)+' · descriptores</div>'+
       gs.map(g=>'<div class="pk-s" style="margin-top:8px">'+esc(g.name)+(g.multi?' · varios':'')+'</div><div class="pk-d" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+g.items.map(it=>{ const on=ev.desc.some(q=>q.d===g.id&&q.i===it.id); return '<button data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+'</button>'; }).join('')+'</div>').join('')+
       '<div class="pk-f"><button id="pkMore">＋ Otra categoría</button><button class="pri" id="pkOk">✓ Listo</button></div></div>';
@@ -6216,6 +6228,7 @@ function renderCfgDescs(){
      '<label class="f" style="width:118px"><span>Varios a la vez</span><input data-dk="multi" type="checkbox"'+(g.multi?' checked':'')+'></label>'+
      '<span class="racts"><button class="btn" data-gup aria-label="Subir grupo" title="Subir">▲</button><button class="btn" data-gdn aria-label="Bajar grupo" title="Bajar">▼</button><button class="btn danger" data-gdel aria-label="Quitar grupo" title="Quitar grupo">✕</button></span>'+
     '</div>'+
+    scopeHTML(g,'dg-s')+
     '<div class="dg-i">'+g.items.map(it=>'<div class="dit" data-i="'+esc(it.id)+'"><input data-dik="label" maxlength="30" value="'+esc(it.label)+'" aria-label="Nombre del descriptor"><input class="keyin" data-dik="key" readonly value="'+esc((it.key||'').toUpperCase())+'" aria-label="Tecla de '+esc(it.label)+'" title="Tecla opcional"><button class="mini" data-idel aria-label="Quitar descriptor '+esc(it.label)+'">×</button></div>').join('')+'</div>'+
     '<div class="dg-a"><input data-dnew maxlength="30" placeholder="Nuevo descriptor" aria-label="Nuevo descriptor"><button class="mini" data-dadd>Añadir</button></div>'+
    '</div>').join(''):'<p class="hint">No hay grupos de descriptores. Crea uno con el botón de abajo.</p>';
@@ -6259,6 +6272,7 @@ function addDescItem(row){
 $('#drows').addEventListener('click',e=>{
   const row=e.target.closest('[data-g]'); if(!row) return;
   const g=descGroup(row.dataset.g), i=cfg.descs.indexOf(g);
+  { const sc=e.target.closest('[data-sc]'); if(sc){ scopeToggle(g,sc.dataset.sc); renderCfgDescs(); descChanged(); return; } }
   if(e.target.closest('[data-dadd]')){addDescItem(row);return;}
   if(e.target.closest('[data-idel]')){const id=e.target.closest('[data-i]').dataset.i; g.items=g.items.filter(x=>x.id!==id);renderCfgDescs();descChanged();return;}
   if(e.target.closest('[data-gup]')&&i>0){[cfg.descs[i-1],cfg.descs[i]]=[cfg.descs[i],cfg.descs[i-1]];renderCfgDescs();descChanged();return;}
@@ -7116,7 +7130,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='12/10/2026 · 22:50 (botoneras rápidas)';
+  const BUILD='13/10/2026 · 01:30';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7153,6 +7167,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
      '<div class="st-h">Botonera</div><div class="st-g">'+
        row('Tamaño de los botones','<span style="flex:none;display:flex;gap:6px;align-items:center">'+btn('stBbS','A−')+'<b id="stBbV" style="min-width:42px;text-align:center">'+Math.round(bbScale*100)+'%</b>'+btn('stBbB','A+')+'</span>')+
        row('Abrir descriptores al pulsar una categoría',sw('stAd',adOn),'Pensado para iPad y pantalla grande')+
+       row('Editor del clip y mesa de producción en otra ventana',sw('stPop',lsGet('bbtag.popEditor')==='1'),'Desactivado: se abren dentro de la aplicación')+
        row('Al etiquetar, parar el vídeo','<select id="stPT"><option value="desc"'+(window.__pauseTag&&window.__pauseTag.get()==='desc'?' selected':'')+'>Si tiene descriptores</option><option value="never"'+(window.__pauseTag&&window.__pauseTag.get()==='never'?' selected':'')+'>Nunca</option></select>','Si la categoría no tiene descriptores, el vídeo sigue. Al cerrar los descriptores continúa solo')+
        row('Tecla para cambiar de botonera','<input id="stSetKey" readonly style="width:64px;text-align:center;font-weight:700" value="'+esc(window.__setKey?(window.__setKey.get()==='`'?'º':(window.__setKey.get()||'—').toUpperCase()):'')+'" title="Haz clic y pulsa la tecla">','Haz clic y pulsa una letra o número. Pasa a la siguiente (con Mayús, a la anterior). Borrar = ninguna')+
        row('Editar botones y sets',btn('stBe','Abrir'))+
@@ -7197,6 +7212,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     $('stHudSz').onchange=e=>window.__hud.set('size',+e.target.value);
     $('stHudSec').onchange=e=>window.__hud.set('secs',+e.target.value);
     { const ke=$('stSetKey'); if(ke) ke.onkeydown=e=>{ e.preventDefault(); e.stopPropagation(); if(e.key==='Tab'||e.key==='Escape') return; if(e.key==='Backspace'||e.key==='Delete'){ window.__setKey.set(''); ke.value='—'; return; } let v=e.code==='Backquote'?'`':(e.key.length===1?e.key:''); if(!v) return; window.__setKey.set(v); ke.value=v==='`'?'º':v.toUpperCase(); const clash=cfg.buttons.find(x=>x.key&&x.key.toLowerCase()===v.toLowerCase()); if(clash) toast('Ojo: «'+clash.label+'» también usa esa tecla; ahora cambiará de botonera.'); }; }
+    $('stPop').onchange=e=>lsSet('bbtag.popEditor',e.target.checked?'1':'0');
     { const pt=$('stPT'); if(pt) pt.onchange=e=>window.__pauseTag.set(e.target.value); }
     on('stBe',()=>{ dlg.close(); openIpBe(); });
     on('stHelp',()=>{ dlg.close(); window.openHelp&&window.openHelp(); });
@@ -7769,6 +7785,7 @@ function openIpDe(){
         '<label>Nombre del grupo<input id="deName" maxlength="30" value="'+esc(g.name)+'" placeholder="p. ej. Resultado"></label>'+
         '<div class="be-s">Color</div><div class="be-cols">'+GCOLORS.concat(['#FF6B6B','#2EC4B6','#FFFFFF']).map(c=>'<button data-c="'+c+'" style="background:'+c+'" class="'+(safeColor(g.color).toLowerCase()===c.toLowerCase()?'on':'')+'" aria-label="Color"></button>').join('')+'</div>'+
         '<label style="flex-direction:row;align-items:center;gap:12px;margin-top:6px"><input type="checkbox" id="deMulti"'+(g.multi?' checked':'')+' style="width:26px;height:26px;min-height:0"> <span style="color:var(--text);font-size:15px">Se pueden elegir varios a la vez</span></label>'+
+        '<div class="be-s">¿Dónde aparece este grupo?</div>'+scopeHTML(g,'de-sc')+
         '<div class="be-s">Descriptores</div><div id="deItems" style="display:flex;flex-direction:column;gap:8px">'+g.items.map(it=>'<div class="de-it" data-i="'+esc(it.id)+'"><input data-f="label" maxlength="30" value="'+esc(it.label)+'" aria-label="Nombre"><input data-f="key" class="de-k" readonly placeholder="Tecla" value="'+esc((it.key||'').toUpperCase())+'" title="Pulsa una tecla para asignarla; Borrar para quitarla" aria-label="Tecla"><button data-idel aria-label="Quitar">✕</button></div>').join('')+'</div>'+
         '<div class="de-it"><input id="deNewI" maxlength="30" placeholder="Nuevo descriptor" aria-label="Nuevo descriptor"><button id="deAdd" class="be-save" style="flex:none;min-height:44px;font-size:15px">Añadir</button></div>'+
         '<div class="be-s" id="deM" role="alert" style="color:#ff8a8a"></div>'+
@@ -7784,6 +7801,7 @@ function openIpDe(){
     if(!g) return;
     q('#deName').oninput=e=>{ g.name=e.target.value.trim()||'Descriptores'; descChanged(); const r=o.querySelector('.be-row.sel b'); if(r) r.textContent=g.name; };
     o.querySelectorAll('.be-cols [data-c]').forEach(c=>c.onclick=()=>{ g.color=c.dataset.c; descChanged(); render(); });
+    o.querySelectorAll('[data-sc]').forEach(c=>c.onclick=()=>{ scopeToggle(g,c.dataset.sc); descChanged(); render(); });
     q('#deMulti').onchange=e=>{ g.multi=e.target.checked; descChanged(); const s=o.querySelector('.be-row.sel small'); if(s) s.textContent=g.items.length+' descriptor'+(g.items.length===1?'':'es')+' · '+(g.multi?'varios a la vez':'uno a la vez'); };
     o.querySelectorAll('.de-it[data-i]').forEach(row=>{
       const it=g.items.find(x=>x.id===row.dataset.i); if(!it) return;
@@ -7848,7 +7866,7 @@ function openIpBe(newBtn){
     g('#beSet').onchange=e=>{IPS.set=e.target.value;lsSet('bbtag.ipset',IPS.set);IPS.sel=null;render();};
     g('#beSetNew').onclick=()=>{ const n=(prompt('Nombre del conjunto (p. ej. Ataque, Defensa)')||'').trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
     g('#beSetPl').onclick=()=>{ const n=(prompt('Nombre del conjunto de jugadoras','Jugadoras')||'').trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); cfg.pgType=cfg.pgType||{}; cfg.pgType[n]='players'; normPages(); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
-    g('#beSetRen').onclick=()=>{ const old=IPS.set, n=(prompt('Nuevo nombre del conjunto',old)||'').trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; if(cfg.pgType&&cfg.pgType[old]){ cfg.pgType[n]=cfg.pgType[old]; delete cfg.pgType[old]; } cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
+    g('#beSetRen').onclick=()=>{ const old=IPS.set, n=(prompt('Nuevo nombre del conjunto',old)||'').trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; if(cfg.pgType&&cfg.pgType[old]){ cfg.pgType[n]=cfg.pgType[old]; delete cfg.pgType[old]; } cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); cfg.descs.forEach(d=>{ d.scope=d.scope.map(v=>v==='set:'+old?'set:'+n:v); }); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
     g('#beSetDel').onclick=()=>{ const old=IPS.set; if(!confirm(isPlSet(old)?'¿Borrar el conjunto de jugadoras «'+old+'»? Las jugadoras no se borran.':'¿Borrar el conjunto «'+old+'»? Sus botones pasan al primer conjunto.')) return; cfg.pages=cfg.pages.filter(x=>x!==old); if(cfg.pgType) delete cfg.pgType[old]; normPages(); cfg.buttons.forEach(x=>{if(x.page===old) x.page=cfg.pages[0];}); IPS.set='*'; lsSet('bbtag.ipset','*'); touch(); render(); };
     g('#beNew').onclick=add;
     o.querySelectorAll('.be-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('[data-grip]')) return; IPS.sel=r.dataset.id; render(); }));
@@ -8210,7 +8228,7 @@ function openProd(){
   const st=layout.panels.prod;
   if(st.win&&popWins.prod&&!popWins.prod.closed){popWins.prod.focus();return;}
   if(isNarrow()){showProd();return;}
-  if(!popOut('prod',{eph:true,fallback:true})) showProd();
+  if(lsGet('bbtag.popEditor')!=='1'||!popOut('prod',{eph:true,fallback:true})) showProd();
 }
 $('#bProd').onclick=openProd;
 let shownAv=[];
@@ -9069,7 +9087,7 @@ function openClipEditor(id){
   selectedId=id; renderList(); renderTimeline(); renderDescStrip();
   if(IPM.on){ ipLibBack=layout.panels.events.vis; layout.panels.events.vis=false; }
   const st=layout.panels.clip;
-  const ok=(isNarrow()||IPM.on)?false:popOut('clip',{eph:true,fallback:true,w:1000,h:860,what:'el editor del clip'});
+  const ok=(isNarrow()||IPM.on||lsGet('bbtag.popEditor')!=='1')?false:popOut('clip',{eph:true,fallback:true,w:1000,h:860,what:'el editor del clip'});
   if(!ok){st.vis=true;st.min=false;st.max=false;applyLayout();saveLayout();}
   ceBuild();
 }
@@ -9084,6 +9102,7 @@ function ceClose(){
   const st=layout.panels.clip, was=st.win;
   ceStop();
   if(was) popBack('clip'); else {st.vis=false; if(IPM.on&&ipLibBack){ layout.panels.events.vis=true; ipLibBack=false; } applyLayout();saveLayout();}
+  setTimeout(()=>{ try{ const r=document.querySelector('#list [data-id="'+selectedId+'"]'); if(r) r.scrollIntoView({block:'nearest'}); }catch(e){} },80);
 }
 function ceFit(){
   const ev=ceEv(), dur=video.duration||0; if(!ev) return;
@@ -9364,7 +9383,7 @@ function onKey(e){
     e.preventDefault();
     const ev=events.find(x=>x.id===selectedId);
     if(!ev){toast('Primero etiqueta una acción para poder calificarla.');return;}
-    if(!descApplies(dsc.g,info(ev).group)){toast('«'+dsc.it.label+'» no se ofrece en el grupo «'+info(ev).group+'».');return;}
+    if(!descApplies(dsc.g,info(ev).group,evPage(ev))){toast('«'+dsc.it.label+'» no se ofrece en el grupo «'+info(ev).group+'».');return;}
     toggleDesc(ev,dsc.g.id,dsc.it.id);
   }
 }
