@@ -1092,8 +1092,8 @@ body.ipHome #ipHome{display:block;position:fixed;left:0;right:0;top:var(--hmT,54
 #ipHome .hm-t i{width:12px;height:12px;border-radius:50%;flex:none}
 #ipHome .hm-t small{display:block;font-weight:400;opacity:.6;font-size:12px}
 #ipHome h3{margin:26px 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#aaa}
-body:not(.ipad) #bCloud .tx,body:not(.ipad) #bTeams .tx,body:not(.ipad) #bMatch .tx,body:not(.ipad) #bLink .tx,body:not(.ipad) #bSet .tx,body:not(.ipad) #bCfg .tx{display:none}
-body:not(.ipad) #bCloud,body:not(.ipad) #bTeams,body:not(.ipad) #bMatch,body:not(.ipad) #bLink,body:not(.ipad) #bSet,body:not(.ipad) #bCfg{padding:6px 9px;font-size:16px}
+body:not(.ipad) #bLive .tx,body:not(.ipad) #bCloud .tx,body:not(.ipad) #bTeams .tx,body:not(.ipad) #bMatch .tx,body:not(.ipad) #bLink .tx,body:not(.ipad) #bSet .tx,body:not(.ipad) #bCfg .tx{display:none}
+body:not(.ipad) #bLive,body:not(.ipad) #bCloud,body:not(.ipad) #bTeams,body:not(.ipad) #bMatch,body:not(.ipad) #bLink,body:not(.ipad) #bSet,body:not(.ipad) #bCfg{padding:6px 9px;font-size:16px}
 @media (max-width:1500px){body:not(.ipad) #bProd .tx,body:not(.ipad) #bMode .tx,body:not(.ipad) #bLayout .tx{display:none}body:not(.ipad) #bProd,body:not(.ipad) #bMode,body:not(.ipad) #bLayout{padding:6px 9px;font-size:16px}}
 @media (max-width:1200px){body:not(.ipad) #bLib .tx{display:none}body:not(.ipad) #bLib{padding:6px 9px;font-size:16px}}
 body:not(.ipad) #bOpen,body:not(.ipad) #bLib{display:none!important}
@@ -4517,6 +4517,7 @@ function startClipAt(idx){
   updateBadge();
 }
 function playClip(id,queue,title){
+  if(window.__liveOn){toast('Termina la grabación para hacer esto.');return;}
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
   if(teleEd) closeTele();
   endFreeze(false);
@@ -5724,6 +5725,7 @@ function expDlgShell(html){
 }
 function expClose(){const d=(DLGDOC||document).getElementById('expDlg'); if(d) d.remove(); DLGDOC=null;}
 function openExport(list,defName){
+  if(window.__liveOn){toast('Termina la grabación para hacer esto.');return;}
   if(window.__srcMode&&window.__srcMode()!=='file'){toast('Los vídeos de enlace no se pueden exportar. Abre el archivo del partido para exportar clips.');return;}
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
   if(EXP.busy) return;
@@ -6325,6 +6327,7 @@ function ipMarks(){
 
 /* ===== iPad: pantalla de exportación ===== */
 function openIpExport(list,defName){
+  if(window.__liveOn){toast('Termina la grabación para hacer esto.');return;}
   if(window.__srcMode&&window.__srcMode()!=='file'){toast('Los vídeos de enlace no se pueden exportar. Abre el archivo del partido para exportar clips.');return;}
   const old=document.getElementById('ipEx'); if(old) old.remove();
   const st={mode:'each',q:'720',draw:true,title:true,cat:'',sel:new Set(list.map(e=>e.id))};
@@ -6564,7 +6567,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     catch(e){ keys.forEach(k=>dirty.add(k)); if(c) cDirty=true; if(t) tDirty=true; setSt('err',e.message); }
   }
   const later=()=>{ clearTimeout(qT); qT=setTimeout(flush,2500); setSt('pend'); };
-  window.__clQ=()=>{ if(!on()||APPLY||!videoKey) return; dirty.add(videoKey); later(); };
+  window.__clQ=()=>{ if(!on()||APPLY||!videoKey||/^live\|/.test(videoKey)) return; dirty.add(videoKey); later(); };
   window.__clC=()=>{ if(!on()||APPLY) return; cDirty=true; later(); };
   window.__clT=()=>{ if(!on()||APPLY) return; tDirty=true; later(); };
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&(dirty.size||cDirty)) flush(); });
@@ -6958,6 +6961,136 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   aT(); aF();
 })();
 
+/* ===== CÁMARA EN VIVO: graba con webcam / capturadora HDMI mientras etiquetas ===== */
+(function(){
+  window.__liveOn=false;
+  let stream=null, prevStream=null, rec=null, chunks=[], t0=0, sid='', mime='', ext='webm', tick=0, wake=null, bar=null, lastNag=0;
+  const el=()=>(performance.now()-t0)/1000;
+  const KEYS=['currentTime','duration','paused','ended','seeking'];
+  function shimOn(){
+    const d=(k,o)=>Object.defineProperty(video,k,Object.assign({configurable:true},o));
+    d('currentTime',{get:()=>el(),set:()=>{ if(performance.now()-lastNag>3000){ lastNag=performance.now(); toast('En directo no se puede retroceder. Al terminar podrás ver el partido y los clips.'); } }});
+    d('duration',{get:()=>Math.max(el(),60)});
+    d('paused',{get:()=>false}); d('ended',{get:()=>false}); d('seeking',{get:()=>false});
+    video.play=()=>Promise.resolve(); video.pause=()=>{};
+  }
+  function shimOff(){ KEYS.forEach(k=>{ try{ delete video[k]; }catch(e){} }); try{ delete video.play; delete video.pause; }catch(e){} }
+  /* --- almacenamiento de trozos (por si se cierra la página) --- */
+  function ldb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('bbtag-live',1); r.onupgradeneeded=()=>r.result.createObjectStore('c',{keyPath:'k'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+  const pad=n=>String(n).padStart(6,'0');
+  async function putChunk(i,blob){ try{ const db=await ldb(); db.transaction('c','readwrite').objectStore('c').put({k:sid+':'+pad(i),blob}); }catch(e){} }
+  async function getChunks(id){ try{ const db=await ldb(); return await new Promise(res=>{ const out=[]; const rq=db.transaction('c','readonly').objectStore('c').openCursor(IDBKeyRange.bound(id+':',id+':￿')); rq.onsuccess=()=>{ const c=rq.result; if(c){ out.push(c.value.blob); c.continue(); } else res(out); }; rq.onerror=()=>res(out); }); }catch(e){ return []; } }
+  async function clearChunks(id){ try{ const db=await ldb(); const tx=db.transaction('c','readwrite'); const rq=tx.objectStore('c').openCursor(IDBKeyRange.bound(id+':',id+':￿')); rq.onsuccess=()=>{ const c=rq.result; if(c){ c.delete(); c.continue(); } }; }catch(e){} }
+  /* --- diálogo --- */
+  const dlg=document.createElement('dialog'); dlg.id='dlgLive'; dlg.className='sm';
+  dlg.innerHTML='<div class="dlg-h"><h2>Cámara en vivo</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b"><video id="lvPrev" muted playsinline autoplay style="width:100%;aspect-ratio:16/9;background:#000;border-radius:8px"></video>'+
+   '<label style="display:block;font-size:12.5px;color:var(--muted)">Cámara o capturadora HDMI<select id="lvCam" class="lv-s"></select></label>'+
+   '<label style="display:block;font-size:12.5px;color:var(--muted)">Micrófono<select id="lvMic" class="lv-s"></select></label>'+
+   '<label style="display:block;font-size:12.5px;color:var(--muted)">Calidad<select id="lvQ" class="lv-s"><option value="720">720p · ocupa menos</option><option value="1080">1080p · más nitidez</option></select></label>'+
+   '<p style="margin:0;color:var(--muted);font-size:12.5px">Graba mientras etiquetas. Al terminar queda el vídeo guardado con todas las marcas. Una capturadora HDMI-USB aparece en la lista como una cámara más. No cierres la pestaña mientras grabas.</p>'+
+   '<div style="display:flex;gap:8px"><button class="btn primary" id="lvGo">● Empezar a grabar</button><button class="btn" id="lvNo">Cancelar</button></div></div><div class="dlg-f"><span class="msg" id="lvM" role="alert"></span></div>';
+  document.body.appendChild(dlg);
+  const st=document.createElement('style'); st.textContent='#dlgLive .lv-s{width:100%;box-sizing:border-box;margin-top:4px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--text);font-size:15px}#lvBar{position:absolute;left:10px;top:10px;z-index:7;display:flex;gap:10px;align-items:center;background:rgba(190,20,20,.92);color:#fff;border-radius:18px;padding:5px 6px 5px 12px;font-size:13px;font-weight:600}#lvBar i{width:9px;height:9px;border-radius:50%;background:#fff;animation:lvb 1s infinite}@keyframes lvb{50%{opacity:.25}}#lvBar button{background:#fff;color:#b00;border:0;border-radius:14px;padding:5px 12px;font-weight:700}body.liveRec .transport,body.liveRec #ipScrub{display:none!important}'; document.head.appendChild(st);
+  const $=id=>dlg.querySelector('#'+id), M=t=>{ $('lvM').textContent=t||''; };
+  const stopPrev=()=>{ if(prevStream){ prevStream.getTracks().forEach(t=>t.stop()); prevStream=null; } $('lvPrev').srcObject=null; };
+  const cons=()=>{ const h=+$('lvQ').value, w=h===1080?1920:1280, cam=$('lvCam').value, mic=$('lvMic').value;
+    return {video:Object.assign({width:{ideal:w},height:{ideal:h},frameRate:{ideal:30}},cam?{deviceId:{exact:cam}}:{}),audio:mic==='none'?false:(mic?{deviceId:{exact:mic}}:true)}; };
+  async function startPrev(first){
+    stopPrev(); M('');
+    try{
+      prevStream=await navigator.mediaDevices.getUserMedia(cons());
+      $('lvPrev').srcObject=prevStream;
+      if(first){
+        const dv=await navigator.mediaDevices.enumerateDevices();
+        const cams=dv.filter(d=>d.kind==='videoinput'), mics=dv.filter(d=>d.kind==='audioinput');
+        const curC=(prevStream.getVideoTracks()[0]&&prevStream.getVideoTracks()[0].getSettings().deviceId)||'';
+        const curM=(prevStream.getAudioTracks()[0]&&prevStream.getAudioTracks()[0].getSettings().deviceId)||'';
+        $('lvCam').innerHTML=cams.map((d,i)=>'<option value="'+esc(d.deviceId)+'"'+(d.deviceId===curC?' selected':'')+'>'+esc(d.label||('Cámara '+(i+1)))+'</option>').join('');
+        $('lvMic').innerHTML='<option value="none">Sin audio</option>'+mics.map((d,i)=>'<option value="'+esc(d.deviceId)+'"'+(d.deviceId===curM?' selected':'')+'>'+esc(d.label||('Micrófono '+(i+1)))+'</option>').join('');
+      }
+    }catch(e){ M(e&&e.name==='NotAllowedError'?'No hay permiso para usar la cámara. Actívalo en los ajustes del navegador.':(e&&e.name==='NotFoundError'?'No se encuentra ninguna cámara.':'No se pudo abrir la cámara: '+((e&&e.message)||e))); }
+  }
+  dlg.querySelector('[data-x]').onclick=$('lvNo').onclick=()=>dlg.close();
+  dlg.addEventListener('close',()=>{ if(!stream) stopPrev(); });
+  ['lvCam','lvMic','lvQ'].forEach(id=>$(id).onchange=()=>startPrev(false));
+  window.openLive=function(){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast('Este navegador no permite usar la cámara (hace falta una conexión segura https).'); return; }
+    if(window.__liveOn){ toast('Ya estás grabando.'); return; }
+    dlg.showModal(); startPrev(true);
+  };
+  /* --- empezar --- */
+  $('lvGo').onclick=async()=>{
+    if(!prevStream){ M('Primero elige una cámara.'); return; }
+    stream=prevStream; prevStream=null; $('lvPrev').srcObject=null; dlg.close();
+    if(window.__extOff) window.__extOff();
+    stopClip(false); if(objectURL){ try{URL.revokeObjectURL(objectURL);}catch(e){} objectURL=null; }
+    lastFile=null; hasVideo=false;
+    const cands=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    mime=cands.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||''; ext=/mp4/.test(mime)?'mp4':'webm';
+    const h=+$('lvQ').value;
+    try{ rec=new MediaRecorder(stream,Object.assign(mime?{mimeType:mime}:{},{videoBitsPerSecond:h===1080?8e6:4e6,audioBitsPerSecond:128e3})); }
+    catch(e){ toast('No se puede grabar en este navegador: '+((e&&e.message)||e)); stream.getTracks().forEach(t=>t.stop()); stream=null; return; }
+    sid='L'+Date.now(); chunks=[]; let ci=0;
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size){ chunks.push(e.data); putChunk(ci++,e.data); } };
+    const d=new Date(); videoKey='live|'+sid; videoName='Partido '+d.toLocaleDateString('es-ES')+' '+d.toTimeString().slice(0,5)+' (grabando)';
+    lsSet('bbtag.live',JSON.stringify({sid,key:videoKey,ext,mime,at:Date.now()}));
+    document.getElementById('videoName').textContent=videoName;
+    t0=performance.now(); shimOn(); window.__liveOn=true; document.body.classList.add('liveRec');
+    video.muted=true; video.autoplay=true; video.srcObject=stream;
+    rec.start(2000); t0=performance.now();
+    bar=document.createElement('div'); bar.id='lvBar'; bar.innerHTML='<i></i><span id="lvT">REC 00:00:00</span><button id="lvStop">Terminar</button>'; document.getElementById('vwrap').appendChild(bar);
+    bar.querySelector('#lvStop').onclick=()=>finish(false);
+    tick=setInterval(()=>{ const s=Math.floor(el()); bar.querySelector('#lvT').textContent='REC '+String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); video.dispatchEvent(new Event('durationchange')); if(s%2===0){ try{ renderTimeline(); }catch(e){} } },1000);
+    try{ if(navigator.wakeLock) wake=await navigator.wakeLock.request('screen'); }catch(e){}
+    toast('Grabando. Etiqueta con los botones; al terminar pulsa «Terminar».');
+  };
+  window.addEventListener('beforeunload',e=>{ if(window.__liveOn){ e.preventDefault(); e.returnValue=''; } });
+  /* --- terminar --- */
+  async function finish(recovered,info){
+    if(!recovered){
+      if(!confirm('¿Terminar la grabación y guardar el partido?')) return;
+      clearInterval(tick); const dur=el();
+      await new Promise(res=>{ rec.onstop=res; try{ rec.stop(); }catch(e){ res(); } });
+      stream.getTracks().forEach(t=>t.stop()); stream=null; try{ wake&&wake.release(); }catch(e){} wake=null;
+      if(bar){ bar.remove(); bar=null; }
+      shimOff(); video.srcObject=null; video.autoplay=false; video.muted=false; video.removeAttribute('src'); try{ video.load(); }catch(e){}
+      window.__liveOn=false; document.body.classList.remove('liveRec');
+      /* los clips alcanzan los segundos de después aunque esos segundos aún no existieran al pulsar */
+      events.forEach(ev=>{ const b=cfg.buttons.find(x=>x.id===ev.btnId); if(b) ev.end=Math.min(dur,Math.max(ev.end,ev.t+(b.post||0))); });
+      info={sid,key:videoKey,ext,mime};
+    }
+    const blob=new Blob(recovered?(await getChunks(info.sid)):chunks,{type:(info.mime||'video/webm').split(';')[0]});
+    if(!blob.size){ toast('La grabación está vacía.'); lsSet('bbtag.live',''); return; }
+    const d=new Date(recovered&&info.at?info.at:Date.now());
+    const name='Partido '+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+'.'+String(d.getMinutes()).padStart(2,'0')+'.'+info.ext;
+    const file=new File([blob],name,{type:blob.type,lastModified:d.getTime()});
+    const newKey=name+'|'+file.size, oldKey=info.key;
+    /* pasar las marcas de la clave provisional a la del archivo */
+    try{
+      let raw=lsGet('bbtag.project.'+oldKey);
+      if(raw){ lsSet('bbtag.project.'+newKey,raw); lsSet('bbtag.pts.'+newKey,String(Date.now())); localStorage.removeItem('bbtag.project.'+oldKey); localStorage.removeItem('bbtag.pts.'+oldKey); }
+      if(!recovered){ videoKey=newKey; saveProject(); }
+      const tm=titlesGet(); if(tm[oldKey]){ tm[newKey]=tm[oldKey]; delete tm[oldKey]; lsSet('bbtag.titles',JSON.stringify(tm)); }
+    }catch(e){}
+    lsSet('bbtag.live',''); clearChunks(info.sid);
+    loadFile(file);
+    toast('Partido guardado en «Mis vídeos» ('+(file.size/1048576).toFixed(0)+' MB).');
+    /* webm sin duración: forzarla */
+    const fix=()=>{ if(isFinite(video.duration)) return; const onD=()=>{ if(isFinite(video.duration)){ video.removeEventListener('durationchange',onD); video.currentTime=0; video.dispatchEvent(new Event('loadedmetadata')); } }; video.addEventListener('durationchange',onD); video.currentTime=1e101; };
+    video.addEventListener('loadedmetadata',function f(){ video.removeEventListener('loadedmetadata',f); setTimeout(fix,50); });
+  }
+  /* --- recuperar una grabación interrumpida --- */
+  setTimeout(async()=>{
+    let info=null; try{ info=JSON.parse(lsGet('bbtag.live')||'null'); }catch(e){}
+    if(!info||!info.sid||window.__liveOn) return;
+    const cs=await getChunks(info.sid); if(!cs.length){ lsSet('bbtag.live',''); return; }
+    if(confirm('Hay una grabación en vivo que no se terminó de guardar ('+new Date(info.at).toLocaleString('es-ES')+').\n¿Recuperarla ahora?')) finish(true,info); else { lsSet('bbtag.live',''); clearChunks(info.sid); }
+  },2500);
+  /* --- accesos --- */
+  const bc=document.getElementById('bCfg');
+  if(bc){ const b=document.createElement('button'); b.className='btn'; b.id='bLive'; b.title='Cámara en vivo: grabar y etiquetar un partido'; b.innerHTML='<span class="ic">📹</span><span class="tx">En vivo</span>'; bc.parentNode.insertBefore(b,bc); b.onclick=()=>window.openLive(); }
+})();
+
 document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle('libMore');
 
 /* ===== iPad: mini-reproductor flotante al reproducir desde la mesa de producción ===== */
@@ -7055,7 +7188,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   $h('hmEdit').onclick=()=>openIpBe();
   { const g=document.querySelector('#ipHome .hm-g');
     const add=(id,col,t1,t2,fn)=>{ const b=document.createElement('button'); b.className='hm-t'; b.id=id; b.innerHTML='<i style="background:'+col+'"></i><span>'+t1+'<small>'+t2+'</small></span>'; b.onclick=()=>{ if(window[fn]) window[fn](); }; g.appendChild(b); };
-    add('hmSet','#9aa3b2','Ajustes','Preferencias y copia de seguridad','openSettings'); add('hmLink','#ff4d4d','Enlace','YouTube, directos, URL','openLink'); add('hmTeams','#ff7ad9','Equipos','Jugadoras guardadas','openTeams'); add('hmCloud','#4ad0ff','Nube','Sincronizar iPad y ordenador','openCloud'); }
+    add('hmLive','#ff3b3b','Cámara en vivo','Grabar y etiquetar un partido','openLive'); add('hmSet','#9aa3b2','Ajustes','Preferencias y copia de seguridad','openSettings'); add('hmLink','#ff4d4d','Enlace','YouTube, directos, URL','openLink'); add('hmTeams','#ff7ad9','Equipos','Jugadoras guardadas','openTeams'); add('hmCloud','#4ad0ff','Nube','Sincronizar iPad y ordenador','openCloud'); }
   $h('hmNew').onclick=()=>{ openIpBe(); setTimeout(()=>{ const b=document.getElementById('beSetNew'); if(b) b.click(); },60); };
   if(!IPM.on){ $h('hmPhoto').innerHTML='<i style="background:#4a9eff"></i><span>Elegir vídeo<small>Desde este equipo</small></span>'; $h('hmFile').innerHTML='<i style="background:#ff5a5a"></i><span>Otras carpetas<small>Discos, USB, red</small></span>'; }
   window.__renderRec=()=>{ try{renderRec();}catch(e){} };
@@ -8098,6 +8231,7 @@ function commitTele(co){
   record(co); renderTimeline(); renderLib(); renderDrawPanel(); renderList(); renderDetail();
 }
 function openTele(existing){
+  if(window.__liveOn){toast('Termina la grabación para hacer esto.');return;}
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
   if(teleEd) return;
   if(clip) stopClip(false);
@@ -8424,6 +8558,7 @@ function teleMarkup(tl){
 }
 let ipLibBack=false;
 function openClipEditor(id){
+  if(window.__liveOn){toast('Termina la grabación para hacer esto.');return;}
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
   if(window.__srcMode&&window.__srcMode()!=='file'){ playClip(id); return; }
   if(!events.some(e=>e.id===id)) return;
