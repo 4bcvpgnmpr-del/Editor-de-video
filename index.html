@@ -719,7 +719,44 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 
 /* ================= MODO iPad ================= */
 .ip-only{display:none!important}
+/* ---- conjunto de jugadoras con foto ---- */
+.pset{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;width:100%}
+.pset-t{display:flex;gap:6px}
+.pset-t button{flex:1;min-height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel2);color:var(--text);font:700 14px var(--f-head);cursor:pointer;padding:0 10px}
+.pset-t button.on{background:var(--tc);border-color:var(--tc);color:#fff}
+.pset-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(96px*var(--bbs,1)),1fr));gap:8px}
+.pcard{position:relative;display:flex;flex-direction:column;padding:0;border:0;border-radius:14px;overflow:hidden;background:#1c1f24;color:#fff;cursor:pointer;aspect-ratio:3/4;min-height:0;text-align:center;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 2px 6px rgba(0,0,0,.35)}
+.pcard:active{transform:scale(.97)}
+.pcard .ph{flex:1;min-height:0;background:#2b3038 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font:800 38px var(--f-head);color:#6b7686}
+.pcard .no{position:absolute;top:6px;left:6px;background:var(--tc);color:#fff;border-radius:8px;padding:1px 7px;font:800 12px var(--f-head);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.pcard .nm{padding:6px 5px 7px;font-size:12.5px;font-weight:700;line-height:1.15;background:rgba(0,0,0,.62);word-break:break-word}
+.pcard.add{background:transparent;border:2px dashed var(--line);box-shadow:none;color:var(--muted);align-items:center;justify-content:center;font:700 13px var(--f-head)}
+.pcard.add b{font-size:30px;line-height:1}
+#plPick{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+#plPick .pk{width:min(780px,100vw);max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;padding:14px 16px 18px;box-shadow:0 -8px 30px rgba(0,0,0,.5)}
+@media(min-width:820px){#plPick{align-items:center}#plPick .pk{border-radius:18px}}
+#plPick .pk-h{display:flex;align-items:center;gap:12px;margin-bottom:12px;position:sticky;top:-14px;background:var(--panel);padding:2px 0 8px;z-index:1}
+#plPick .pk-ph{width:54px;height:54px;border-radius:50%;background:#2b3038 center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;font:800 20px var(--f-head);color:#8d99aa}
+#plPick .pk-t{flex:1;min-width:0}
+#plPick .pk-t b{display:block;font:800 18px var(--f-head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#plPick .pk-t small{color:var(--muted);font-size:13px}
+#plPick .pk-x{min-width:44px;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:18px;cursor:pointer}
+#plPick .pk-s{font:700 12px var(--f-head);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+#plPick .pk-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+#plPick .pk-c{min-height:54px;border-radius:12px;border:0;background:var(--c);color:var(--ink);font:800 15px var(--f-head);padding:8px 10px;cursor:pointer;line-height:1.1}
+#plPick .pk-c:active{transform:scale(.97)}
+#plPick .pk-d{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+#plPick .pk-d button{min-height:46px;border-radius:12px;border:2px solid var(--c);background:transparent;color:var(--text);font:700 15px var(--f-head);padding:0 14px;cursor:pointer}
+#plPick .pk-d button[aria-pressed=true]{background:var(--c);color:var(--ink)}
+#plPick .pk-f{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+#plPick .pk-f button{flex:1;min-height:50px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:800 16px var(--f-head);cursor:pointer}
+#plPick .pk-f button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.ph-row{display:flex;align-items:center;gap:12px}
+.ph-row .ph-img{width:72px;height:72px;border-radius:50%;background:#2b3038 center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;font:800 24px var(--f-head);color:#8d99aa}
+
+
 body.ipad .ip-only{display:inline-flex!important}
+#pTags select#ipSetSel{display:inline-block!important}
 body.ipad select#ipSetSel{display:inline-block!important}
 body.ipad{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 body.ipad button,body.ipad .btn,body.ipad .ib,body.ipad select,body.ipad label{touch-action:manipulation;-webkit-user-select:none;user-select:none}
@@ -1042,6 +1079,16 @@ body.ipad.vfull #pTags .bb-wrap,body.ipad.vfull #pTags .bb-cats{background:trans
 body.ipad.vfull #pTags button,body.ipad.vfull #pTags select{pointer-events:auto}
 body.ipad.vfull #pTags .code{background:rgba(12,12,12,.42)!important;backdrop-filter:blur(3px);min-height:44px;margin-bottom:0}
 body.ipad.vfull #pTags .code .cl{text-shadow:0 1px 3px #000}
+body.ipad.vfull #pTags .pset-t button{background:rgba(12,12,12,.42);backdrop-filter:blur(3px);border-color:rgba(255,255,255,.18)}
+body.ipad.vfull #pTags .pset-t button.on{background:var(--tc);opacity:.85}
+body.ipad.vfull #pTags .pcard{background:rgba(12,12,12,.35)!important;backdrop-filter:blur(3px);box-shadow:none;border:1px solid rgba(255,255,255,.14)}
+body.ipad.vfull #pTags .pcard .ph{background-color:transparent;opacity:.72}
+body.ipad.vfull #pTags .pcard .nm{background:rgba(0,0,0,.38);text-shadow:0 1px 3px #000}
+body.ipad.vfull #pTags .pcard.add{background:rgba(12,12,12,.25)!important;border:2px dashed rgba(255,255,255,.3)}
+body.ipad.vfull #pTags .pset-g{gap:5px}
+body.ipad.vfull #plPick{background:rgba(0,0,0,.18)}
+body.ipad.vfull #plPick .pk{background:rgba(24,24,26,.78);backdrop-filter:blur(8px)}
+body.ipad.vfull #plPick .pk-h{background:transparent}
 body.ipad.vfull #pTags #ipSetSel,body.ipad.vfull #pTags #ipLow{background:rgba(12,12,12,.5)!important}
 body.ipad.vfull #pTags .codes{gap:5px;max-height:calc(100vh - 90px);overflow-y:auto;overflow-x:hidden;pointer-events:auto;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 body.ipad.vfull #pTags .codes::-webkit-scrollbar{display:none}
@@ -3612,9 +3659,12 @@ const DESC_DEFAULTS=[
   {id:'ddef',name:'Defensa rival',color:'#9AA7FF',multi:false,scope:[],items:['Individual','Zona','Presión'].map(l=>DI('ddef',l))},
   {id:'dval',name:'Valoración',color:'#F5C542',multi:false,scope:[],items:['Bueno','Mejorable','Error'].map(l=>DI('dval',l))}
 ];
+const phOk=x=>(typeof x==='string'&&x.indexOf('data:image/')===0&&x.length<80000)?x:'';
+const rp=p=>{ const o={n:String(p.n),name:String(p.name||'')}; const f=phOk(p.photo); if(f) o.photo=f; return o; };
+function keepPh(nu,old){ (nu||[]).forEach(p=>{ if(!p.photo){ const q=(old||[]).find(x=>String(x.n)===String(p.n)); if(q&&q.photo) p.photo=q.photo; } }); return nu; }
 function defaultCfg(){
   const buttons=JSON.parse(JSON.stringify(DEFAULTS.concat(EXTRA)));
-  return {v:CFG_V,pages:['Principal','Sistemas'],teamNames:{L:'Local',R:'Rival'},rosters:{L:[],R:[]},buttons,
+  return {v:CFG_V,pages:['Principal','Sistemas'],pgType:{},teamNames:{L:'Local',R:'Rival'},rosters:{L:[],R:[]},buttons,
     cats:[...new Set(buttons.map(b=>b.group))],descs:JSON.parse(JSON.stringify(DESC_DEFAULTS))};
 }
 function migrateCfg(o){
@@ -3633,10 +3683,12 @@ function migrateCfg(o){
   }
   o.v=CFG_V;
   o.buttons.forEach(b=>{if(!o.pages.includes(b.page)) o.pages.push(b.page);});
-  { const ro={L:[],R:[]}; ['L','R'].forEach(k=>{ro[k]=(o.rosters&&Array.isArray(o.rosters[k])?o.rosters[k]:[]).filter(p=>p&&p.n!=null&&p.n!=='').map(p=>({n:String(p.n),name:String(p.name||'')}));}); o.rosters=ro; }
+  { const ro={L:[],R:[]}; ['L','R'].forEach(k=>{ro[k]=(o.rosters&&Array.isArray(o.rosters[k])?o.rosters[k]:[]).filter(p=>p&&p.n!=null&&p.n!=='').map(rp);}); o.rosters=ro; }
   if(!Array.isArray(o.cats)||!o.cats.length) o.cats=[];
   o.cats=o.cats.map(String);
   o.buttons.forEach(b=>{if(!o.cats.includes(b.group)) o.cats.push(b.group);});
+  { const pt={}; if(o.pgType&&typeof o.pgType==='object') Object.keys(o.pgType).forEach(k=>{ if(o.pages.includes(k)&&o.pgType[k]==='players') pt[k]='players'; }); o.pgType=pt;
+    const a=o.pages.filter(x=>!pt[x]), b=o.pages.filter(x=>pt[x]); if(a.length) o.pages=a.concat(b); else { o.pgType={}; } }
   if(!Array.isArray(o.descs)) o.descs=v0<3?JSON.parse(JSON.stringify(DESC_DEFAULTS)):[];
   o.descs=o.descs.filter(g=>g&&g.id).map(g=>({id:String(g.id),name:String(g.name||'Descriptores'),color:safeColor(g.color),multi:!!g.multi,
     scope:[],
@@ -3785,7 +3837,7 @@ let baseTeams=null;
 function matchApply(render){
   if(matchMeta&&(matchMeta.L||matchMeta.R)){
     if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
-    ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(p=>({n:String(p.n),name:String(p.name||'')})); } });
+    ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(rp); } });
   } else if(baseTeams){ try{ const b=JSON.parse(baseTeams); cfg.teamNames=b.teamNames; cfg.rosters=b.rosters; }catch(e){} baseTeams=null; }
   const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')):videoName;
   if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} }
@@ -3793,7 +3845,7 @@ function matchApply(render){
 function teamSync(){
   if(!matchMeta||!videoKey) return; let ch=false; const tl=teamsGet(); let tch=false;
   ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(!t||!t.name) return;
-    const pl=roster(k).map(p=>({n:p.n,name:p.name})), nm=cfg.teamNames[k];
+    const pl=roster(k).map(rp), nm=cfg.teamNames[k];
     if(JSON.stringify(t.players||[])!==JSON.stringify(pl)||t.name!==nm){ t.players=pl; t.name=nm; ch=true; const lt=t.id&&tl.find(x=>x.id===t.id); if(lt){ lt.players=pl; lt.name=nm; tch=true; } } });
   if(tch) teamsSave(tl);
   if(ch) saveProject();
@@ -3914,8 +3966,9 @@ function inkOf(c){
 function renderCodes(){
   const ipSelEl=document.getElementById('ipSetSel');
   if(ipSelEl&&typeof IPS!=='undefined'){ ipSelEl.innerHTML='<option value="*">Todos</option>'+cfg.pages.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join(''); if(IPS.set!=='*'&&!cfg.pages.includes(IPS.set)) IPS.set='*'; ipSelEl.value=IPS.set; }
-  const items=cfg.buttons.filter(b=>!b.hidden&&(!document.body.classList.contains('ipad')||typeof IPS==='undefined'||!IPS||IPS.set==='*'||(b.page||cfg.pages[0])===IPS.set));
+  const items=cfg.buttons.filter(b=>!b.hidden&&(typeof IPS==='undefined'||!IPS||IPS.set==='*'||(b.page||cfg.pages[0])===IPS.set));
   const btnHtml=b=>'<button class="code '+(b.size||'m')+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
+  if(typeof IPS!=='undefined'&&IPS&&isPlSet(IPS.set)){ codes.innerHTML=plSetHTML(); return; }
   codes.innerHTML=items.length?items.map(btnHtml).join(''):
     '<p class="hint" style="grid-column:1/-1">No hay categorías. Crea una con «+ Categoría».</p>';
   updateCounts();
@@ -4294,6 +4347,75 @@ $('#bbSmaller').onclick=()=>{bbScale=BB_SCALES[Math.max(0,BB_SCALES.indexOf(bbSc
 $('#bbBigger').onclick=()=>{bbScale=BB_SCALES[Math.min(BB_SCALES.length-1,BB_SCALES.indexOf(bbScale)+1)];applyBbScale();};
 applyBbScale();
 
+/* ---------- conjunto de jugadoras con foto + ventana para elegir categoría y descriptor ---------- */
+const isPlSet=n=>!!(cfg.pgType&&cfg.pgType[n]==='players');
+function normPages(){ const a=cfg.pages.filter(x=>!isPlSet(x)), b=cfg.pages.filter(isPlSet); cfg.pages=a.concat(b); if(!a.length){ cfg.pages.unshift('Principal'); } }
+function photoFromFile(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{ try{
+      const S=192, c=document.createElement('canvas'); c.width=c.height=S; const x=c.getContext('2d');
+      const s=Math.min(im.naturalWidth,im.naturalHeight), sx=(im.naturalWidth-s)/2, sy=Math.max(0,(im.naturalHeight-s)*0.3);
+      x.drawImage(im,sx,Math.min(sy,im.naturalHeight-s),s,s,0,0,S,S); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg',0.82)); }catch(e){ rej(e); } };
+    im.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('No se pudo leer la imagen')); };
+    im.src=url;
+  });
+}
+const phStyle=p=>p&&p.photo?'style="background-image:url('+p.photo+')"':'';
+const phInit=p=>p&&p.photo?'':esc((p&&p.name?p.name.trim()[0]:'')||'');
+function plSetHTML(){
+  const k=team, r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0)), tc='var(--'+(k==='L'?'local':'rival')+')';
+  return '<div class="pset" style="--tc:'+tc+'"><div class="pset-t">'+['L','R'].map(t=>'<button data-pst="'+t+'" class="'+(t===k?'on':'')+'" style="--tc:var(--'+(t==='L'?'local':'rival')+')">'+esc(teamName(t))+'</button>').join('')+'</div>'+
+    '<div class="pset-g">'+r.map(p=>'<button class="pcard" data-pcn="'+esc(p.n)+'" title="'+esc('#'+p.n+' '+p.name)+'"><span class="ph" '+phStyle(p)+'>'+phInit(p)+'</span><span class="no">'+esc(p.n)+'</span><span class="nm">'+esc(p.name||('#'+p.n))+'</span></button>').join('')+
+    '<button class="pcard add" data-pcadd="1" title="Añadir jugadora"><b>＋</b>Jugadora</button></div>'+
+    (r.length?'':'<p class="hint">Todavía no hay jugadoras en este equipo. Pulsa «＋ Jugadora» o crea los equipos en 👥.</p>')+'</div>';
+}
+codes.addEventListener('click',e=>{
+  const t=e.target.closest('[data-pst]'); if(t){ setTeam(t.dataset.pst); renderCodes(); return; }
+  if(e.target.closest('[data-pcadd]')){ openItem('player',null,{team}); return; }
+  const c=e.target.closest('.pcard[data-pcn]'); if(!c) return;
+  if(bbEditing){ openItem('player',{team,n:c.dataset.pcn}); return; }
+  openPlayerPicker(team,c.dataset.pcn);
+});
+function tagFor(b,k,n,t){
+  const dur=video.duration||0, start=Math.max(0,t-(b.pre||0)); let end=Math.min(dur,t+(b.post||0)); if(end-start<0.5) end=Math.min(dur,start+0.5);
+  const ev=normEvent({id:uid(),btnId:b.id,label:b.label,color:b.color,pts:b.pts||0,t,start,end,team:k,player:String(n),period,video:videoName,note:'',cat:b.group,phase:PH.cur});
+  events.push(ev); sortEvents(); selectedId=ev.id; commit(); renderDetail(); return ev;
+}
+function closePlayerPicker(){ const o=document.getElementById('plPick'); if(o) o.remove(); }
+function openPlayerPicker(k,n){
+  if(!hasVideo){ toast('Abre primero un vídeo para poder etiquetar.'); return; }
+  closePlayerPicker();
+  const p=roster(k).find(x=>x.n===String(n))||{n:String(n),name:''}, t0=video.currentTime;
+  const o=document.createElement('div'); o.id='plPick'; (document.fullscreenElement||document.body).appendChild(o);
+  let ev=null;
+  const head='<div class="pk-h"><span class="pk-ph" '+phStyle(p)+'>'+(p.photo?'':esc((p.name||'#'+p.n).trim()[0]||''))+'</span><span class="pk-t"><b>#'+esc(p.n)+' '+esc(p.name||'')+'</b><small>'+esc(teamName(k))+' · '+fmt(t0)+'</small></span><button class="pk-x" id="pkX" aria-label="Cerrar">✕</button></div>';
+  function stepCat(){
+    const sets=cfg.pages.filter(s=>!isPlSet(s)).map(s=>({s,b:cfg.buttons.filter(b=>!b.hidden&&(b.page||cfg.pages[0])===s)})).filter(x=>x.b.length);
+    o.innerHTML='<div class="pk">'+head+(sets.length?sets.map(x=>(sets.length>1?'<div class="pk-s">'+esc(x.s)+'</div>':'<div class="pk-s">¿Qué ha hecho?</div>')+'<div class="pk-g">'+x.b.map(b=>'<button class="pk-c" data-b="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'">'+esc(b.label)+'</button>').join('')+'</div>').join(''):'<p class="hint">No hay categorías. Crea alguna en 🎛 Botonera.</p>')+'</div>';
+    wire();
+    o.querySelectorAll('[data-b]').forEach(x=>x.onclick=()=>{
+      const b=btnById(x.dataset.b); if(!b) return;
+      ev=tagFor(b,k,p.n,t0); flash(b.id);
+      if(cfg.descs.some(g=>g.items.length)) stepDesc(b); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
+    });
+  }
+  function stepDesc(b){
+    const gs=cfg.descs.filter(g=>g.items.length);
+    o.innerHTML='<div class="pk">'+head+'<div class="pk-s">'+esc(b.label)+' · descriptores</div>'+
+      gs.map(g=>'<div class="pk-s" style="margin-top:8px">'+esc(g.name)+(g.multi?' · varios':'')+'</div><div class="pk-d" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+g.items.map(it=>{ const on=ev.desc.some(q=>q.d===g.id&&q.i===it.id); return '<button data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+'</button>'; }).join('')+'</div>').join('')+
+      '<div class="pk-f"><button id="pkMore">＋ Otra categoría</button><button class="pri" id="pkOk">✓ Listo</button></div></div>';
+    wire();
+    o.querySelectorAll('[data-dg]').forEach(x=>x.onclick=()=>{ toggleDesc(ev,x.dataset.dg,x.dataset.di); const g=descGroup(x.dataset.dg); if(!g) return;
+      o.querySelectorAll('[data-dg="'+x.dataset.dg+'"]').forEach(y=>y.setAttribute('aria-pressed',ev.desc.some(q=>q.d===x.dataset.dg&&q.i===y.dataset.di))); });
+    o.querySelector('#pkMore').onclick=()=>{ ev=null; stepCat(); };
+    o.querySelector('#pkOk').onclick=()=>{ toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); };
+  }
+  function wire(){ o.querySelector('#pkX').onclick=closePlayerPicker; }
+  o.addEventListener('click',e=>{ if(e.target===o) closePlayerPicker(); });
+  stepCat();
+}
+
 /* ---------- editor rápido de categorías, descriptores, jugadoras y equipos ---------- */
 const PALETTE=['#E74C3C','#00B4D8','#F39C12','#2ECC71','#3498DB','#9B59B6','#E67E22','#1ABC9C','#F1C40F','#E84393','#7F8C8D','#16A085'];
 let itState=null;
@@ -4329,6 +4451,7 @@ function openItem(kind,ref,opt){
     html='<label class="f"><span>Equipo</span><select id="itTeam"><option value="L"'+(k==='L'?' selected':'')+'>'+esc(teamName('L'))+'</option><option value="R"'+(k==='R'?' selected':'')+'>'+esc(teamName('R'))+'</option></select></label>'+
       '<div class="row2"><label class="f" style="flex:0 0 90px"><span>Número</span><input id="itNum" inputmode="numeric" maxlength="3" value="'+esc(p?p.n:'')+'"></label>'+
       '<label class="f" style="flex:1 1 180px"><span>Nombre</span><input id="itName" maxlength="40" value="'+esc(p?p.name:'')+'" placeholder="p. ej. Tesson Lisa"></label></div>'+
+      '<div class="ph-row" style="margin:6px 0"><span class="ph-img" id="itPhImg" '+phStyle(p)+'>'+phInit(p)+'</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="itPhPick">📷 Foto</button><button type="button" class="btn" id="itPhDel"'+(p&&p.photo?'':' hidden')+'>Quitar foto</button></div><input type="file" id="itPhFile" accept="image/*" hidden></div>'+
       (p?'':'<details><summary class="hint" style="cursor:pointer">Añadir varias a la vez</summary><label class="f" style="margin-top:6px"><span>Una por línea: número y nombre</span><textarea id="itMany" rows="6" placeholder="1 Tesson Lisa&#10;2 Anne Sarah"></textarea></label></details>');
     $('#itDel').hidden=!p;
   } else if(kind==='team'){
@@ -4339,6 +4462,14 @@ function openItem(kind,ref,opt){
   $('#itTitle').textContent=title; body.innerHTML=html;
   const gs=$('#itGroup'); if(gs){const upd=()=>{$('#itNewG').hidden=gs.value!=='__new'; const g=descGroup(gs.value); if(g) $('#itColor').value=safeColor(g.color).slice(0,7);}; gs.onchange=upd; upd();}
   const n=$('#itNum'); if(n) n.oninput=()=>{n.value=n.value.replace(/\D/g,'');};
+  if(kind==='player'){
+    itState.photo=(ref&&(roster(ref.team).find(x=>x.n===ref.n)||{}).photo)||'';
+    const pi=$('#itPhImg'), pd=$('#itPhDel'), pf=$('#itPhFile');
+    const show=()=>{ pi.style.backgroundImage=itState.photo?'url('+itState.photo+')':''; pi.textContent=itState.photo?'':(($('#itName').value.trim()[0])||''); pd.hidden=!itState.photo; };
+    $('#itPhPick').onclick=()=>pf.click();
+    pf.onchange=async()=>{ const f=pf.files&&pf.files[0]; if(!f) return; try{ itState.photo=await photoFromFile(f); show(); }catch(e){ $('#itMsg').textContent='No se pudo usar esa foto.'; } pf.value=''; };
+    pd.onclick=()=>{ itState.photo=''; show(); };
+  }
   $('#dlgItem').showModal();
   setTimeout(()=>{const f=(kind==='player'&&!ref)?$('#itNum'):$('#itName'); if(f){f.focus(); f.select();}},30);
 }
@@ -4381,7 +4512,7 @@ function itSave(){
         cfg.rosters[ok]=roster(ok).filter(x=>x.n!==on);
         events.forEach(e=>{if(e.team===ok&&String(e.player)===on){e.team=k;e.player=num;}});
       }
-      cfg.rosters[k].push({n:num,name});
+      cfg.rosters[k].push(Object.assign({n:num,name},st.photo?{photo:st.photo}:{}));
     }
   } else if(st.kind==='team'){
     cfg.teamNames[st.ref]=name||(st.ref==='L'?'Local':'Rival'); renderTeamBar();
@@ -6152,7 +6283,7 @@ function parseRoster(txt){
 }
 ['L','R'].forEach(k=>{
   $('#ros'+k).addEventListener('change',e=>{
-    const r=parseRoster(e.target.value); cfg.rosters[k]=r.out; saveCfg();
+    const r=parseRoster(e.target.value); cfg.rosters[k]=keepPh(r.out,cfg.rosters[k]); saveCfg();
     dmsg(r.bad.length?'No se han podido leer estas líneas: '+r.bad.join(' · '):'');
     e.target.value=r.out.map(p=>p.n+(p.name?' '+p.name:'')).join('\n');
     renderDescStrip(); renderFilters(); renderList(); renderDetail(); renderPlaylists();
@@ -6697,9 +6828,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     B.querySelector('#teOk').onclick=()=>{
       const name=B.querySelector('#teN').value.trim(); if(!name){ msg(dT,'Pon un nombre al equipo.'); return; }
       const r=parseRoster(B.querySelector('#teP').value); if(r.bad&&r.bad.length){ msg(dT,'Revisa: '+r.bad.join(' · ')); return; }
-      t.name=name; t.players=r.out; if(i==null) tl.push(t); teamsSave(tl);
+      t.name=name; t.players=keepPh(r.out,t.players); if(i==null) tl.push(t); teamsSave(tl);
       /* si el partido abierto usa este equipo, se actualiza */
-      if(matchMeta){ let ch=false; ['L','R'].forEach(k=>{ if(matchMeta[k]&&matchMeta[k].id===t.id){ matchMeta[k]={id:t.id,name:t.name,players:t.players.map(p=>({n:p.n,name:p.name}))}; ch=true; } }); if(ch){ matchApply(true); saveProject(); } }
+      if(matchMeta){ let ch=false; ['L','R'].forEach(k=>{ if(matchMeta[k]&&matchMeta[k].id===t.id){ matchMeta[k]={id:t.id,name:t.name,players:t.players.map(rp)}; ch=true; } }); if(ch){ matchApply(true); saveProject(); } }
       listT();
     };
   }
@@ -6720,7 +6851,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     B.querySelector('#maOk').onclick=()=>{
       const lid=B.querySelector('#maL').value, rid=B.querySelector('#maR').value, date=B.querySelector('#maD').value;
       if(lid&&lid===rid){ msg(dM,'El local y el rival no pueden ser el mismo equipo.'); return; }
-      const snap=id=>{ const t=tl.find(x=>x.id===id); return t?{id:t.id,name:t.name,players:(t.players||[]).map(p=>({n:p.n,name:p.name}))}:null; };
+      const snap=id=>{ const t=tl.find(x=>x.id===id); return t?{id:t.id,name:t.name,players:(t.players||[]).map(rp)}:null; };
       const nm={date:date||'',L:snap(lid),R:snap(rid)};
       if(!nm.L&&!nm.R&&!nm.date){ matchMeta=null; } else { matchMeta=nm; }
       try{ localStorage.setItem('bbtag.asked.'+videoKey,'1'); }catch(e){}
@@ -6960,7 +7091,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
    ['Empezar: flujo básico en 5 pasos',['<ol><li>Abre el vídeo (📂, o desde el menú de inicio) o pega un enlace de YouTube con 🔗.</li><li>Elige equipo, cuarto y fase (ataque/defensa) arriba.</li><li>Mientras ves el partido, pulsa en la botonera la categoría y el descriptor de cada jugada: se crea un clip con ese momento.</li><li>Revisa los clips en la Biblioteca, filtra y reprodúcelos.</li><li>Analiza con Rendimiento, Quinteto, Tabla y Estadísticas, y exporta los vídeos.</li></ol><p>Todo se guarda solo en el dispositivo, asociado al archivo de vídeo. Con la nube activada (☁) se sincroniza entre ordenador e iPad.</p>']],
    ['Barra de arriba',['<ul><li><b>Nombre del partido:</b> púlsalo para elegir equipos y fecha.</li><li><b>Marcador:</b> suma los puntos de los clips etiquetados (no es el oficial).</li><li><b>Equipo:</b> a quién se asignan las acciones nuevas. Tecla 0.</li><li><b>Cuarto:</b> periodo de las acciones nuevas. Mayús+1 a 5.</li><li><b>↶ ↷:</b> deshacer y rehacer.</li><li><b>👁:</b> muestra u oculta la botonera.</li><li><b>🎛 Botonera:</b> editor de categorías, descriptores y jugadoras.</li><li><b>🎬 Producción:</b> playlists y dibujos.</li><li><b>📱/💻:</b> cambia entre modo iPad y ordenador.</li><li><b>▦ Diseño:</b> mueve, minimiza o separa los paneles.</li><li><b>👥 Equipos, 📅 Partido, 🔗 Enlace, 📹 En vivo, ☁ Nube, ⚙ Ajustes, ❓ Ayuda.</b></li></ul>']],
    ['Reproductor y línea de tiempo',['<ul><li><b>−5 / −1 / +1 / +5 s:</b> saltos de tiempo (se cambian en Ajustes).</li><li><b>Fotograma anterior/siguiente:</b> teclas coma y punto, o flechas.</li><li><b>Espacio:</b> reproducir o pausar. <b>F:</b> pantalla completa.</li><li><b>Velocidad:</b> de 0,25× a 2×, útil para ver una jugada lenta.</li><li><b>Fotogramas:</b> los fps del avance fotograma a fotograma.</li><li><b>Dibujos:</b> muestra u oculta los dibujos al reproducir.</li><li><b>＋ Tag / ☰ Clips (iPad):</b> crear un clip manual aquí y abrir la lista.</li><li><b>Barra de avance:</b> las marcas son tus clips.</li></ul><p><b>Línea de tiempo:</b> muestra los clips en el tiempo, una fila por categoría. Con Zoom (− + Ajustar) acercas o ves todo el partido. <b>+ Marcador</b> deja una marca. <b>▾ Esconder</b> la oculta para dar más sitio al vídeo.</p>']],
-   ['Botonera: cómo se etiqueta',['<ul><li><b>Categorías:</b> una acción (Tiro de 2, Pérdida, Rebote…). Al pulsarla se crea un clip. Cada una tiene color, tecla y, si quieres, puntos.</li><li><b>Descriptores</b> (tira de abajo): detalles de la acción, por ejemplo Resultado (anota/falla) o Zona. Unos grupos admiten uno solo y otros varios a la vez.</li><li><b>Jugadoras:</b> pulsa el dorsal para asignar la acción.</li><li><b>⚔ Ataque / 🛡 Defensa:</b> marca la fase de las jugadas nuevas; luego puedes filtrar por ella.</li><li><b>A− / A+:</b> tamaño de los botones.</li><li><b>✎ Editar:</b> pulsa cualquier botón para cambiar nombre, color, tamaño o borrarlo. También con clic derecho.</li><li><b>＋:</b> nueva categoría.</li><li><b>🎛 (arriba):</b> editor completo de categorías y de descriptores (grupos, colores, “varios a la vez” y teclas).</li><li><b>Abrir descriptores al pulsar una categoría:</b> se activa en Ajustes.</li></ul><p>Cada categoría tiene sus segundos “antes” y “después”: el clip empieza unos segundos antes del instante en que pulsas y acaba unos segundos después.</p>']],
+   ['Botonera: cómo se etiqueta',['<ul><li><b>Categorías:</b> una acción (Tiro de 2, Pérdida, Rebote…). Al pulsarla se crea un clip. Cada una tiene color, tecla y, si quieres, puntos.</li><li><b>Descriptores</b> (tira de abajo): detalles de la acción, por ejemplo Resultado (anota/falla) o Zona. Unos grupos admiten uno solo y otros varios a la vez.</li><li><b>Jugadoras:</b> pulsa el dorsal para asignar la acción.</li><li><b>⚔ Ataque / 🛡 Defensa:</b> marca la fase de las jugadas nuevas; luego puedes filtrar por ella.</li><li><b>A− / A+:</b> tamaño de los botones.</li><li><b>✎ Editar:</b> pulsa cualquier botón para cambiar nombre, color, tamaño o borrarlo. También con clic derecho.</li><li><b>＋:</b> nueva categoría.</li><li><b>🎛 (arriba):</b> editor completo de categorías y de descriptores (grupos, colores, “varios a la vez” y teclas).</li><li><b>Abrir descriptores al pulsar una categoría:</b> se activa en Ajustes.</li></ul><p><b>Varias botoneras (conjuntos):</b> el desplegable junto a «Categorías» cambia de conjunto (Todos, Principal, Sistemas…). En 🎛 Botonera puedes crear más con «＋ Conjunto».</p><p><b>Botonera de jugadoras con fotos:</b> en 🎛 Botonera pulsa «＋ Jugadoras». Ese conjunto muestra a cada jugadora con su cara y su nombre; elige Local o Rival arriba. Para añadir una jugadora o ponerle foto pulsa «＋ Jugadora» (o ✎ Editar y toca su tarjeta). Al pulsar una jugadora en el partido se abre una ventana: eliges la categoría y luego los descriptores, y el clip queda guardado a su nombre en el instante en que la pulsaste. «＋ Otra categoría» deja añadir más acciones a la misma jugadora sin cerrar.</p><p>Cada categoría tiene sus segundos “antes” y “después”: el clip empieza unos segundos antes del instante en que pulsas y acaba unos segundos después.</p>']],
    ['Biblioteca (lista de clips)',['<ul><li>Pulsar un clip lo reproduce. <b>Ver todos</b> reproduce los filtrados uno tras otro.</li><li><b>Orden:</b> más recientes, tiempo, nombre o tipo.</li><li><b>Buscar:</b> por nombre, etiqueta, descriptor o comentario.</li><li><b>Filtros:</b> equipo, periodo, jugadora, fase, destacados ★ y chips de categorías y descriptores.</li><li><b>Marcar varios:</b> barra para reproducir, añadir a playlist, exportar, destacar o borrar.</li><li><b>🎞 Vídeo:</b> guarda los clips filtrados como archivo de vídeo.</li><li><b>Editar clip:</b> ajusta inicio y fin, comentario, categoría, jugadora y descriptores, y dibuja sobre la imagen.</li></ul>']],
    ['Dibujar sobre el vídeo (Freeze frame)',['<p>Pausa en el instante que quieres explicar y pulsa <b>Freeze frame</b> (Mayús+F; en iPad, el lápiz ✏️). Aparece un menú con herramientas y colores. Puedes quitar la última figura (⌫) o <b>Borrar todo</b>.</p><ul><li><b>Pausa:</b> segundos que se queda congelada la imagen al reproducir el clip.</li><li><b>Sobre el vídeo (sin pausa):</b> el dibujo se superpone mientras el vídeo sigue.</li><li><b>✓ Listo:</b> guarda el dibujo. Quedan en Producción → Dibujos.</li></ul>']],
    ['Mesa de producción',['<p>Para montar un vídeo de análisis con las jugadas que quieras enseñar.</p><ul><li><b>Playlists:</b> a la izquierda los clips disponibles (con buscador y filtros); a la derecha el orden del montaje. “Añadir todos” pasa los que ves.</li><li><b>Portada:</b> diapositiva de título al principio. <b>Vídeo ext.:</b> añade otro vídeo al montaje.</li><li><b>◄ Ini / Fin ►:</b> ajusta inicio o final del clip seleccionado en pasos de 0,1, 0,5 o 1 s.</li><li><b>▶ Reproducir</b> lo ve entero; <b>🎞 Vídeo</b> lo guarda como archivo; <b>Exportar</b> lo guarda como lista.</li><li><b>Dibujos:</b> todas las congelaciones y dibujos que hiciste.</li></ul>']],
@@ -7412,7 +7543,7 @@ function openIpBe(newBtn){
   const sub=b=>'−'+(b.pre||0)+' s / +'+(b.post||0)+' s'+(b.pts?' · '+b.pts+' pt'+(b.pts>1?'s':''):'');
   const touch=()=>{ saveCfg(); };
   function add(){
-    const b={id:uid(),label:'',group:'Otros',sub:'',page:IPS.set==='*'?cfg.pages[0]:IPS.set,key:'',pre:5,post:3,pts:0,color:PALETTE[cfg.buttons.length%PALETTE.length],icon:'',size:'m',hidden:false};
+    const b={id:uid(),label:'',group:'Otros',sub:'',page:(IPS.set==='*'||isPlSet(IPS.set))?cfg.pages[0]:IPS.set,key:'',pre:5,post:3,pts:0,color:PALETTE[cfg.buttons.length%PALETTE.length],icon:'',size:'m',hidden:false};
     cfg.buttons.push(b); if(!cfg.cats.includes('Otros')) cfg.cats.push('Otros'); IPS.sel=b.id; touch(); render(true);
   }
   function render(focusName){
@@ -7421,7 +7552,7 @@ function openIpBe(newBtn){
     const sets=ipSetList();
     o.innerHTML='<div class="be-h"><button class="be-x" id="beX" aria-label="Cerrar">✕</button><b>Editar botonera</b>'+
       '<select id="beSet" aria-label="Conjunto"><option value="*"'+(IPS.set==='*'?' selected':'')+'>Todos los botones</option>'+sets.map(s=>'<option value="'+esc(s)+'"'+(IPS.set===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select>'+
-      '<button class="be-m" id="beSetNew">＋ Conjunto</button><button class="be-m" id="beSetRen"'+(IPS.set==='*'?' disabled':'')+'>✎</button><button class="be-m" id="beSetDel"'+(IPS.set==='*'||sets.length<2?' disabled':'')+'>🗑</button>'+
+      '<button class="be-m" id="beSetNew">＋ Conjunto</button><button class="be-m" id="beSetPl" title="Un conjunto con las caras y los nombres de las jugadoras">＋ Jugadoras</button><button class="be-m" id="beSetRen"'+(IPS.set==='*'?' disabled':'')+'>✎</button><button class="be-m" id="beSetDel"'+(IPS.set==='*'||(!isPlSet(IPS.set)&&sets.filter(x=>!isPlSet(x)).length<2)?' disabled':'')+'>🗑</button>'+
       '<span class="sp"></span><button class="be-m" id="beDesc" title="Editar los descriptores (resultado, defensa…)">Descriptores</button><button class="be-done" id="beDone">Hecho</button></div>'+
       '<div class="be-b"><div class="be-l" id="beList">'+list.map(x=>'<div class="be-row'+(x.id===IPS.sel?' sel':'')+'" data-id="'+esc(x.id)+'"><i style="background:'+safeColor(x.color)+'"></i><span class="be-t"><b>'+esc(x.label||'Sin nombre')+'</b><small>'+esc(sub(x))+'</small></span><span class="be-g" data-grip title="Arrastra para ordenar">≡</span></div>').join('')+
         '<button class="be-new" id="beNew">＋ Nueva categoría</button></div>'+
@@ -7431,18 +7562,19 @@ function openIpBe(newBtn){
         '<div class="be-s">Segundos antes del momento</div><div class="be-sl"><input type="range" id="bePre" min="0" max="30" value="'+(b.pre||0)+'"><input type="number" id="bePreN" min="0" max="120" value="'+(b.pre||0)+'"><span>s</span></div>'+
         '<div class="be-s">Segundos después</div><div class="be-sl"><input type="range" id="bePost" min="0" max="30" value="'+(b.post||0)+'"><input type="number" id="bePostN" min="0" max="120" value="'+(b.post||0)+'"><span>s</span></div>'+
         '<div class="be-two"><label>Puntos que suma<select id="bePts">'+[0,1,2,3].map(n=>'<option value="'+n+'"'+((b.pts||0)===n?' selected':'')+'>'+n+'</option>').join('')+'</select></label>'+
-        '<label>Conjunto<select id="beSetOf">'+sets.map(s=>'<option value="'+esc(s)+'"'+(ipSetOf(b)===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label>'+
+        '<label>Conjunto<select id="beSetOf">'+sets.filter(s=>!isPlSet(s)).map(s=>'<option value="'+esc(s)+'"'+(ipSetOf(b)===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select></label>'+
         '<label>Tecla (teclado)<input id="beKey" maxlength="1" value="'+esc(b.key||'')+'"></label></div>'+
         '<div class="be-act"><button class="be-save" id="beSave">Guardar</button><button class="be-del" id="beDel">Borrar categoría</button></div>'+
         '<div class="be-nav"><button id="bePrev"'+(i<=0?' disabled':'')+'>‹ Anterior</button><button id="beNext"'+(i>=list.length-1?' disabled':'')+'>Siguiente ›</button></div>'
-        :'<p class="hint" style="padding:24px">No hay categorías en este conjunto. Pulsa «＋ Nueva categoría».</p>')+'</div></div>';
+        :'<p class="hint" style="padding:24px">'+(isPlSet(IPS.set)?'Este conjunto muestra a las jugadoras con su foto. Al pulsar una, eliges la categoría y los descriptores. Para añadir jugadoras o ponerles foto, usa «✎ Editar» en la botonera.':'No hay categorías en este conjunto. Pulsa «＋ Nueva categoría».')+'</p>')+'</div></div>';
     const g=s=>o.querySelector(s);
     g('#beX').onclick=g('#beDone').onclick=closeIpBe;
     g('#beDesc').onclick=()=>{ closeIpBe(); openIpDe(); };
     g('#beSet').onchange=e=>{IPS.set=e.target.value;lsSet('bbtag.ipset',IPS.set);IPS.sel=null;render();};
     g('#beSetNew').onclick=()=>{ const n=(prompt('Nombre del conjunto (p. ej. Ataque, Defensa)')||'').trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
-    g('#beSetRen').onclick=()=>{ const old=IPS.set, n=(prompt('Nuevo nombre del conjunto',old)||'').trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
-    g('#beSetDel').onclick=()=>{ const old=IPS.set; if(!confirm('¿Borrar el conjunto «'+old+'»? Sus botones pasan al primer conjunto.')) return; cfg.pages=cfg.pages.filter(x=>x!==old); cfg.buttons.forEach(x=>{if(x.page===old) x.page=cfg.pages[0];}); IPS.set='*'; lsSet('bbtag.ipset','*'); touch(); render(); };
+    g('#beSetPl').onclick=()=>{ const n=(prompt('Nombre del conjunto de jugadoras','Jugadoras')||'').trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); cfg.pgType=cfg.pgType||{}; cfg.pgType[n]='players'; normPages(); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
+    g('#beSetRen').onclick=()=>{ const old=IPS.set, n=(prompt('Nuevo nombre del conjunto',old)||'').trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; if(cfg.pgType&&cfg.pgType[old]){ cfg.pgType[n]=cfg.pgType[old]; delete cfg.pgType[old]; } cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); };
+    g('#beSetDel').onclick=()=>{ const old=IPS.set; if(!confirm(isPlSet(old)?'¿Borrar el conjunto de jugadoras «'+old+'»? Las jugadoras no se borran.':'¿Borrar el conjunto «'+old+'»? Sus botones pasan al primer conjunto.')) return; cfg.pages=cfg.pages.filter(x=>x!==old); if(cfg.pgType) delete cfg.pgType[old]; normPages(); cfg.buttons.forEach(x=>{if(x.page===old) x.page=cfg.pages[0];}); IPS.set='*'; lsSet('bbtag.ipset','*'); touch(); render(); };
     g('#beNew').onclick=add;
     o.querySelectorAll('.be-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('[data-grip]')) return; IPS.sel=r.dataset.id; render(); }));
     /* arrastrar para ordenar */
