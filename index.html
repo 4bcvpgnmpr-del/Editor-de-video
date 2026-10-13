@@ -5692,7 +5692,7 @@ async function fxRun(list,o,prog){
     try{ const r=await VideoEncoder.isConfigSupported(cfg); if(r&&r.supported){ecfg=cfg;mcodec=c[1];break;} }catch(e){}
   }
   if(!ecfg) throw new Error('Este navegador no codifica H.264 (el único formato que abren todos los reproductores).');
-  const useAudio=!!(at&&/^mp4a/.test(at.codec));
+  const useAudio=!window.__expMute()&&!!(at&&/^mp4a/.test(at.codec));
   const asc=useAudio?fxAsc(mp,at.id):undefined;
   const mainSrc={file,mp,info,vt,at,dcfg,useAudio};
   const srcCache=new Map();
@@ -5809,7 +5809,7 @@ async function fxCopy(list,o,prog,srcFile){
   if(!cd) throw new Error('Códec no copiable ('+vt.codec+').');
   const dsc=(cd==='avc'||cd==='hevc')?fxDesc(mp,vt.id):undefined;
   if((cd==='avc'||cd==='hevc')&&!dsc) throw new Error('Sin configuración del códec.');
-  const useAudio=!!(at&&/^mp4a/.test(at.codec)); const asc=useAudio?fxAsc(mp,at.id):undefined;
+  const useAudio=!window.__expMute()&&!!(at&&/^mp4a/.test(at.codec)); const asc=useAudio?fxAsc(mp,at.id):undefined;
   if(useAudio&&!asc) throw new Error('Audio no copiable.');
   const fps=Math.max(10,Math.min(60,Math.round(vt.nb_samples/(vt.duration/vt.timescale))||30));
   const target=new Mp4Muxer.ArrayBufferTarget();
@@ -5886,7 +5886,7 @@ async function expRecord(list,o,prog){
   if(o.draw) for(const tl of teles){ imgs.set(tl.id,await expSvgImg(tl,ow,oh)); }
   const saved={paused:video.paused,t:video.currentTime,rate:video.playbackRate,muted:video.muted,vol:video.volume};
   stopClip(false); endFreeze(false); video.pause(); video.muted=false; video.volume=1; video.playbackRate=1;
-  const au=expAudio(), stream=cv.captureStream(30);
+  const au=window.__expMute()?null:expAudio(), stream=cv.captureStream(30);
   if(au) au.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
   const chunks=[]; let rec;
   try{ rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:o.bps}); }catch(e){ rec=new MediaRecorder(stream); }
@@ -6042,13 +6042,16 @@ function efDb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('bbtag-f
 (async()=>{ if(!efHas()) return; try{ const db=await efDb(); const h=await new Promise(r=>{ const q=db.transaction('h').objectStore('h').get('dir'); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); if(h){ EXPF.dir=h; EXPF.name=h.name; } }catch(e){} })();
 async function efPick(){ const h=await window.showDirectoryPicker({mode:'readwrite',id:'bbtag-export'}); EXPF.dir=h; EXPF.name=h.name; try{ const db=await efDb(); db.transaction('h','readwrite').objectStore('h').put(h,'dir'); }catch(e){} return h; }
 async function efPerm(){ if(!EXPF.use||!EXPF.dir) return false; try{ let p=await EXPF.dir.queryPermission({mode:'readwrite'}); if(p!=='granted') p=await EXPF.dir.requestPermission({mode:'readwrite'}); return p==='granted'; }catch(e){ return false; } }
+window.__expMute=()=>lsGet('bbtag.expMute')==='1';
 function efRowHtml(){
-  if(!efHas()) return '';
-  return '<div class="ef-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px">'+
+  const mute='<div class="ef-row" style="display:flex;align-items:center;gap:8px;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><label style="display:flex;gap:8px;align-items:center;flex:1"><input type="checkbox" id="exMute"'+(window.__expMute()?' checked':'')+'> 🔇 Exportar sin sonido <span style="font-size:12.5px;color:var(--muted)">(si el audio sale desfasado)</span></label></div>';
+  if(!efHas()) return mute;
+  return mute+'<div class="ef-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px">'+
     '<label style="display:flex;gap:8px;align-items:center;flex:1;min-width:150px"><input type="checkbox" id="efUse"'+(EXPF.use?' checked':'')+'> Guardar en una carpeta</label>'+
     '<span id="efName" style="font-size:12.5px;color:var(--muted)">'+(EXPF.dir?esc(EXPF.name):'sin elegir')+'</span><button class="btn" id="efPick" type="button">Elegir carpeta…</button></div>';
 }
 function efBind(root){
+  { const m=root.querySelector('#exMute'); if(m) m.onchange=()=>lsSet('bbtag.expMute',m.checked?'1':'0'); }
   const u=root.querySelector('#efUse'), p=root.querySelector('#efPick'), n=root.querySelector('#efName'); if(!u||!p) return;
   u.onchange=async()=>{ EXPF.use=u.checked; lsSet('bbtag.exfolder',u.checked?'1':'0'); if(u.checked&&!EXPF.dir) p.click(); };
   p.onclick=async()=>{ try{ await efPick(); n.textContent=EXPF.name; u.checked=true; EXPF.use=true; lsSet('bbtag.exfolder','1'); }catch(e){} };
