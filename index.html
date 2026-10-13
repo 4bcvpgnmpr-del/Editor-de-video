@@ -6726,7 +6726,7 @@ const PANELS={
 const IPM=(()=>{ let m=lsGet('bbtag.mode')||'auto'; const ua=navigator.userAgent||''; const auto=/iPad/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
   return {get mode(){return m;},set(v){m=v;lsSet('bbtag.mode',v);},get on(){return m==='ipad'||(m==='auto'&&auto);},auto}; })();
 if(IPM.auto){ if(IPM.mode!=='auto') IPM.set('auto'); document.body.classList.add('realIpad'); }
-document.body.classList.toggle('ipad',IPM.on); document.documentElement.classList.toggle('ipad',IPM.on); document.body.classList.toggle('descFloat',lsGet('bbtag.descFloat')!=='0');
+document.body.classList.toggle('ipad',IPM.on); document.documentElement.classList.toggle('ipad',IPM.on); document.body.classList.toggle('descFloat',lsGet('bbtag.descFloat')==='1');
 const narrowMQ=window.matchMedia('(max-width:900px)');
 const isNarrow=()=>narrowMQ.matches&&!IPM.on;
 let zTop=30;
@@ -7432,7 +7432,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 03:10 · botonera: descriptores flotantes y jugadoras';
+  const BUILD='13/10/2026 · 03:40 · botonera: jugadoras abajo vuelven';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7468,7 +7468,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
      '</div>'+
      '<div class="st-h">Botonera</div><div class="st-g">'+
        row('Tamaño de los botones','<span style="flex:none;display:flex;gap:6px;align-items:center">'+btn('stBbS','A−')+'<b id="stBbV" style="min-width:42px;text-align:center">'+Math.round(bbScale*100)+'%</b>'+btn('stBbB','A+')+'</span>')+
-       row('Descriptores flotantes (como en pantalla completa)',sw('stDf',lsGet('bbtag.descFloat')!=='0'),'Ganas espacio: se abren con el botón de etiqueta de la botonera')+
+       row('Descriptores flotantes (como en pantalla completa)',sw('stDf',lsGet('bbtag.descFloat')==='1'),'Opcional: ganas espacio; se abren con el botón de la etiqueta 🏷 de la botonera')+
        row('Abrir descriptores al pulsar una categoría',sw('stAd',adOn),'Pensado para iPad y pantalla grande')+
        row('Mesa de producción en ventana aparte',sw('stPop',lsGet('bbtag.popProd')!=='0'),'El editor del clip siempre se abre en el reproductor')+
        row('Al etiquetar, parar el vídeo','<select id="stPT"><option value="desc"'+(window.__pauseTag&&window.__pauseTag.get()==='desc'?' selected':'')+'>Si tiene descriptores</option><option value="never"'+(window.__pauseTag&&window.__pauseTag.get()==='never'?' selected':'')+'>Nunca</option></select>','Si la categoría no tiene descriptores, el vídeo sigue. Al cerrar los descriptores continúa solo')+
