@@ -6178,7 +6178,7 @@ $('#bCsv').onclick=()=>{
 };
 $('#bJson').onclick=()=>{
   if(!hasVideo){toast('Abre un vídeo para guardar su proyecto.');return;}
-  saveFile('proyecto-'+baseName()+'.json',JSON.stringify({app:'scouting-baloncesto',version:4,videoName,videoKey,exportedAt:new Date().toISOString(),teamNames:cfg.teamNames,rosters:cfg.rosters,pages:cfg.pages,cats:cfg.cats,descs:cfg.descs,buttons:cfg.buttons,events,markers,stints,teles,playlists,covers,externals},null,2));
+  saveFile('proyecto-'+baseName()+'.scout.json',JSON.stringify({app:'scouting-baloncesto',format:'scoutflow-video-project',version:4,meta:matchMeta,videoName,videoKey,exportedAt:new Date().toISOString(),teamNames:cfg.teamNames,rosters:cfg.rosters,pages:cfg.pages,cats:cfg.cats,descs:cfg.descs,buttons:cfg.buttons,events,markers,stints,teles,playlists,covers,externals},null,2));
 };
 $('#bLoad').onclick=()=>$('#fileProject').click();
 $('#fileProject').onchange=async e=>{
@@ -6199,6 +6199,7 @@ $('#fileProject').onchange=async e=>{
     playlists=(Array.isArray(o.playlists)?o.playlists:[]).map(p=>normPl({id:uid(),name:p&&p.name,folder:p&&p.folder,items:((p&&p.items)||[]).map(i=>idMap[i]||(isCoverId(i)&&(Array.isArray(o.covers)?o.covers:[]).some(c=>c&&'c:'+c.id===i)?i:(isExtId(i)&&(Array.isArray(o.externals)?o.externals:[]).some(c=>c&&'x:'+c.id===i)?i:null))).filter(Boolean)}));
     externals=(Array.isArray(o.externals)?o.externals:[]).map(normExt);
     covers=(Array.isArray(o.covers)?o.covers:[]).map(normCover);
+    if(o.meta&&typeof o.meta==='object'){ matchMeta=o.meta; try{ matchApply(false); }catch(_){} }
     if(teleEd) closeTele(true);
     plCur=null; sortEvents(); selectedId=null; saveCfg(); saveProject(); teleKey=''; renderAll(); histInit();
     toast('Proyecto cargado: '+events.length+' clips, '+teles.length+' dibujos, '+playlists.length+' playlists.',{label:'Deshacer',fn:()=>{events=prev.events;stints=prev.stints;markers=prev.markers;teles=prev.teles;playlists=prev.playlists;covers=prev.covers;externals=prev.externals;cfg=prev.cfg;saveCfg();saveProject();teleKey='';renderAll();histInit();}});
