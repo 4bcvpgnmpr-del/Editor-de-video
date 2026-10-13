@@ -5687,8 +5687,9 @@ async function fxRun(list,o,prog){
   const dcfg={codec:vcodec,codedWidth:sw,codedHeight:sh}; const dsc=/^avc1/.test(vcodec)?fxDesc(mp,vt.id):undefined; if(dsc) dcfg.description=dsc;
   if(!(await VideoDecoder.isConfigSupported(dcfg)).supported) throw new Error('El dispositivo no puede decodificar este vídeo.');
   let ecfg=null, mcodec='';
-  for(const c of [['avc1.420028','avc'],['avc1.42002a','avc'],['avc1.4d0028','avc'],['avc1.640028','avc'],['avc1.42001f','avc']]){
-    const cfg={codec:c[0],width:ow,height:oh,bitrate:o.bps,framerate:fps,latencyMode:'realtime'}; if(c[1]==='avc') cfg.avc={format:'avc'};
+  const prof=o.pro?[['avc1.64002a','avc'],['avc1.640028','avc'],['avc1.4d002a','avc'],['avc1.4d0028','avc'],['avc1.420028','avc']]:[['avc1.420028','avc'],['avc1.42002a','avc'],['avc1.4d0028','avc'],['avc1.640028','avc'],['avc1.42001f','avc']];
+  for(const c of prof){
+    const cfg={codec:c[0],width:ow,height:oh,bitrate:o.bps,framerate:fps,latencyMode:o.pro?'quality':'realtime'}; if(o.pro) cfg.bitrateMode='variable'; if(c[1]==='avc') cfg.avc={format:'avc'};
     try{ const r=await VideoEncoder.isConfigSupported(cfg); if(r&&r.supported){ecfg=cfg;mcodec=c[1];break;} }catch(e){}
   }
   if(!ecfg) throw new Error('Este navegador no codifica H.264 (el único formato que abren todos los reproductores).');
@@ -5996,14 +5997,14 @@ function openExport(list,defName){
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
     '<label style="display:block;margin:10px 0 3px;font-weight:600">Calidad</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
+    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn primary" id="exGo">Empezar</button></div>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
   d.querySelector('#exGo').onclick=()=>{
-    const q=+d.querySelector('#exQ').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:Math.round(q*16/9),bps:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
+    const q=+d.querySelector('#exQ').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
     try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(e){}
     runExport(list,defName,d.querySelector('#exMode').value,o);
@@ -6605,7 +6606,7 @@ function openIpExport(list,defName){
     const chosen=list.filter(e=>st.sel.has(e.id));
     el.innerHTML='<div class="ex-h"><button class="ib" id="exX">✕</button><b>Exportar vídeo</b><span>'+chosen.length+'/'+list.length+' clips</span></div>'+
     '<div class="ex-b"><h4>Modo</h4><div class="ex-modes"><button data-m="each" aria-pressed="'+(st.mode==='each')+'"><b>Clips sueltos</b><small>Un archivo por clip</small></button><button data-m="one" aria-pressed="'+(st.mode==='one')+'"><b>Secuencia</b><small>Todos en un solo vídeo</small></button></div>'+
-    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Calidad</span><select id="exQ2"><option value="540">540p</option><option value="720">720p</option><option value="1080">1080p</option><option value="0">Original (sin recodificar)</option></select></label></div>'+efRowHtml()+
+    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Calidad</span><select id="exQ2"><option value="540">540p</option><option value="720">720p</option><option value="1080">1080p</option><option value="1088">⭐ 1080p PRO (16 Mbps)</option><option value="0">Original (sin recodificar)</option></select></label></div>'+efRowHtml()+
     '<h4>Filtrar por categoría</h4><div class="ex-chips"><button data-c="" aria-pressed="'+(st.cat==='')+'">Todas</button>'+cats.map(c=>'<button data-c="'+esc(c)+'" aria-pressed="'+(st.cat===c)+'">'+esc(c)+'</button>').join('')+'</div>'+
     '<h4>Elegir clips <span class="ex-all"><a id="exAll">Todos</a> · <a id="exNone">Ninguno</a></span></h4>'+
     vis.map(e=>'<div class="ex-row" data-id="'+e.id+'"><span class="ex-ck" aria-pressed="'+st.sel.has(e.id)+'"></span><i style="background:'+info(e).color+'"></i><div><b>'+esc(evName(e))+'</b><small>'+fmt(e.start)+' – '+fmt(e.end)+'</small></div><button class="ib" data-v="'+e.id+'" aria-label="Ver">▶</button></div>').join('')+'</div>'+
@@ -6625,7 +6626,7 @@ function openIpExport(list,defName){
     if((b=t.closest('.ex-row'))){ const id=b.dataset.id; st.sel.has(id)?st.sel.delete(id):st.sel.add(id); draw(); return; }
     if(t.closest('#exGo2')){
       const chosen=list.filter(x=>st.sel.has(x.id)); if(!chosen.length) return;
-      const q=+el.querySelector('#exQ2').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:Math.round(q*16/9),bps:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
+      const q=+el.querySelector('#exQ2').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
       efPerm().then(ok=>{EXPF.ok=ok;}); el.remove();
       try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(er){}
       runExport(chosen,defName,chosen.length>1?st.mode:'one',o);
@@ -7516,6 +7517,65 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   video.addEventListener('loadedmetadata',()=>setTimeout(add,200));
   new MutationObserver(()=>render()).observe(document.getElementById('videoName'),{childList:true,characterData:true,subtree:true});
   render();
+})();
+
+/* ===== Exportar el montaje para editores profesionales (EDL + XML) ===== */
+(function(){
+  const host=document.getElementById('plExp'); if(!host) return;
+  const xe=t=>String(t).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
+  const tc=(f,fps)=>{ f=Math.max(0,Math.round(f)); const ff=f%fps, s=Math.floor(f/fps); const pad=n=>String(n).padStart(2,'0'); return pad(Math.floor(s/3600))+':'+pad(Math.floor(s/60)%60)+':'+pad(s%60)+':'+pad(ff); };
+  function gather(){
+    const p=curPl(); if(!p) return null; const out=[];
+    p.items.forEach(id=>{
+      if(isCoverId(id)) return;
+      if(isExtId(id)){ const x=extOf(id); if(x) out.push({name:x.name,file:x.fname,from:x.from,to:x.to,src:x.src||''}); return; }
+      const e=events.find(v=>v.id===id); if(!e) return;
+      out.push({name:[evName(e),e.player?playerLabel(e.team,e.player):'',descText(e)].filter(Boolean).join(' · '),file:videoName,from:e.start,to:e.end,src:'',dur:video.duration||0});
+    });
+    return {p,out};
+  }
+  function buildEdl(g,fps){
+    let rec=fps*3600, n=0, L=['TITLE: '+g.p.name.replace(/[\r\n]/g,' '),'FCM: NON-DROP FRAME',''];
+    g.out.forEach(c=>{ n++; const a=c.from*fps, b=c.to*fps, len=Math.max(1,Math.round(b-a));
+      L.push(String(n).padStart(3,'0')+'  AX       AA/V  C        '+tc(a,fps)+' '+tc(Math.round(a)+len,fps)+' '+tc(rec,fps)+' '+tc(rec+len,fps));
+      L.push('* FROM CLIP NAME: '+c.file); L.push('* SOURCE FILE: '+c.file); L.push('* COMMENT: '+c.name+(c.src?' ('+c.src+')':'')); L.push(''); rec+=len; });
+    return L.join('\r\n');
+  }
+  function buildXml(g,fps){
+    const rate='<rate><timebase>'+fps+'</timebase><ntsc>FALSE</ntsc></rate>';
+    const files={}; let fn=0, rec=0;
+    const items=g.out.map((c,i)=>{ const a=Math.round(c.from*fps), b=Math.max(a+1,Math.round(c.to*fps)), len=b-a; const tot=Math.round((c.dur||c.to+60)*fps);
+      let fx; if(files[c.file]) fx='<file id="'+files[c.file]+'"/>'; else { const id='file-'+(++fn); files[c.file]=id; fx='<file id="'+id+'"><name>'+xe(c.file)+'</name><pathurl>'+xe(c.file)+'</pathurl>'+rate+'<duration>'+tot+'</duration><media><video><samplecharacteristics>'+rate+'</samplecharacteristics></video><audio><channelcount>2</channelcount></audio></media></file>'; }
+      const o={a,b,len,start:rec,end:rec+len,name:c.name,fx,tot,i}; rec+=len; return o; });
+    const clip=(o,k)=>'<clipitem id="'+k+'-'+o.i+'"><name>'+xe(o.name)+'</name><duration>'+o.tot+'</duration>'+rate+'<start>'+o.start+'</start><end>'+o.end+'</end><in>'+o.a+'</in><out>'+o.b+'</out>'+o.fx.replace(/<file id="([^"]+)"><name>[\s\S]*<\/file>/,(m)=>m)+'<comments><mastercomment1>'+xe(o.name)+'</mastercomment1></comments></clipitem>';
+    // el bloque <file> completo solo va en el primer uso: el de audio referencia por id
+    const aud=o=>{ const id=(o.fx.match(/id="([^"]+)"/)||[])[1]; return clip(Object.assign({},o,{fx:'<file id="'+id+'"/>'}),'a'); };
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4"><sequence id="seq-1"><name>'+xe(g.p.name)+'</name><duration>'+rec+'</duration>'+rate+
+      '<media><video><format><samplecharacteristics>'+rate+'<width>1920</width><height>1080</height><pixelaspectratio>square</pixelaspectratio></samplecharacteristics></format><track>'+items.map(o=>clip(o,'v')).join('')+'</track></video>'+
+      '<audio><numOutputChannels>2</numOutputChannels><track>'+items.map(aud).join('')+'</track></audio></media></sequence></xmeml>';
+  }
+  function openDlg(){
+    const g=gather(); if(!g||!g.out.length){ toast('Elige un montaje con clips.'); return; }
+    const files=[...new Set(g.out.map(c=>c.file))];
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Para editor profesional</h3><div id="pfB"></div>');
+    d.firstElementChild.style.width='min(560px,100%)';
+    const B=d.querySelector('#pfB'), sel='width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);margin:4px 0 10px';
+    B.innerHTML='<p class="hint" style="margin:0 0 10px">Genera la lista de cortes de «'+esc(g.p.name)+'» ('+g.out.length+' clips, sin portadas) para abrirla en Premiere Pro, DaVinci Resolve o Final Cut con tus vídeos <b>originales</b>, sin perder calidad y con tiempos al fotograma.</p>'+
+      '<label>Fotogramas por segundo del vídeo<select id="pfF" style="'+sel+'"><option>25</option><option>24</option><option>30</option><option>50</option><option>60</option></select></label>'+
+      '<label>Formato<select id="pfT" style="'+sel+'"><option value="both">EDL + XML (los dos)</option><option value="edl">EDL (CMX 3600)</option><option value="xml">XML (Final Cut 7 / Premiere / DaVinci)</option></select></label>'+
+      '<p class="hint" style="margin:0 0 10px">Archivos que debes tener a mano en el editor: <b>'+esc(files.join(', '))+'</b></p>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="pfNo">Cancelar</button><button class="btn primary" id="pfGo">Descargar</button></div>';
+    B.querySelector('#pfNo').onclick=expClose;
+    B.querySelector('#pfGo').onclick=()=>{
+      const fps=+B.querySelector('#pfF').value, t=B.querySelector('#pfT').value, nm=g.p.name.replace(/[^\w\-]+/g,'_')||'montaje', doc=d.ownerDocument;
+      if(t!=='xml') saveFile(nm+'.edl',buildEdl(g,fps),doc);
+      if(t!=='edl') setTimeout(()=>saveFile(nm+'.xml',buildXml(g,fps),doc),t==='both'?400:0);
+      expClose(); toast('Listo. En el editor, importa el archivo y enlaza los vídeos originales si te los pide.');
+    };
+  }
+  const b=document.createElement('button'); b.className='btn'; b.id='plPro'; b.title='Exportar la lista de cortes (EDL/XML) para Premiere, DaVinci o Final Cut'; b.textContent='🎞 Para editor (EDL/XML)';
+  host.after(b); b.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; openDlg(); };
+  window.__proEdl=(fps)=>{ const g=gather(); return g?{edl:buildEdl(g,fps),xml:buildXml(g,fps)}:null; };
 })();
 
 /* ===== esconder línea de tiempo y bloque de análisis (ordenador) ===== */
