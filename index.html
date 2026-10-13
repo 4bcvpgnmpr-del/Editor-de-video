@@ -5392,6 +5392,7 @@ function openExtEditor(extId,addToPl){
     '<video id="exVid" controls playsinline style="width:100%;max-height:260px;background:#000;border-radius:8px"></video>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><label style="font-size:12.5px">Inicio (s)<input type="number" id="exFrom" min="0" step="0.1" value="'+W.from+'" style="'+inp+'"></label><label style="font-size:12.5px">Fin (s)<input type="number" id="exTo" min="0" step="0.1" value="'+W.to+'" style="'+inp+'"></label>'+
     '<button class="mini" id="exSetF">Inicio = posición actual</button><button class="mini" id="exSetT">Fin = posición actual</button></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:12.5px;color:var(--muted)">Inicio</span>'+[-1,-0.1,0.1,1].map(n=>'<button class="mini" data-nf="'+n+'">'+(n>0?'+':'')+n+'</button>').join('')+'<span style="font-size:12.5px;color:var(--muted);margin-left:10px">Fin</span>'+[-1,-0.1,0.1,1].map(n=>'<button class="mini" data-nt="'+n+'">'+(n>0?'+':'')+n+'</button>').join('')+'<button class="mini primary" id="exPlay" style="margin-left:auto">▶ Ver el tramo</button></div>'+
     '<label style="font-size:12.5px;display:block;margin-top:8px">Nombre<input id="exNm" maxlength="60" value="'+esc(W.name)+'" style="'+inp+'"></label>'+
     '<input type="file" id="exFile" accept="video/*" hidden>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" id="exCancel">Cancelar</button><button class="btn primary" id="exSave">Guardar</button></div>');
@@ -5401,6 +5402,10 @@ function openExtEditor(extId,addToPl){
   g('#exPick').onclick=()=>g('#exFile').click();
   g('#exFile').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; if(!ex||!(+g('#exTo').value>0)){ setFile(f,'new'); if(g('#exNm').value.indexOf('Vídeo externo')===0) g('#exNm').value=f.name.replace(/\.[^.]+$/,'').slice(0,60); } else setFile(f,true); };
   g('#exSetF').onclick=()=>{g('#exFrom').value=Math.round(vid.currentTime*10)/10;};
+  const nud=(sel,n)=>{ const el=g(sel); el.value=Math.max(0,Math.round(((+el.value||0)+n)*10)/10); try{ vid.currentTime=+el.value; }catch(er){} };
+  d.querySelectorAll('[data-nf]').forEach(b=>b.onclick=()=>nud('#exFrom',+b.dataset.nf));
+  d.querySelectorAll('[data-nt]').forEach(b=>b.onclick=()=>nud('#exTo',+b.dataset.nt));
+  g('#exPlay').onclick=()=>{ const f=+g('#exFrom').value||0, t=+g('#exTo').value||0; try{ vid.currentTime=f; vid.play(); const chk=()=>{ if(vid.paused||(t>f&&vid.currentTime>=t)){ if(!vid.paused) vid.pause(); vid.removeEventListener('timeupdate',chk); } }; vid.addEventListener('timeupdate',chk); }catch(er){} };
   g('#exSetT').onclick=()=>{g('#exTo').value=Math.round(vid.currentTime*10)/10;};
   const close=()=>{ try{vid.pause();}catch(e){} if(url) URL.revokeObjectURL(url); expClose(); };
   g('#exCancel').onclick=close;
@@ -8302,7 +8307,7 @@ function renderPlaylists(){
     const meta=[fmt(e.t),e.period,teamName(e.team),playerLabel(e.team,e.player),descText(e)].concat(e.tags.map(t=>'#'+t)).filter(Boolean).join(' · ');
     return '<li class="prow'+(playing?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(inf.color)+'" title="'+esc(evName(e)+' — '+meta)+'">'+
       '<span class="rn">'+(i+1)+'</span><span class="rt"><b>'+esc(evName(e))+'</b><span class="rm">'+esc(meta)+'</span></span>'+
-      '<span class="ra"><button data-act="up" title="Subir" aria-label="Subir">▲</button><button data-act="dn" title="Bajar" aria-label="Bajar">▼</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="rm" title="Quitar de la playlist" aria-label="Quitar de la playlist">×</button></span></li>';
+      '<span class="ra"><button data-act="up" title="Subir" aria-label="Subir">▲</button><button data-act="dn" title="Bajar" aria-label="Bajar">▼</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="edit" title="Abrir el editor del clip (ajustar inicio y fin)" aria-label="Editar clip">✎</button><button data-act="rm" title="Quitar de la playlist" aria-label="Quitar de la playlist">×</button></span></li>';
   }).join('');
   updateNudge();
   /* clips disponibles, con sus filtros */
@@ -8400,11 +8405,15 @@ $('#plList').addEventListener('click',e=>{
     if(a==='up'&&i>0){[p.items[i-1],p.items[i]]=[p.items[i],p.items[i-1]];commit();return;}
     if(a==='dn'&&i<p.items.length-1){[p.items[i+1],p.items[i]]=[p.items[i],p.items[i+1]];commit();return;}
     if(a==='play'){selectEv(id);playClip(id);return;}
+    if(a==='edit'){ stopClip(true); selectEv(id); openClipEditor(id); return; }
     return;
   }
   selectEv(id); updateNudge();
 });
-$('#plList').addEventListener('dblclick',e=>{const li=e.target.closest('.prow'); if(li&&!isCoverId(li.dataset.id)&&!isExtId(li.dataset.id)) playClip(li.dataset.id);});
+$('#plList').addEventListener('dblclick',e=>{ const li=e.target.closest('.prow'); if(!li||e.target.closest('[data-act]')) return; const id=li.dataset.id;
+  if(isCoverId(id)){ DLGDOC=e.currentTarget.ownerDocument; openCoverEditor(id.slice(2),false); return; }
+  if(isExtId(id)){ DLGDOC=e.currentTarget.ownerDocument; openExtEditor(id.slice(2),false); return; }
+  stopClip(true); selectEv(id); openClipEditor(id); });
 $('#plExtV').onclick=e=>{ if(!curPl()){toast('Primero crea una playlist con «Nueva».');return;} DLGDOC=e.currentTarget.ownerDocument; openExtEditor(null,true); };
 $('#plCover').onclick=e=>{ if(!curPl()){toast('Primero crea una playlist con «Nueva».');return;} DLGDOC=e.currentTarget.ownerDocument; openCoverEditor(null,true); };
 function updateNudge(){
