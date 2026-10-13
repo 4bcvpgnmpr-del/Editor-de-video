@@ -6084,6 +6084,11 @@ async function ffLoad(){
 }
 async function ffOverlayPng(tl,W,H){
   const im=await expSvgImg(tl,W,H); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); if(im) x.drawImage(im,0,0,W,H);
+  tl.items.forEach(sh=>{ if(sh.type!=='lens') return; x.beginPath(); x.arc(sh.cx*W,sh.cy*H,sh.r*W,0,Math.PI*2); x.strokeStyle=safeColor(sh.color); x.lineWidth=Math.max(2,(sh.sw||4)*W/1000*1.4); x.stroke(); });
+  return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
+}
+function ffMaskPng(d){
+  const c=document.createElement('canvas'); c.width=d; c.height=d; const x=c.getContext('2d'); x.fillStyle='#000'; x.fillRect(0,0,d,d); x.fillStyle='#fff'; x.beginPath(); x.arc(d/2,d/2,d/2,0,Math.PI*2); x.fill();
   return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
 }
 function ffTitlePng(text,W,H){
@@ -6123,10 +6128,20 @@ async function ffRun(list,o,prog){
         /* dibujos de este clip: "sobre el vídeo" (con su tiempo) y "pausa" (imagen congelada) */
         const ovT=(o.draw&&!e.ext)?teles.filter(x=>x.mode==='overlay'&&x.t<to&&x.t+x.hold>from):[];
         const fzT=(o.draw&&!e.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=from&&x.t<to).sort((a,b)=>a.t-b.t):[];
-        const png={}; for(const tl of ovT.concat(fzT)){ png[tl.id]='o'+i+'_'+tl.id+'.png'; await ff.writeFile(png[tl.id],await ffOverlayPng(tl,W,H)); }
+        const png={}, lensOf={}; for(const tl of ovT.concat(fzT)){ png[tl.id]='o'+i+'_'+tl.id+'.png'; await ff.writeFile(png[tl.id],await ffOverlayPng(tl,W,H)); lensOf[tl.id]=[]; let li=0; for(const sh of tl.items){ if(sh.type!=='lens') continue; const nm='m'+i+'_'+tl.id+'_'+(li++)+'.png'; await ff.writeFile(nm,await ffMaskPng(2*Math.max(8,Math.round(sh.r*W)))); lensOf[tl.id].push({cx:sh.cx,cy:sh.cy,r:sh.r,zoom:sh.zoom,mask:nm}); } }
         const build=(inArgs,ovs,audioMode,dur,outName)=>{
           const a=inArgs.slice(); let idx=1, fc='[0:v]'+vf+'[v0]', last='v0';
-          ovs.forEach((ov,k)=>{ a.push('-i',ov.png); fc+=';['+last+']['+idx+':v]overlay=0:0:format=auto'+(ov.en?":enable='between(t,"+ov.en[0].toFixed(3)+","+ov.en[1].toFixed(3)+")'":'')+'[v'+(k+1)+']'; last='v'+(k+1); idx++; });
+          let nn=0; const en=ov=>ov.en?":enable='between(t,"+ov.en[0].toFixed(3)+","+ov.en[1].toFixed(3)+")'":'';
+          ovs.forEach(ov=>{
+            (ov.lens||[]).forEach(L=>{
+              const r=Math.max(8,Math.round(L.r*W)), d=2*r, z=Math.max(1,L.zoom||2), cw=Math.max(8,Math.round(d/z/2)*2), cxp=Math.round(L.cx*W), cyp=Math.round(L.cy*H);
+              const cx0=Math.min(Math.max(0,cxp-cw/2),W-cw), cy0=Math.min(Math.max(0,cyp-cw/2),H-cw), ox=cxp-r, oy=cyp-r, mi=idx++;
+              a.push('-i',L.mask);
+              fc+=';['+last+']split[ls'+nn+'][lb'+nn+'];[lb'+nn+']crop='+cw+':'+cw+':'+cx0+':'+cy0+',scale='+d+':'+d+',format=yuva420p[lz'+nn+'];['+mi+':v]format=gray[lm'+nn+'];[lz'+nn+'][lm'+nn+']alphamerge[lc'+nn+'];[ls'+nn+'][lc'+nn+']overlay='+ox+':'+oy+':format=auto'+en(ov)+'[vl'+nn+']';
+              last='vl'+nn; nn++;
+            });
+            a.push('-i',ov.png); fc+=';['+last+']['+idx+':v]overlay=0:0:format=auto'+en(ov)+'[vo'+nn+']'; last='vo'+nn; nn++; idx++;
+          });
           fc+=';['+last+']format=yuv420p[v]';
           let amap, af=[];
           if(audioMode){ amap='0:a:0'; af=['-af','aresample=async=1:first_pts=0']; }
@@ -6139,7 +6154,7 @@ async function ffRun(list,o,prog){
           const p0=pts[j], p1=pts[j+1], dur=p1-p0;
           if(dur>=0.04||(pts.length===2)){
             const d=Math.max(0.2,dur), nm='seg'+i+'_'+(part++)+'.mp4';
-            const ovs=titleOv.concat(ovT.filter(x=>x.t<p1&&x.t+x.hold>p0).map(x=>({png:png[x.id],en:[Math.max(0,x.t-p0),x.t+x.hold-p0]})));
+            const ovs=titleOv.concat(ovT.filter(x=>x.t<p1&&x.t+x.hold>p0).map(x=>({png:png[x.id],lens:lensOf[x.id],en:[Math.max(0,x.t-p0),x.t+x.hold-p0]})));
             const base=['-y','-ss',String(p0),'-t',String(d),'-i',src];
             let rc=mute?1:await ff.exec(build(base,ovs,true,d,nm)); if(rc!==0) rc=await ff.exec(build(base,ovs,false,d,nm));
             if(rc!==0) throw new Error('ffmpeg no pudo procesar el clip '+(i+1)+'.');
@@ -6150,7 +6165,7 @@ async function ffRun(list,o,prog){
             let rc=await ff.exec(['-y','-ss',String(f.t),'-i',src,'-frames:v','1','-vf','scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black',still]);
             if(rc!==0) throw new Error('No se pudo congelar la imagen.');
             const base=['-y','-loop','1','-framerate',String(FPS),'-t',String(hold),'-i',still];
-            rc=await ff.exec(build(base,titleOv.concat([{png:png[f.id]}]),false,hold,nm));
+            rc=await ff.exec(build(base,titleOv.concat([{png:png[f.id],lens:lensOf[f.id]}]),false,hold,nm));
             if(rc!==0) throw new Error('Falló una pausa con dibujo.');
             segs.push(nm); try{ await ff.deleteFile(still); }catch(_){}
           }
@@ -7296,7 +7311,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 00:20 · motor pro: con dibujos';
+  const BUILD='13/10/2026 · 00:40 · motor pro: dibujos y lupas';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
