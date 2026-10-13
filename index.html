@@ -6030,15 +6030,15 @@ async function runExport(list,defName,mode,o){
   EXP.busy=true; EXP.cancel=false;
   const total=expDur(list,o.draw), t0=performance.now();
   const shell=(i,n,ev)=>{
-    const el=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Grabando…</h3><p id="exInfo" style="margin:0 0 10px;color:var(--muted)"></p>'+
+    const el=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">'+(o.ff?'Exportando…':'Grabando…')+'</h3><p id="exInfo" style="margin:0 0 10px;color:var(--muted)"></p>'+
       '<div style="height:10px;border-radius:6px;background:var(--panel2);overflow:hidden"><div id="exBar" style="height:100%;width:0;background:var(--accent)"></div></div>'+
       '<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">No cambies de pestaña ni bloquees la pantalla hasta que termine.</p>'+
       '<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn danger" id="exCan">Cancelar</button></div>');
-    el.querySelector('#exCan').onclick=()=>{EXP.cancel=true; el.querySelector('#exInfo').textContent='Cancelando…';};
+    el.querySelector('#exCan').onclick=()=>{EXP.cancel=true; el.querySelector('#exInfo').textContent='Cancelando…'; if(o.ff){ try{ if(FF.inst) FF.inst.terminate(); }catch(_){} FF.inst=null; FF.loading=null; clearInterval(window.__exTick); EXP.busy=false; EXP.frac=null; expClose(); toast('Exportación cancelada.'); }};
   };
   let info='';
   const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const b=DD_.getElementById('exBar'); if(b) b.style.width=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total)))+'%'; };
-  shell(); const tick=setInterval(upd,400);
+  shell(); const tick=setInterval(upd,400); window.__exTick=tick;
   const out=[];
   try{
     const groups=mode==='each'?list.map(e=>[e]):[list];
@@ -6046,9 +6046,9 @@ async function runExport(list,defName,mode,o){
       const r=await (o.ff?ffRun:expRun)(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
       if(r) out.push({blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])):expClean(defName||baseName())});
     }
-  }catch(e){ clearInterval(tick); EXP.busy=false; expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p><div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
+  }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p><div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
   clearInterval(tick); EXP.busy=false;
-  if(EXP.cancel||!out.length){ expClose(); toast('Exportación cancelada.'); return; }
+  if(EXP.cancel||!out.length){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; }
   showExported(out);
 }
 
@@ -7268,7 +7268,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 23:35 · motor pro: copia guardada corregida';
+  const BUILD='13/10/2026 · 23:50 · motor pro: cancelar funciona';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
