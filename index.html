@@ -5997,14 +5997,14 @@ function openExport(list,defName){
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
     '<label style="display:block;margin:10px 0 3px;font-weight:600">Calidad</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
+    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="9000">🎬 MOTOR PRO propio · ffmpeg (1080p, cortes exactos, sin dibujos)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn primary" id="exGo">Empezar</button></div>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
   d.querySelector('#exGo').onclick=()=>{
-    const q=+d.querySelector('#exQ').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
+    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:1920,bps:0,draw:false,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
     try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(e){}
     runExport(list,defName,d.querySelector('#exMode').value,o);
@@ -6027,13 +6027,100 @@ async function runExport(list,defName,mode,o){
   try{
     const groups=mode==='each'?list.map(e=>[e]):[list];
     for(let g=0;g<groups.length&&!EXP.cancel;g++){
-      const r=await expRun(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
+      const r=await (o.ff?ffRun:expRun)(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
       if(r) out.push({blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])):expClean(defName||baseName())});
     }
   }catch(e){ clearInterval(tick); EXP.busy=false; expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p><div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
   clearInterval(tick); EXP.busy=false;
   if(EXP.cancel||!out.length){ expClose(); toast('Exportación cancelada.'); return; }
   showExported(out);
+}
+
+/* ===== Motor profesional propio (ffmpeg dentro de la app) ===== */
+const FF={inst:null,loading:null};
+function ffScript(src){ return new Promise((res,rej)=>{ if(window.FFmpegWASM) return res(); const sc=document.createElement('script'); sc.src=src; sc.onload=()=>res(); sc.onerror=()=>rej(new Error('No se pudo cargar el motor (¿falta la carpeta ffmpeg en la web?).')); document.head.appendChild(sc); }); }
+async function ffLoad(){
+  if(FF.inst) return FF.inst;
+  if(FF.loading) return FF.loading;
+  FF.loading=(async()=>{
+    const abs=u=>new URL(u,location.href).href;
+    await ffScript(abs('ffmpeg/ffmpeg.js'));
+    const f=new window.FFmpegWASM.FFmpeg();
+    const parts=[]; for(const nm of ['core-p00.bin','core-p01.bin','core-p02.bin']){ const r=await fetch(abs('ffmpeg/'+nm)); if(!r.ok) break; parts.push(await r.blob()); }
+    if(!parts.length) throw new Error('Faltan los archivos del motor en la carpeta ffmpeg de la web.');
+    const wasmURL=URL.createObjectURL(new Blob(parts,{type:'application/wasm'}));
+    await f.load({coreURL:abs('ffmpeg/ffmpeg-core.js'),wasmURL,classWorkerURL:abs('ffmpeg/814.ffmpeg.js')});
+    FF.inst=f; return f;
+  })();
+  try{ return await FF.loading; } finally{ FF.loading=null; }
+}
+function ffTitlePng(text,W,H){
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+  const fs=Math.round(H*0.045); x.font='700 '+fs+'px sans-serif'; const t=String(text||'').slice(0,80); const w=Math.min(W*0.8,x.measureText(t).width+fs);
+  x.fillStyle='rgba(0,0,0,.66)'; const r=Math.round(fs*0.25), px=Math.round(H*0.02), py=Math.round(H*0.02), bh=Math.round(fs*1.45);
+  x.beginPath(); x.roundRect?x.roundRect(px,py,w,bh,r):x.rect(px,py,w,bh); x.fill();
+  x.fillStyle='#fff'; x.textBaseline='middle'; x.fillText(t,px+fs*0.5,py+bh/2,w-fs);
+  return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
+}
+async function ffRun(list,o,prog){
+  const W=1920,H=1080,FPS=25;
+  prog(0,list.length,{name:'Cargando el motor (solo la primera vez, ≈ 31 MB)…'});
+  const ff=await ffLoad(); if(EXP.cancel) return null;
+  let cur=0, n=list.length; EXP.frac=0;
+  ff.on('progress',({progress})=>{ if(progress>=0&&progress<=1) EXP.frac=Math.min(0.99,(cur+progress)/n); });
+  const mounts=new Map(); let mi=0;
+  const mountFor=async file=>{ if(mounts.has(file)) return mounts.get(file); const dir='/in'+(mi++); await ff.createDir(dir); await ff.mount('WORKERFS',{files:[file]},dir); const p=dir+'/'+file.name; mounts.set(file,p); return p; };
+  const mute=window.__expMute();
+  const vf='scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps='+FPS;
+  const enc=['-c:v','libx264','-preset','veryfast','-crf','18','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-g',String(FPS*2),'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
+  const segs=[];
+  try{
+    for(let i=0;i<list.length&&!EXP.cancel;i++){
+      cur=i; const e=list[i], seg='seg'+i+'.mp4'; prog(i,n,{name:e.name||e.label||''});
+      let dur, args;
+      const title=(o.title&&!e.cover)?(e.name||e.label||''):'';
+      if(title){ await ff.writeFile('t'+i+'.png',await ffTitlePng(title,W,H)); }
+      if(e.cover){
+        dur=Math.max(0.5,e.dur||3); const m=/^data:image\/(\w+);base64,(.*)$/.exec(e.img||''); if(!m) throw new Error('Portada no válida.');
+        const bin=Uint8Array.from(atob(m[2]),ch=>ch.charCodeAt(0)); await ff.writeFile('c'+i+'.img',bin);
+        args=['-y','-loop','1','-framerate',String(FPS),'-t',String(dur),'-i','c'+i+'.img','-f','lavfi','-t',String(dur),'-i','anullsrc=r=48000:cl=stereo','-vf',vf+',format=yuv420p','-map','0:v','-map','1:a',...enc,'-shortest',seg];
+        const rc=await ff.exec(args); if(rc!==0) throw new Error('Falló una portada.');
+      } else {
+        const file=e.ext?e.file:lastFile; if(!file) throw new Error('No hay archivo de vídeo.');
+        const src=await mountFor(file); const from=e.ext?e.from:e.start, to=e.ext?e.to:e.end; dur=Math.max(0.2,to-from);
+        const base=['-y','-ss',String(from),'-t',String(dur),'-i',src];
+        const run=async(withAudio)=>{
+          const a=base.slice(); let idx=1, tIdx=-1, sIdx=-1;
+          if(title){ a.push('-i','t'+i+'.png'); tIdx=idx++; }
+          if(!withAudio){ a.push('-f','lavfi','-t',String(dur),'-i','anullsrc=r=48000:cl=stereo'); sIdx=idx++; }
+          if(title) a.push('-filter_complex','[0:v]'+vf+'[b];[b][1:v]overlay=0:0:format=auto,format=yuv420p[v]','-map','[v]');
+          else a.push('-vf',vf+',format=yuv420p','-map','0:v:0');
+          if(withAudio) a.push('-map','0:a:0','-af','aresample=async=1:first_pts=0'); else a.push('-map',sIdx+':a');
+          a.push(...enc,'-shortest',seg); return ff.exec(a);
+        };
+        let rc=mute?1:await run(true); if(rc!==0) rc=await run(false);
+        if(rc!==0) throw new Error('ffmpeg no pudo procesar el clip '+(i+1)+'.');
+      }
+      segs.push(seg);
+      try{ await ff.deleteFile('t'+i+'.png'); }catch(_){} try{ await ff.deleteFile('c'+i+'.img'); }catch(_){}
+    }
+    if(EXP.cancel||!segs.length){ try{ ff.terminate(); }catch(_){} FF.inst=null; return null; }
+    prog(n,n,{name:'Uniendo los clips…'}); EXP.frac=0.99;
+    let outName=segs[0];
+    if(segs.length>1){
+      await ff.writeFile('list.txt',segs.map(x=>"file '"+x+"'").join('\n'));
+      const rc=await ff.exec(['-y','-f','concat','-safe','0','-i','list.txt','-c','copy','-movflags','+faststart','out.mp4']); if(rc!==0) throw new Error('No se pudieron unir los clips.');
+      outName='out.mp4';
+    }
+    const data=await ff.readFile(outName);
+    const blob=new Blob([data.buffer?data:new Uint8Array(data)],{type:'video/mp4'});
+    for(const sname of segs){ try{ await ff.deleteFile(sname); }catch(_){} } try{ await ff.deleteFile('out.mp4'); }catch(_){} try{ await ff.deleteFile('list.txt'); }catch(_){}
+    EXP.frac=1;
+    return {blob,mime:'video/mp4',codecs:'avc1.640028 mp4a'};
+  } finally {
+    for(const [f,p] of mounts){ try{ await ff.unmount(p.slice(0,p.lastIndexOf('/'))); }catch(_){} }
+    EXP.frac=null;
+  }
 }
 
 /* ===== carpeta de destino (Chrome/Edge en ordenador) ===== */
@@ -7153,7 +7240,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 13:25 · pro-export + carpeta + proyecto .scout';
+  const BUILD='13/10/2026 · 14:05 · motor pro ffmpeg';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -9608,7 +9695,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
+try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
 </body>
