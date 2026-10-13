@@ -1471,7 +1471,7 @@ body:not(.ipad) .ipfz .fz-top #fzMin{display:none}
                 <button class="btn primary" id="plPlay">▶ Reproducir</button><button class="btn" id="plExp" title="Guardar la playlist como archivo de vídeo">🎞 Vídeo</button><button class="btn" id="plCsv">Exportar</button>
               </div>
               <p class="hint" id="plInfo" style="margin:0 10px 2px"></p>
-              <div id="plNudge" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 10px 6px"><span class="hint" id="nudTxt" style="margin:0;flex:1;min-width:150px"></span><button class="mini" data-n="s-">◄ Ini</button><button class="mini" data-n="s+">Ini ►</button><button class="mini" data-n="e-">◄ Fin</button><button class="mini" data-n="e+">Fin ►</button><select id="nudStep" aria-label="Salto"><option value="0.1">0,1 s</option><option value="0.5" selected>0,5 s</option><option value="1">1 s</option></select></div>
+              <div id="plPrevBox" hidden style="margin:2px 10px 6px"><video id="plPrev" controls playsinline style="width:100%;max-height:34vh;background:#000;border-radius:8px"></video><div class="hint" id="plPrevTx" style="margin:2px 0 0"></div></div><div id="plNudge" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 10px 6px"><span class="hint" id="nudTxt" style="margin:0;flex:1;min-width:150px"></span><button class="mini" data-n="s-">◄ Ini</button><button class="mini" data-n="s+">Ini ►</button><button class="mini" data-n="e-">◄ Fin</button><button class="mini" data-n="e+">Fin ►</button><select id="nudStep" aria-label="Salto"><option value="0.1">0,1 s</option><option value="0.5" selected>0,5 s</option><option value="1">1 s</option></select></div>
               <div class="seq-wrap"><ul class="seq" id="plList" aria-label="Clips de la playlist"></ul></div>
             </div>
           </div>
@@ -8404,11 +8404,11 @@ $('#plList').addEventListener('click',e=>{
     if(a==='rm'){p.items.splice(i,1);commit();return;}
     if(a==='up'&&i>0){[p.items[i-1],p.items[i]]=[p.items[i],p.items[i-1]];commit();return;}
     if(a==='dn'&&i<p.items.length-1){[p.items[i+1],p.items[i]]=[p.items[i],p.items[i+1]];commit();return;}
-    if(a==='play'){selectEv(id);playClip(id);return;}
+    if(a==='play'){selectEv(id);prevClip(id);return;}
     if(a==='edit'){ stopClip(true); selectEv(id); openClipEditor(id); return; }
     return;
   }
-  selectEv(id); updateNudge();
+  selectEv(id); updateNudge(); prevClip(id);
 });
 $('#plList').addEventListener('dblclick',e=>{ const li=e.target.closest('.prow'); if(!li||e.target.closest('[data-act]')) return; const id=li.dataset.id;
   if(isCoverId(id)){ DLGDOC=e.currentTarget.ownerDocument; openCoverEditor(id.slice(2),false); return; }
@@ -8416,6 +8416,25 @@ $('#plList').addEventListener('dblclick',e=>{ const li=e.target.closest('.prow')
   stopClip(true); selectEv(id); openClipEditor(id); });
 $('#plExtV').onclick=e=>{ if(!curPl()){toast('Primero crea una playlist con «Nueva».');return;} DLGDOC=e.currentTarget.ownerDocument; openExtEditor(null,true); };
 $('#plCover').onclick=e=>{ if(!curPl()){toast('Primero crea una playlist con «Nueva».');return;} DLGDOC=e.currentTarget.ownerDocument; openCoverEditor(null,true); };
+/* vista previa del clip dentro de la mesa */
+function prevClip(id){
+  const pv=$('#plPrev'); if(!pv) return; const e=events.find(x=>x.id===id); if(!e) return;
+  if(!hasVideo){toast('Abre primero un vídeo.');return;}
+  const src=video.currentSrc||video.src; $('#plPrevBox').hidden=false; try{$('#plPrevBox').scrollIntoView({block:'nearest'});}catch(_){}
+  if(pv.dataset.src!==src){ pv.src=src; pv.dataset.src=src; }
+  pv._ev=id; video.pause();
+  const go=()=>{ pv.currentTime=e.start; pv.play().catch(()=>{}); };
+  if(pv.readyState>=1) go(); else pv.addEventListener('loadedmetadata',go,{once:true});
+  const p=curPl(), n=p?p.items.indexOf(id)+1:0;
+  $('#plPrevTx').textContent=evName(e)+(n?' · clip '+n+' de '+p.items.length:'')+' · '+e.start.toFixed(1)+'–'+e.end.toFixed(1)+' s';
+}
+(function(){ const pv=$('#plPrev'); if(!pv) return;
+  pv.addEventListener('timeupdate',()=>{
+    const e=events.find(x=>x.id===pv._ev); if(!e||pv.paused||pv.currentTime<e.end) return;
+    const p=curPl(); const q=p?p.items.filter(x=>events.some(v=>v.id===x)):[]; const i=q.indexOf(e.id);
+    if(i>=0&&i<q.length-1) prevClip(q[i+1]); else pv.pause();
+  });
+})();
 function updateNudge(){
   const t=$('#nudTxt'); if(!t) return;
   const p=curPl(), ev=events.find(x=>x.id===selectedId);
@@ -8429,7 +8448,7 @@ $('#plNudge').addEventListener('click',e=>{
   const st=parseFloat($('#nudStep').value)||0.5, k=b.dataset.n, mx=video.duration||ev.end+60;
   if(k==='s-') ev.start=Math.max(0,ev.start-st); else if(k==='s+') ev.start=Math.min(ev.end-0.2,ev.start+st); else if(k==='e-') ev.end=Math.max(ev.start+0.2,ev.end-st); else ev.end=Math.min(mx,ev.end+st);
   ev.start=Math.round(ev.start*100)/100; ev.end=Math.round(ev.end*100)/100;
-  commit(); if(hasVideo) playClip(ev.id);
+  commit(); prevClip(ev.id);
 });
 /* arrastrar y soltar: desde la lista de clips (de la mesa o de la Biblioteca) o reordenando */
 let dndPayload=null;
