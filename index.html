@@ -5739,7 +5739,7 @@ async function fxRun(list,o,prog){
       if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
       const frz=(o.draw&&!ev.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=ev.start&&x.t<ev.end).sort((a,b)=>a.t-b.t):[];
       const done=new Set(); let shift=0, decErr=null, lastSlot=-1;
-      const cts0=V.map(x=>x.cts), spanS=(Math.max(...cts0)-Math.min(...cts0))/V[0].timescale, srcRate=V.length>1&&spanS>0?(V.length-1)/spanS:fps, useGrid=Math.abs(srcRate/fps-1)>0.04;
+      const cts0=V.map(x=>x.cts), spanS=(Math.max(...cts0)-Math.min(...cts0))/V[0].timescale, srcRate=V.length>1&&spanS>0?(V.length-1)/spanS:fps, vfr=(()=>{ if(V.length<6) return false; const c=cts0.slice().sort((a,b)=>a-b), d=[]; for(let i=1;i<c.length;i++) d.push(c[i]-c[i-1]); const m=d.slice().sort((a,b)=>a-b)[d.length>>1]||1; return d.some(x=>x>m*1.6||x<m*0.55); })(), useGrid=Math.abs(srcRate/fps-1)>0.04||vfr;
       const emit=(frame,tl,out,al)=>{
         fitDraw(ctx,frame,ow,oh);
         if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
@@ -7259,7 +7259,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 22:20 · fix ritmo de fotogramas v3';
+  const BUILD='13/10/2026 · 22:40 · fix ritmo de fotogramas v4 (vídeos de ritmo variable)';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
