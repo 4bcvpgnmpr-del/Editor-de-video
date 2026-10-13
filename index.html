@@ -6062,10 +6062,19 @@ async function ffLoad(){
     const abs=u=>new URL(u,location.href).href;
     await ffScript(abs('ffmpeg/ffmpeg.js'));
     const f=new window.FFmpegWASM.FFmpeg();
-    const parts=[]; for(const nm of ['core-p00.bin','core-p01.bin','core-p02.bin']){ const r=await fetch(abs('ffmpeg/'+nm)); if(!r.ok) break; parts.push(await r.blob()); }
-    if(!parts.length) throw new Error('Faltan los archivos del motor en la carpeta ffmpeg de la web.');
-    const SZ=[16777216,15351898]; const names=['core-p00.bin','core-p01.bin'];
-    for(let i=0;i<SZ.length;i++){ if(!parts[i]) throw new Error('Falta '+names[i]+' en la carpeta ffmpeg.'); if(parts[i].size!==SZ[i]) throw new Error(names[i]+' no es el original: pesa '+parts[i].size+' bytes y debería pesar '+SZ[i]+'. Súbelo de nuevo desde el archivo que te mandé, sin abrirlo ni editarlo.'); }
+    const SZ=[16777216,15351898], names=['core-p00.bin','core-p01.bin'], parts=[];
+    for(let i=0;i<names.length;i++){
+      const u=abs('ffmpeg/'+names[i]); let b=null;
+      try{ const r=await fetch(u); if(r.ok) b=await r.blob(); }catch(_){}
+      if(!b||b.size!==SZ[i]){
+        /* copia guardada vieja o dañada: se borra y se vuelve a pedir a la web */
+        try{ for(const k of await caches.keys()) await caches.delete(k); }catch(_){}
+        try{ const r=await fetch(u+'?v='+Date.now(),{cache:'reload'}); if(r.ok) b=await r.blob(); }catch(_){}
+      }
+      if(!b) throw new Error('Falta '+names[i]+' en la carpeta ffmpeg de la web.');
+      if(b.size!==SZ[i]) throw new Error(names[i]+' no es el original: pesa '+b.size+' bytes y debería pesar '+SZ[i]+'. Súbelo de nuevo a la carpeta ffmpeg de GitHub, sin abrirlo ni editarlo.');
+      parts.push(b);
+    }
     { const h=new Uint8Array(await parts[0].slice(0,4).arrayBuffer()); if(h[0]!==0||h[1]!==0x61||h[2]!==0x73||h[3]!==0x6d) throw new Error('core-p00.bin está dañado (no empieza como un archivo del motor). Súbelo de nuevo sin abrirlo ni editarlo.'); }
     const wasmURL=URL.createObjectURL(new Blob(parts,{type:'application/wasm'}));
     await f.load({coreURL:abs('ffmpeg/ffmpeg-core.js'),wasmURL,classWorkerURL:abs('ffmpeg/814.ffmpeg.js')});
@@ -7259,7 +7268,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 22:40 · fix ritmo de fotogramas v4 (vídeos de ritmo variable)';
+  const BUILD='13/10/2026 · 23:35 · motor pro: copia guardada corregida';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
