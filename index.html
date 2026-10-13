@@ -5368,6 +5368,18 @@ const isExtId=id=>typeof id==='string'&&id.indexOf('x:')===0;
 const extOf=id=>externals.find(x=>'x:'+x.id===id);
 const extFiles={}, extUrls={};
 function normExt(x){x=x||{};return {id:String(x.id||uid()),name:String(x.name||'Vídeo externo').slice(0,90),fname:String(x.fname||'').slice(0,120),size:+x.size||0,from:Math.max(0,+x.from||0),to:Math.max(0,+x.to||0),src:String(x.src||'').slice(0,80),color:/^#[0-9a-f]{3,8}$/i.test(x.color||'')?x.color:'',tm:String(x.tm||'').slice(0,60)};}
+function extEnrich(x){
+  if(x._e||x.tm||!x.fname) return; x._e=1;
+  try{
+    const key=x.fname+'|'+x.size; let evs,o=null;
+    if(key===videoKey) evs=events; else { o=JSON.parse(lsGet('bbtag.project.'+key)||'null'); evs=(o&&Array.isArray(o.events))?o.events.filter(v=>v&&isFinite(v.start)&&isFinite(v.end)).map(normEvent):[]; }
+    const e=evs.find(v=>Math.abs(v.start-x.from)<0.06&&Math.abs(v.end-x.to)<0.06); if(!e) return;
+    const T=titlesGet(), t=(T[key]&&T[key].t)||x.fname;
+    const side=o?((o.meta&&o.meta[e.team==='R'?'R':'L']&&o.meta[e.team==='R'?'R':'L'].name)||(e.team==='R'?'Rival':'Local')):teamName(e.team);
+    const n=extFromEv(e,t,x.fname,x.size,side,e.player?'#'+e.player:'');
+    x.name=n.name; x.src=t; x.color=n.color; x.tm=n.tm;
+  }catch(_){}
+}
 function extFromEv(e,srcTitle,fname,size,teamLbl,playerTxt){ const nm=[evName(e),playerTxt||'',descText(e)].filter(Boolean).join(' · '); return normExt({name:nm,fname,size,from:e.start,to:e.end,src:srcTitle,color:info(e).color||e.color,tm:[teamLbl,e.period,fmt(e.t)].filter(Boolean).join(' · ')}); }
 function extUrl(id){ if(extUrls[id]) return extUrls[id]; const f=extFiles[id]; if(!f) return ''; return (extUrls[id]=URL.createObjectURL(f)); }
 function fitDraw(ctx,src,ow,oh,sw,sh){
@@ -8391,7 +8403,7 @@ function renderPlaylists(){
   const list=$('#plList');
   if(!cur) list.innerHTML='<li class="none">Pulsa «Nueva» para crear una playlist. Por ejemplo: SCOUT RIVAL, Buenos ataques, Errores.</li>';
   else if(!(valid.length||covs.length||exts.length)) list.innerHTML='<li class="none">Playlist vacía. Arrastra clips hasta aquí, o pulsa «+» en la lista de clips.</li>';
-  else list.innerHTML=cur.items.map((id,i)=>{
+  else { const vmap={}; const VCOL=['#4DA3FF','#F5C542','#3FBF7F','#FF7A7A','#C792FF','#38C6D9']; list.innerHTML=cur.items.map((id,i)=>{
     if(isCoverId(id)){
       const c=coverOf(id); if(!c) return '';
       const pl_=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
@@ -8399,8 +8411,11 @@ function renderPlaylists(){
     }
     if(isExtId(id)){
       const x=extOf(id); if(!x) return '';
+      extEnrich(x);
       const ok=!!extFiles[x.id], pl_=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
-      return '<li class="prow'+(pl_?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(x.color||'#4DA3FF')+'" title="'+esc(x.name+(x.src?' — de '+x.src:''))+'"><span class="rn">'+(i+1)+'</span><span class="rt"><b>🎞 '+esc(x.name)+'</b><span class="rm">'+(ok?esc((x.src?'De «'+x.src+'»':'Vídeo externo')+(x.tm?' · '+x.tm:'')+' · '+x.from.toFixed(1)+'–'+x.to.toFixed(1)+' s'):'⚠ Falta el archivo «'+esc(x.fname)+'» — pulsa ✎ para elegirlo')+'</span></span><span class="ra"><button data-act="up" title="Subir">▲</button><button data-act="dn" title="Bajar">▼</button><button data-act="play" title="Ver">▶</button><button data-act="edit" title="Editar">✎</button><button data-act="rm" title="Quitar">✕</button></span></li>';
+      if(!vmap[x.fname]) vmap[x.fname]=Object.keys(vmap).length+1;
+      const vl=String.fromCharCode(64+vmap[x.fname]);
+      return '<li class="prow'+(pl_?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(x.color||'#4DA3FF')+'" title="'+esc(x.name+(x.src?' — de '+x.src:''))+'"><span class="rn">'+(i+1)+'</span><span class="rt"><b><span style="display:inline-block;min-width:20px;text-align:center;border-radius:5px;background:'+VCOL[(vmap[x.fname]-1)%VCOL.length]+';color:#111;font-size:.8em;padding:0 5px;margin-right:6px" title="'+esc(x.fname)+'">'+vl+'</span>'+esc(x.name)+'</b><span class="rm">'+(ok?esc('Vídeo '+vl+' · '+x.fname+(x.src&&x.src!==x.fname?' · '+x.src:'')+(x.tm?' · '+x.tm:'')+' · '+x.from.toFixed(1)+'–'+x.to.toFixed(1)+' s'):'⚠ Falta el archivo «'+esc(x.fname)+'» — pulsa ✎ para elegirlo')+'</span></span><span class="ra"><button data-act="up" title="Subir">▲</button><button data-act="dn" title="Bajar">▼</button><button data-act="play" title="Ver">▶</button><button data-act="edit" title="Editar">✎</button><button data-act="rm" title="Quitar">✕</button></span></li>';
     }
     const e=events.find(x=>x.id===id); if(!e) return '';
     const inf=info(e), playing=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
@@ -8408,7 +8423,7 @@ function renderPlaylists(){
     return '<li class="prow'+(playing?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(inf.color)+'" title="'+esc(evName(e)+' — '+meta)+'">'+
       '<span class="rn">'+(i+1)+'</span><span class="rt"><b>'+esc(evName(e))+'</b><span class="rm">'+esc(meta)+'</span></span>'+
       '<span class="ra"><button data-act="up" title="Subir" aria-label="Subir">▲</button><button data-act="dn" title="Bajar" aria-label="Bajar">▼</button><button data-act="play" title="Ver clip" aria-label="Ver clip">'+ICON.clip+'</button><button data-act="edit" title="Abrir el editor del clip (ajustar inicio y fin)" aria-label="Editar clip">✎</button><button data-act="rm" title="Quitar de la playlist" aria-label="Quitar de la playlist">×</button></span></li>';
-  }).join('');
+  }).join(''); }
   updateNudge();
   /* clips disponibles, con sus filtros */
   renderMesaFilters();
