@@ -7401,6 +7401,40 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const host=document.getElementById('plExtV'); if(!host) return;
   const b=document.createElement('button'); b.className='mini'; b.id='plOther'; b.title='Traer cortes de otro partido guardado'; b.textContent='＋ Cortes de otro partido';
   host.after(b); b.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; openOther(); };
+  /* llevar el montaje actual a otro partido guardado */
+  async function sendMontage(){
+    const cp=curPl(); if(!cp||!cp.items.length){ toast('Elige un montaje con clips para llevarlo.'); return; }
+    if(!videoKey||!/\|\d+$/.test(videoKey)||/^(yt|url|live)\|/.test(videoKey)){ toast('Solo se puede llevar desde un vídeo abierto como archivo.'); return; }
+    const cur=await get(videoKey); if(!cur||!cur.blob){ toast('Este vídeo aún no está en «Mis vídeos»; espera unos segundos y vuelve a intentarlo.'); return; }
+    let vids=[]; try{ vids=await vidList(); }catch(e){}
+    const T=titlesGet(), myTitle=(T[videoKey]&&T[videoKey].t)||videoName;
+    const games=vids.filter(v=>v.key!==videoKey).map(v=>({key:v.key,name:v.name,title:(T[v.key]&&T[v.key].t)||v.name,date:(T[v.key]&&T[v.key].d)||''}));
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Llevar montaje a otro partido</h3><div id="snB"></div>');
+    d.firstElementChild.style.width='min(640px,100%)';
+    const B=d.querySelector('#snB');
+    const btn='padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);text-align:left;cursor:pointer;font-size:14px';
+    B.innerHTML='<p class="hint" style="margin:0 0 10px">Se copiará «'+esc(cp.name)+'» ('+cp.items.length+' clips) como un montaje nuevo dentro del partido que elijas. Los clips seguirán viniendo de «'+esc(myTitle)+'».</p>'+
+      (games.length?'<div style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto">'+games.map((g,i)=>'<button data-g="'+i+'" style="'+btn+'"><b>'+esc(g.title)+'</b>'+(g.date?' · '+esc(matchDate(g.date)):'')+'<br><span style="color:var(--muted);font-size:12.5px">'+esc(g.name)+'</span></button>').join('')+'</div>':'<p style="color:var(--muted)">No hay otros partidos en «Mis vídeos». Abre el otro vídeo una vez para que se guarde y vuelve aquí.</p>')+
+      '<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="snNo">Cerrar</button></div>';
+    B.querySelector('#snNo').onclick=expClose;
+    B.querySelectorAll('[data-g]').forEach(bt=>bt.onclick=()=>{
+      const g=games[+bt.dataset.g];
+      let o=q(g.key); if(!o||typeof o!=='object') o={};
+      ['events','markers','stints','teles','playlists','covers','externals'].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; });
+      const size=+videoKey.split('|').pop(), items=[];
+      cp.items.forEach(id=>{
+        if(isCoverId(id)){ const c=coverOf(id); if(c){ const n=normCover(Object.assign({},c,{id:uid()})); o.covers.push(n); items.push('c:'+n.id); } }
+        else if(isExtId(id)){ const x=extOf(id); if(x){ const n=normExt(Object.assign({},x,{id:uid()})); o.externals.push(n); items.push('x:'+n.id); } }
+        else { const e=events.find(v=>v.id===id); if(e){ const n=normExt({name:(evName(e)+' · '+fmt(e.t)+' · '+myTitle).slice(0,60),fname:videoName,size,from:e.start,to:e.end}); o.externals.push(n); items.push('x:'+n.id); } }
+      });
+      if(!items.length){ toast('El montaje no tiene clips válidos.'); return; }
+      o.playlists.push({id:uid(),name:(cp.name+' · de '+myTitle).slice(0,60),folder:cp.folder||'',items});
+      lsSet('bbtag.project.'+g.key,JSON.stringify(o)); lsSet('bbtag.pts.'+g.key,String(Date.now()));
+      expClose(); toast('Montaje llevado a «'+g.title+'» ('+items.length+' clips). Ábrelo desde «Mis vídeos».');
+    });
+  }
+  const b2=document.createElement('button'); b2.className='mini'; b2.id='plSend'; b2.title='Copiar este montaje a otro partido guardado'; b2.textContent='⇢ Llevar a otro partido';
+  b.after(b2); b2.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; sendMontage(); };
 })();
 
 /* ===== esconder línea de tiempo y bloque de análisis (ordenador) ===== */
