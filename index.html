@@ -6013,7 +6013,7 @@ function openExport(list,defName){
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
     '<label style="display:block;margin:10px 0 3px;font-weight:600">Calidad</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="9000">🎬 MOTOR PRO propio · ffmpeg (1080p, cortes exactos, con dibujos)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
+    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'🎬 MOTOR PRO nativo · rápido (1080p, cortes exactos, con dibujos)':'🎬 MOTOR PRO propio · ffmpeg (1080p, cortes exactos, con dibujos)')+'</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
@@ -6054,11 +6054,33 @@ async function runExport(list,defName,mode,o){
 
 /* ===== Motor profesional propio (ffmpeg dentro de la app) ===== */
 const FF={inst:null,loading:null};
+/* App de escritorio: mismo contrato que ffmpeg.wasm, pero con el ffmpeg nativo del ordenador */
+function ffNative(){
+  const D=window.scoutDesktop, ls=[], dirs=new Map(); let job=null, ready=null;
+  const need=async()=>{ if(!ready) ready=D.start().then(j=>{job=j;}); await ready; };
+  return {
+    on(ev,fn){ if(ev==='progress') ls.push(fn); },
+    async createDir(){ await need(); },
+    async unmount(){},
+    async mount(_,o,dir){ await need(); const f=o.files[0]; let pth=D.pathFor(f);
+      if(!pth){ const CH=8*1024*1024; for(let off=0,first=true;off<f.size||first;off+=CH,first=false){ await D.append(job,f.name,new Uint8Array(await f.slice(off,off+CH).arrayBuffer()),first); } pth=await D.pathOf(job,f.name); }
+      dirs.set(dir,pth); },
+    async writeFile(n,data){ await need(); if(typeof data==='string') data=new TextEncoder().encode(data); await D.write(job,n,data); },
+    async readFile(n){ await need(); return await D.read(job,n); },
+    async deleteFile(n){ await need(); await D.del(job,n); },
+    async exec(args){ await need(); const ti=args.indexOf('-t'); const dur=ti>=0?parseFloat(args[ti+1]):0;
+      const a=args.map(x=>{ if(typeof x==='string'&&x.charAt(0)==='/') for(const [d,pth] of dirs) if(x.indexOf(d+'/')===0) return pth; return x; });
+      D.onProgress(sec=>{ if(dur>0) ls.forEach(fn=>fn({progress:Math.min(1,sec/dur)})); });
+      return await D.exec(job,a); },
+    terminate(){ try{ D.kill(job); }catch(_){} }
+  };
+}
 function ffScript(src){ return new Promise((res,rej)=>{ if(window.FFmpegWASM) return res(); const sc=document.createElement('script'); sc.src=src; sc.onload=()=>res(); sc.onerror=()=>rej(new Error('No se pudo cargar el motor (¿falta la carpeta ffmpeg en la web?).')); document.head.appendChild(sc); }); }
 async function ffLoad(){
   if(FF.inst) return FF.inst;
   if(FF.loading) return FF.loading;
   FF.loading=(async()=>{
+    if(window.scoutDesktop){ FF.inst=ffNative(); return FF.inst; }
     const abs=u=>new URL(u,location.href).href;
     await ffScript(abs('ffmpeg/ffmpeg.js'));
     const f=new window.FFmpegWASM.FFmpeg();
@@ -6101,7 +6123,7 @@ function ffTitlePng(text,W,H){
 }
 async function ffRun(list,o,prog){
   const W=1920,H=1080,FPS=25;
-  prog(0,list.length,{name:'Cargando el motor (solo la primera vez, ≈ 31 MB)…'});
+  prog(0,list.length,{name:window.scoutDesktop?'Preparando…':'Cargando el motor (solo la primera vez, ≈ 31 MB)…'}); try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(true); }catch(_){}
   const ff=await ffLoad(); if(EXP.cancel) return null;
   let cur=0, n=list.length; EXP.frac=0;
   ff.on('progress',({progress})=>{ if(progress>=0&&progress<=1) EXP.frac=Math.min(0.99,(cur+progress)/n); });
@@ -6109,7 +6131,7 @@ async function ffRun(list,o,prog){
   const mountFor=async file=>{ if(mounts.has(file)) return mounts.get(file); const dir='/in'+(mi++); await ff.createDir(dir); await ff.mount('WORKERFS',{files:[file]},dir); const p=dir+'/'+file.name; mounts.set(file,p); return p; };
   const mute=window.__expMute();
   const vf='scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps='+FPS;
-  const enc=['-c:v','libx264','-preset','ultrafast','-crf','18','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-g',String(FPS*2),'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
+  const enc=['-c:v','libx264','-preset',window.scoutDesktop?'veryfast':'ultrafast','-crf','18','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-g',String(FPS*2),'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
   const segs=[];
   try{
     for(let i=0;i<list.length&&!EXP.cancel;i++){
@@ -6190,7 +6212,7 @@ async function ffRun(list,o,prog){
     return {blob,mime:'video/mp4',codecs:'avc1.640028 mp4a'};
   } finally {
     for(const [f,p] of mounts){ try{ await ff.unmount(p.slice(0,p.lastIndexOf('/'))); }catch(_){} }
-    EXP.frac=null;
+    EXP.frac=null; try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(false); }catch(_){}
   }
 }
 
@@ -7311,7 +7333,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 00:40 · motor pro: dibujos y lupas';
+  const BUILD='13/10/2026 · 01:10 · motor pro: dibujos, lupas y modo escritorio';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
