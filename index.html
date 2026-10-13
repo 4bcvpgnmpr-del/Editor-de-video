@@ -5739,6 +5739,7 @@ async function fxRun(list,o,prog){
       if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
       const frz=(o.draw&&!ev.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=ev.start&&x.t<ev.end).sort((a,b)=>a.t-b.t):[];
       const done=new Set(); let shift=0, decErr=null, lastSlot=-1;
+      const cts0=V.map(x=>x.cts), spanS=(Math.max(...cts0)-Math.min(...cts0))/V[0].timescale, srcRate=V.length>1&&spanS>0?(V.length-1)/spanS:fps, useGrid=Math.abs(srcRate/fps-1)>0.04;
       const emit=(frame,tl,out,al)=>{
         fitDraw(ctx,frame,ow,oh);
         if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
@@ -5757,18 +5758,28 @@ async function fxRun(list,o,prog){
           if(t<ev.start-0.5/fps||t>=ev.end){frame.close();return;}
           let tl=null;
           if(o.draw&&!ev.ext) for(const x of teles){ if(x.mode==='overlay'&&t>=x.t&&t<=x.t+x.hold){tl=x;break;} }
-          const slot=Math.round(Math.max(0,t-ev.start)*fps);
-          if(slot<=lastSlot||slot>=Math.round((ev.end-ev.start)*fps)){ frame.close(); return; }
           const f=frz.find(x=>!done.has(x.id)&&t>=x.t-0.5/fps);
-          if(f){
-            const out=base+slot/fps+shift;
-            done.add(f.id);
-            const n=Math.max(1,Math.round(f.hold*10));
-            for(let k=0;k<n;k++){ const ag=k*(f.hold/n); emit(frame,f,out+ag,teleAlpha(f,ag,f.hold-ag)); }
-            shift+=f.hold; lastSlot=slot;
+          if(!useGrid){
+            const out=base+Math.max(0,t-ev.start)+shift;
+            if(f){
+              done.add(f.id);
+              const n=Math.max(1,Math.round(f.hold*10));
+              for(let k=0;k<n;k++){ const ag=k*(f.hold/n); emit(frame,f,out+ag,teleAlpha(f,ag,f.hold-ag)); }
+              shift+=f.hold;
+            }else emit(frame,tl,out,tl?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1);
           }else{
-            for(let k=lastSlot+1;k<=slot;k++) emit(frame,tl,base+k/fps+shift,tl?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1);
-            lastSlot=slot;
+            /* el vídeo tiene otra velocidad de fotogramas que el principal: se pasa a ritmo constante */
+            const slot=Math.round(Math.max(0,t-ev.start)*fps);
+            if(slot<=lastSlot||slot>=Math.round((ev.end-ev.start)*fps)){ frame.close(); return; }
+            if(f){
+              const out=base+slot/fps+shift; done.add(f.id);
+              const n=Math.max(1,Math.round(f.hold*10));
+              for(let k=0;k<n;k++){ const ag=k*(f.hold/n); emit(frame,f,out+ag,teleAlpha(f,ag,f.hold-ag)); }
+              shift+=f.hold; lastSlot=slot;
+            }else{
+              for(let k=lastSlot+1;k<=slot;k++) emit(frame,tl,base+k/fps+shift,tl?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1);
+              lastSlot=slot;
+            }
           }
           frame.close();
         }catch(e){ decErr=e; try{frame.close();}catch(_){} }
@@ -7248,7 +7259,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 21:40 · fix vídeos lentos de otro proyecto';
+  const BUILD='13/10/2026 · 22:20 · fix ritmo de fotogramas v3';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
