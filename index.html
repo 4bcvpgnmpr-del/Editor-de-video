@@ -992,6 +992,13 @@ body.ipad #pTags #ipAuto{width:46px;min-height:44px;padding:0;border-radius:12px
 body.ipad #pTags #ipAuto[aria-pressed=true]{background:var(--accent);color:#111}
 body.ipad.vfull #pTags #ipAuto{background:rgba(12,12,12,.5)}
 body.ipad.vfull.lowOn #pTags .bb-low{right:8px;bottom:84px;width:300px;max-height:56vh}
+/* ordenador: descriptores flotantes, igual que en pantalla completa */
+body.descFloat:not(.ipad) #pTags .bb-low{display:none}
+body.descFloat:not(.ipad).lowOn #pTags .bb-low{display:block;position:fixed;right:14px;bottom:70px;width:400px;max-width:92vw;max-height:62vh;z-index:58;background:var(--panel);border:2px solid var(--accent);border-radius:16px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.6);border-left:2px solid var(--accent)}
+body.descFloat:not(.ipad) #pTags #ipLow,body.descFloat:not(.ipad) #pTags #ipAuto{display:inline-flex!important;align-items:center;justify-content:center;min-height:30px;min-width:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:0 8px;cursor:pointer;font-size:14px}
+body.descFloat:not(.ipad).lowOn #pTags #ipLow,body.descFloat:not(.ipad) #pTags #ipAuto[aria-pressed=true]{background:var(--accent);color:var(--on-accent,#111);border-color:var(--accent)}
+.pset-g .pcard .nm{font-size:var(--pf,10px)}
+.pset-g .pcard .no{font-size:var(--pn,10px)}
 body.ipad #pTags #ipLow{margin-left:auto;width:46px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 
 body.ipad .codes{gap:6px}
@@ -3824,6 +3831,7 @@ function renderDescStrip(){
       g.items.map(it=>{const on=!!ev&&ev.desc.some(o=>o.d===g.id&&o.i===it.id);
         return '<button class="dchip" data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'" aria-pressed="'+on+'" title="'+esc(g.name+': '+it.label)+'">'+esc(it.label)+(it.key?'<kbd>'+esc(it.key.toUpperCase())+'</kbd>':'')+'</button>';}).join('')+'</div></div>').join('')
     :'<p class="hint">Todavía no hay descriptores. Crea uno con «+».</p>';
+  if(typeof IPS!=='undefined'&&IPS&&isPlSet(IPS.set)){ box.hidden=false; box.innerHTML=h; return; }
   const k=plTeam(ev), tc='var(--'+(k==='L'?'local':'rival')+')';
   const r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
   h+='<div class="bb-sh" style="margin-top:10px"><b>Jugadoras</b><span class="sp"></span><button class="bb-ib" data-team-edit="'+k+'" title="Cambiar el nombre del equipo">✎ Nombre</button><button class="bb-ib bb-add" id="bbAddPl" data-pl-add="'+k+'" title="Nueva jugadora" aria-label="Nueva jugadora">+</button></div>';
@@ -4052,7 +4060,8 @@ function renderCodes(){
   const items=cfg.buttons.filter(b=>!b.hidden&&(typeof IPS==='undefined'||!IPS||IPS.set==='*'||(b.page||cfg.pages[0])===IPS.set));
   const btnHtml=b=>'<button class="code '+(b.size||'m')+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
   try{ renderSetQuick(); }catch(e){}
-  if(typeof IPS!=='undefined'&&IPS&&isPlSet(IPS.set)){ codes.innerHTML=plSetHTML(); return; }
+  try{ renderDescStrip(); }catch(e){}
+  if(typeof IPS!=='undefined'&&IPS&&isPlSet(IPS.set)){ codes.innerHTML=plSetHTML(); fitPlSet(); return; }
   codes.innerHTML=items.length?items.map(btnHtml).join(''):
     '<p class="hint" style="grid-column:1/-1">No hay categorías. Crea una con «+ Categoría».</p>';
   updateCounts();
@@ -4465,6 +4474,20 @@ function photoFromFile(file){
 }
 const phStyle=p=>p&&p.photo?'style="background-image:url('+p.photo+')"':'';
 const phInit=p=>p&&p.photo?'':esc((p&&p.name?p.name.trim()[0]:'')||'');
+function fitPlSet(){
+  const ps=codes.querySelector('.pset'); if(!ps) return;
+  const g=ps.querySelector('.pset-g'), t=ps.querySelector('.pset-t'); if(!g||!g.children.length) return;
+  const n=g.children.length, gap=5, cs=getComputedStyle(codes);
+  const W=codes.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-2;
+  const H=codes.clientHeight-(parseFloat(cs.paddingTop)||0)-(parseFloat(cs.paddingBottom)||0)-(t?t.offsetHeight:0)-gap*2-2;
+  if(W<60||H<60) return;
+  let best=0,bc=1;
+  for(let c=1;c<=n;c++){ const rows=Math.ceil(n/c), sz=Math.min((W-gap*(c-1))/c,(H-gap*(rows-1))/rows); if(sz>best){best=sz;bc=c;} }
+  best=Math.floor(Math.max(46,Math.min(best,150)));
+  g.style.gridTemplateColumns='repeat('+bc+','+best+'px)'; g.style.justifyContent='center';
+  g.style.setProperty('--pf',Math.max(9,Math.min(15,best/6.2)).toFixed(1)+'px'); g.style.setProperty('--pn',Math.max(9,Math.min(14,best/6.8)).toFixed(1)+'px');
+}
+try{ new ResizeObserver(()=>fitPlSet()).observe(codes); }catch(e){}
 function plSetHTML(){
   const k=team, r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0)), tc='var(--'+(k==='L'?'local':'rival')+')';
   return '<div class="pset" style="--tc:'+tc+'"><div class="pset-t">'+['L','R'].map(t=>'<button data-pst="'+t+'" class="'+(t===k?'on':'')+'" style="--tc:var(--'+(t==='L'?'local':'rival')+')">'+esc(teamName(t))+'</button>').join('')+'</div>'+
@@ -6703,7 +6726,7 @@ const PANELS={
 const IPM=(()=>{ let m=lsGet('bbtag.mode')||'auto'; const ua=navigator.userAgent||''; const auto=/iPad/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
   return {get mode(){return m;},set(v){m=v;lsSet('bbtag.mode',v);},get on(){return m==='ipad'||(m==='auto'&&auto);},auto}; })();
 if(IPM.auto){ if(IPM.mode!=='auto') IPM.set('auto'); document.body.classList.add('realIpad'); }
-document.body.classList.toggle('ipad',IPM.on); document.documentElement.classList.toggle('ipad',IPM.on);
+document.body.classList.toggle('ipad',IPM.on); document.documentElement.classList.toggle('ipad',IPM.on); document.body.classList.toggle('descFloat',lsGet('bbtag.descFloat')!=='0');
 const narrowMQ=window.matchMedia('(max-width:900px)');
 const isNarrow=()=>narrowMQ.matches&&!IPM.on;
 let zTop=30;
@@ -7038,7 +7061,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   window.__autoDesc={get:()=>on,toggle:()=>b.click()};
   b.onclick=()=>{ on=!on; try{localStorage.setItem('bbtag.autoDesc',on?'1':'0');}catch(e){} sync(); if(!on) document.body.classList.remove('lowOn'); toast(on?'Al pulsar una categoría se abren los descriptores.':'Los descriptores ya no se abren solos.'); };
   document.getElementById('codes').addEventListener('click',e=>{
-    if(!on||!document.body.classList.contains('ipad')||!e.target.closest('.code')) return;
+    if(!on||!(document.body.classList.contains('ipad')||document.body.classList.contains('descFloat'))||!e.target.closest('.code')) return;
     if(document.getElementById('pTags').classList.contains('editing')) return;
     setTimeout(()=>document.body.classList.add('lowOn'),30);
   });
@@ -7409,7 +7432,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 02:20 · menú de escritorio';
+  const BUILD='13/10/2026 · 03:10 · botonera: descriptores flotantes y jugadoras';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7445,6 +7468,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
      '</div>'+
      '<div class="st-h">Botonera</div><div class="st-g">'+
        row('Tamaño de los botones','<span style="flex:none;display:flex;gap:6px;align-items:center">'+btn('stBbS','A−')+'<b id="stBbV" style="min-width:42px;text-align:center">'+Math.round(bbScale*100)+'%</b>'+btn('stBbB','A+')+'</span>')+
+       row('Descriptores flotantes (como en pantalla completa)',sw('stDf',lsGet('bbtag.descFloat')!=='0'),'Ganas espacio: se abren con el botón de etiqueta de la botonera')+
        row('Abrir descriptores al pulsar una categoría',sw('stAd',adOn),'Pensado para iPad y pantalla grande')+
        row('Mesa de producción en ventana aparte',sw('stPop',lsGet('bbtag.popProd')!=='0'),'El editor del clip siempre se abre en el reproductor')+
        row('Al etiquetar, parar el vídeo','<select id="stPT"><option value="desc"'+(window.__pauseTag&&window.__pauseTag.get()==='desc'?' selected':'')+'>Si tiene descriptores</option><option value="never"'+(window.__pauseTag&&window.__pauseTag.get()==='never'?' selected':'')+'>Nunca</option></select>','Si la categoría no tiene descriptores, el vídeo sigue. Al cerrar los descriptores continúa solo')+
@@ -7482,6 +7506,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     $('stTele').onchange=e=>{ const c=document.getElementById('chkTele'); if(c.checked!==e.target.checked) c.click(); };
     on('stBbS',()=>{ document.getElementById('bbSmaller').click(); $('stBbV').textContent=Math.round(bbScale*100)+'%'; });
     on('stBbB',()=>{ document.getElementById('bbBigger').click(); $('stBbV').textContent=Math.round(bbScale*100)+'%'; });
+    $('stDf').onchange=e=>{ lsSet('bbtag.descFloat',e.target.checked?'1':'0'); document.body.classList.toggle('descFloat',e.target.checked); document.body.classList.remove('lowOn'); };
     $('stAd').onchange=e=>{ if(window.__autoDesc&&window.__autoDesc.get()!==e.target.checked) window.__autoDesc.toggle(); };
     $('stHud').onchange=e=>window.__hud.set('on',e.target.checked);
     $('stHudP').onchange=e=>window.__hud.set('player',e.target.checked);
