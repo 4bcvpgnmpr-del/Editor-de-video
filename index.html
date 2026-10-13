@@ -6013,14 +6013,14 @@ function openExport(list,defName){
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
     '<label style="display:block;margin:10px 0 3px;font-weight:600">Calidad</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="9000">🎬 MOTOR PRO propio · ffmpeg (1080p, cortes exactos, sin dibujos)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
+    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="9000">🎬 MOTOR PRO propio · ffmpeg (1080p, cortes exactos, con dibujos)</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn primary" id="exGo">Empezar</button></div>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
   d.querySelector('#exGo').onclick=()=>{
-    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:1920,bps:0,draw:false,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
+    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
     try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(e){}
     runExport(list,defName,d.querySelector('#exMode').value,o);
@@ -6082,6 +6082,10 @@ async function ffLoad(){
   })();
   try{ return await FF.loading; } finally{ FF.loading=null; }
 }
+async function ffOverlayPng(tl,W,H){
+  const im=await expSvgImg(tl,W,H); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); if(im) x.drawImage(im,0,0,W,H);
+  return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
+}
 function ffTitlePng(text,W,H){
   const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
   const fs=Math.round(H*0.045); x.font='700 '+fs+'px sans-serif'; const t=String(text||'').slice(0,80); const w=Math.min(W*0.8,x.measureText(t).width+fs);
@@ -6104,7 +6108,7 @@ async function ffRun(list,o,prog){
   const segs=[];
   try{
     for(let i=0;i<list.length&&!EXP.cancel;i++){
-      cur=i; const e=list[i], seg='seg'+i+'.mp4'; prog(i,n,{name:e.name||e.label||''});
+      cur=i; const e=list[i]; let seg='seg'+i+'.mp4'; prog(i,n,{name:e.name||e.label||''});
       let dur, args;
       const title=(o.title&&!e.cover)?(e.name||e.label||''):'';
       if(title){ await ff.writeFile('t'+i+'.png',await ffTitlePng(title,W,H)); }
@@ -6115,21 +6119,45 @@ async function ffRun(list,o,prog){
         const rc=await ff.exec(args); if(rc!==0) throw new Error('Falló una portada.');
       } else {
         const file=e.ext?e.file:lastFile; if(!file) throw new Error('No hay archivo de vídeo.');
-        const src=await mountFor(file); const from=e.ext?e.from:e.start, to=e.ext?e.to:e.end; dur=Math.max(0.2,to-from);
-        const base=['-y','-ss',String(from),'-t',String(dur),'-i',src];
-        const run=async(withAudio)=>{
-          const a=base.slice(); let idx=1, tIdx=-1, sIdx=-1;
-          if(title){ a.push('-i','t'+i+'.png'); tIdx=idx++; }
-          if(!withAudio){ a.push('-f','lavfi','-t',String(dur),'-i','anullsrc=r=48000:cl=stereo'); sIdx=idx++; }
-          if(title) a.push('-filter_complex','[0:v]'+vf+'[b];[b][1:v]overlay=0:0:format=auto,format=yuv420p[v]','-map','[v]');
-          else a.push('-vf',vf+',format=yuv420p','-map','0:v:0');
-          if(withAudio) a.push('-map','0:a:0','-af','aresample=async=1:first_pts=0'); else a.push('-map',sIdx+':a');
-          a.push(...enc,'-shortest',seg); return ff.exec(a);
+        const src=await mountFor(file); const from=e.ext?e.from:e.start, to=e.ext?e.to:e.end;
+        /* dibujos de este clip: "sobre el vídeo" (con su tiempo) y "pausa" (imagen congelada) */
+        const ovT=(o.draw&&!e.ext)?teles.filter(x=>x.mode==='overlay'&&x.t<to&&x.t+x.hold>from):[];
+        const fzT=(o.draw&&!e.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=from&&x.t<to).sort((a,b)=>a.t-b.t):[];
+        const png={}; for(const tl of ovT.concat(fzT)){ png[tl.id]='o'+i+'_'+tl.id+'.png'; await ff.writeFile(png[tl.id],await ffOverlayPng(tl,W,H)); }
+        const build=(inArgs,ovs,audioMode,dur,outName)=>{
+          const a=inArgs.slice(); let idx=1, fc='[0:v]'+vf+'[v0]', last='v0';
+          ovs.forEach((ov,k)=>{ a.push('-i',ov.png); fc+=';['+last+']['+idx+':v]overlay=0:0:format=auto'+(ov.en?":enable='between(t,"+ov.en[0].toFixed(3)+","+ov.en[1].toFixed(3)+")'":'')+'[v'+(k+1)+']'; last='v'+(k+1); idx++; });
+          fc+=';['+last+']format=yuv420p[v]';
+          let amap, af=[];
+          if(audioMode){ amap='0:a:0'; af=['-af','aresample=async=1:first_pts=0']; }
+          else { a.push('-f','lavfi','-t',String(dur),'-i','anullsrc=r=48000:cl=stereo'); amap=idx+':a'; }
+          a.push('-filter_complex',fc,'-map','[v]','-map',amap,...af,...enc,'-shortest',outName); return a;
         };
-        let rc=mute?1:await run(true); if(rc!==0) rc=await run(false);
-        if(rc!==0) throw new Error('ffmpeg no pudo procesar el clip '+(i+1)+'.');
+        const titleOv=title?[{png:'t'+i+'.png'}]:[];
+        const pts=[from].concat(fzT.map(x=>x.t),[to]); let part=0;
+        for(let j=0;j<pts.length-1;j++){
+          const p0=pts[j], p1=pts[j+1], dur=p1-p0;
+          if(dur>=0.04||(pts.length===2)){
+            const d=Math.max(0.2,dur), nm='seg'+i+'_'+(part++)+'.mp4';
+            const ovs=titleOv.concat(ovT.filter(x=>x.t<p1&&x.t+x.hold>p0).map(x=>({png:png[x.id],en:[Math.max(0,x.t-p0),x.t+x.hold-p0]})));
+            const base=['-y','-ss',String(p0),'-t',String(d),'-i',src];
+            let rc=mute?1:await ff.exec(build(base,ovs,true,d,nm)); if(rc!==0) rc=await ff.exec(build(base,ovs,false,d,nm));
+            if(rc!==0) throw new Error('ffmpeg no pudo procesar el clip '+(i+1)+'.');
+            segs.push(nm);
+          }
+          if(j<fzT.length){
+            const f=fzT[j], hold=Math.max(0.5,f.hold||2), still='s'+i+'_'+j+'.png', nm='seg'+i+'_'+(part++)+'.mp4';
+            let rc=await ff.exec(['-y','-ss',String(f.t),'-i',src,'-frames:v','1','-vf','scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black',still]);
+            if(rc!==0) throw new Error('No se pudo congelar la imagen.');
+            const base=['-y','-loop','1','-framerate',String(FPS),'-t',String(hold),'-i',still];
+            rc=await ff.exec(build(base,titleOv.concat([{png:png[f.id]}]),false,hold,nm));
+            if(rc!==0) throw new Error('Falló una pausa con dibujo.');
+            segs.push(nm); try{ await ff.deleteFile(still); }catch(_){}
+          }
+        }
+        seg=null;
       }
-      segs.push(seg);
+      if(seg) segs.push(seg);
       try{ await ff.deleteFile('t'+i+'.png'); }catch(_){} try{ await ff.deleteFile('c'+i+'.img'); }catch(_){}
     }
     if(EXP.cancel||!segs.length){ try{ ff.terminate(); }catch(_){} FF.inst=null; return null; }
@@ -7268,7 +7296,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 23:55 · motor pro: más rápido (ultrafast)';
+  const BUILD='13/10/2026 · 00:20 · motor pro: con dibujos';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
