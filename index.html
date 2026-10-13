@@ -5738,7 +5738,7 @@ async function fxRun(list,o,prog){
       while(V.length&&!V[0].is_sync) V.shift();
       if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
       const frz=(o.draw&&!ev.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=ev.start&&x.t<ev.end).sort((a,b)=>a.t-b.t):[];
-      const done=new Set(); let shift=0, decErr=null;
+      const done=new Set(); let shift=0, decErr=null, lastSlot=-1;
       const emit=(frame,tl,out,al)=>{
         fitDraw(ctx,frame,ow,oh);
         if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
@@ -5757,14 +5757,19 @@ async function fxRun(list,o,prog){
           if(t<ev.start-0.5/fps||t>=ev.end){frame.close();return;}
           let tl=null;
           if(o.draw&&!ev.ext) for(const x of teles){ if(x.mode==='overlay'&&t>=x.t&&t<=x.t+x.hold){tl=x;break;} }
+          const slot=Math.round(Math.max(0,t-ev.start)*fps);
+          if(slot<=lastSlot||slot>=Math.round((ev.end-ev.start)*fps)){ frame.close(); return; }
           const f=frz.find(x=>!done.has(x.id)&&t>=x.t-0.5/fps);
-          const out=base+Math.max(0,t-ev.start)+shift;
           if(f){
+            const out=base+slot/fps+shift;
             done.add(f.id);
             const n=Math.max(1,Math.round(f.hold*10));
             for(let k=0;k<n;k++){ const ag=k*(f.hold/n); emit(frame,f,out+ag,teleAlpha(f,ag,f.hold-ag)); }
-            shift+=f.hold;
-          }else emit(frame,tl,out,tl?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1);
+            shift+=f.hold; lastSlot=slot;
+          }else{
+            for(let k=lastSlot+1;k<=slot;k++) emit(frame,tl,base+k/fps+shift,tl?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1);
+            lastSlot=slot;
+          }
           frame.close();
         }catch(e){ decErr=e; try{frame.close();}catch(_){} }
       };
@@ -6048,6 +6053,9 @@ async function ffLoad(){
     const f=new window.FFmpegWASM.FFmpeg();
     const parts=[]; for(const nm of ['core-p00.bin','core-p01.bin','core-p02.bin']){ const r=await fetch(abs('ffmpeg/'+nm)); if(!r.ok) break; parts.push(await r.blob()); }
     if(!parts.length) throw new Error('Faltan los archivos del motor en la carpeta ffmpeg de la web.');
+    const SZ=[16777216,15351898]; const names=['core-p00.bin','core-p01.bin'];
+    for(let i=0;i<SZ.length;i++){ if(!parts[i]) throw new Error('Falta '+names[i]+' en la carpeta ffmpeg.'); if(parts[i].size!==SZ[i]) throw new Error(names[i]+' no es el original: pesa '+parts[i].size+' bytes y debería pesar '+SZ[i]+'. Súbelo de nuevo desde el archivo que te mandé, sin abrirlo ni editarlo.'); }
+    { const h=new Uint8Array(await parts[0].slice(0,4).arrayBuffer()); if(h[0]!==0||h[1]!==0x61||h[2]!==0x73||h[3]!==0x6d) throw new Error('core-p00.bin está dañado (no empieza como un archivo del motor). Súbelo de nuevo sin abrirlo ni editarlo.'); }
     const wasmURL=URL.createObjectURL(new Blob(parts,{type:'application/wasm'}));
     await f.load({coreURL:abs('ffmpeg/ffmpeg-core.js'),wasmURL,classWorkerURL:abs('ffmpeg/814.ffmpeg.js')});
     FF.inst=f; return f;
@@ -7240,7 +7248,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 14:05 · motor pro ffmpeg';
+  const BUILD='13/10/2026 · 21:40 · fix vídeos lentos de otro proyecto';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
