@@ -7183,7 +7183,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
        row('Qué se ve','<span style="flex:none;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end"><label><input type="checkbox" id="stHudP"'+(HUD.player?' checked':'')+'> Jugadora</label><label><input type="checkbox" id="stHudC"'+(HUD.cat?' checked':'')+'> Categoría</label><label><input type="checkbox" id="stHudD"'+(HUD.desc?' checked':'')+'> Descriptor</label></span>')+
        row('Dónde','<select id="stHudPos">'+[['tl','Arriba izquierda'],['tc','Arriba centro'],['tr','Arriba derecha'],['bl','Abajo izquierda'],['bc','Abajo centro'],['br','Abajo derecha']].map(x=>'<option value="'+x[0]+'"'+(HUD.pos===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>')+
        row('Tamaño','<select id="stHudSz">'+[[0.75,'Pequeño'],[1,'Normal'],[1.4,'Grande'],[1.9,'Muy grande']].map(x=>'<option value="'+x[0]+'"'+(HUD.size===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>')+
-       row('Cuánto tiempo','<select id="stHudSec">'+[2,3,4,6,8].map(x=>'<option value="'+x+'"'+(HUD.secs===x?' selected':'')+'>'+x+' s</option>').join('')+'</select>','Desde el instante de la marca')+
+       row('Cuánto tiempo','<select id="stHudSec">'+[0,2,3,4,6,8].map(x=>'<option value="'+x+'"'+(HUD.secs===x?' selected':'')+'>'+(x?x+' s':'Todo el corte')+'</option>').join('')+'</select>','«Todo el corte»: de principio a fin del clip')+
      '</div>'+
      '<div class="st-h">Almacenamiento</div><div class="st-g">'+
        row('Vídeos guardados en este dispositivo',btn('stLib','Ver'),vids.length+' vídeos · '+(vsize/1073741824).toFixed(2)+' GB'+(usage?' · Usado '+usage:''))+
@@ -7277,8 +7277,8 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== Etiquetas sobre el vídeo (HUD) ===== */
 (function(){
-  const KEY='bbtag.hud', D={on:false,cat:true,desc:true,player:true,pos:'tr',size:1,secs:4,max:3};
-  let H=Object.assign({},D); try{ Object.assign(H,JSON.parse(lsGet(KEY)||'{}')); }catch(e){}
+  const KEY='bbtag.hud', D={on:false,cat:true,desc:true,player:true,pos:'tr',size:1,secs:0,max:3};
+  let H=Object.assign({},D); try{ Object.assign(H,JSON.parse(lsGet(KEY)||'{}')); if(!H.v2){H.secs=0;H.v2=1;} }catch(e){}
   const wrap=document.getElementById('vwrap'); if(!wrap) return;
   const el=document.createElement('div'); el.id='tagHud'; wrap.appendChild(el);
   const POS={tl:'top:8px;left:8px;align-items:flex-start',tc:'top:8px;left:50%;transform:translateX(-50%);align-items:center',tr:'top:8px;right:8px;align-items:flex-end',
@@ -7293,7 +7293,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   let last='';
   function render(){
     if(!H.on||!hasVideo){ if(el.style.display!=='none'){ el.style.display='none'; last=''; } return; }
-    const t=video.currentTime, a=events.filter(e=>t>=e.t&&t<=e.t+H.secs).sort((x,y)=>y.t-x.t).slice(0,H.max);
+    const t=video.currentTime, a=events.filter(e=>H.secs>0?(t>=e.t&&t<=e.t+H.secs):(t>=(e.start!=null?e.start:e.t)&&t<=(e.end!=null?e.end:e.t+4))).sort((x,y)=>y.t-x.t).slice(0,H.max);
     const html=a.map(e=>{
       const l1=H.player?pname(e):'', l2=H.cat?e.label:'', l3=H.desc?descText(e):'';
       if(!l1&&!l2&&!l3) return '';
