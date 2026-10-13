@@ -4738,7 +4738,7 @@ function startClipAt(idx){
     xv.src=extUrl(x_.id); xv.hidden=false; xv.muted=false;
     const go=()=>{ try{xv.currentTime=x_.from;}catch(e){} xv.play().catch(()=>{ xv.muted=true; xv.play().catch(()=>{}); }); };
     if(xv.readyState>=1) go(); else xv.onloadedmetadata=()=>{xv.onloadedmetadata=null;go();};
-    clip.ext={to:x_.to}; { const ct=$('#ctitle'); ct.textContent=x_.name; ct.hidden=false; } updateBadge(); return;
+    clip.ext={to:x_.to}; { const ct=$('#ctitle'); ct.textContent=x_.name+(x_.src?'  ·  '+x_.src:''); ct.hidden=false; } updateBadge(); return;
   }
   if(isCoverId(clip.queue[idx])){
     const cv_=coverOf(clip.queue[idx]); video.pause(); endFreeze(false); showCover(cv_); clip.cover={until:performance.now()+cv_.dur*1000};
@@ -5367,7 +5367,8 @@ function hideCover(){ const el=$('#coverShow'); if(el&&!el.hidden){el.hidden=tru
 const isExtId=id=>typeof id==='string'&&id.indexOf('x:')===0;
 const extOf=id=>externals.find(x=>'x:'+x.id===id);
 const extFiles={}, extUrls={};
-function normExt(x){x=x||{};return {id:String(x.id||uid()),name:String(x.name||'Vídeo externo').slice(0,60),fname:String(x.fname||'').slice(0,120),size:+x.size||0,from:Math.max(0,+x.from||0),to:Math.max(0,+x.to||0)};}
+function normExt(x){x=x||{};return {id:String(x.id||uid()),name:String(x.name||'Vídeo externo').slice(0,90),fname:String(x.fname||'').slice(0,120),size:+x.size||0,from:Math.max(0,+x.from||0),to:Math.max(0,+x.to||0),src:String(x.src||'').slice(0,80),color:/^#[0-9a-f]{3,8}$/i.test(x.color||'')?x.color:'',tm:String(x.tm||'').slice(0,60)};}
+function extFromEv(e,srcTitle,fname,size,teamLbl,playerTxt){ const nm=[evName(e),playerTxt||'',descText(e)].filter(Boolean).join(' · '); return normExt({name:nm,fname,size,from:e.start,to:e.end,src:srcTitle,color:info(e).color||e.color,tm:[teamLbl,e.period,fmt(e.t)].filter(Boolean).join(' · ')}); }
 function extUrl(id){ if(extUrls[id]) return extUrls[id]; const f=extFiles[id]; if(!f) return ''; return (extUrls[id]=URL.createObjectURL(f)); }
 function fitDraw(ctx,src,ow,oh,sw,sh){
   sw=sw||src.displayWidth||src.videoWidth||ow; sh=sh||src.displayHeight||src.videoHeight||oh;
@@ -7389,7 +7390,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
           const pick=evs.filter(e=>sel.has(e.id)); if(!pick.length){ toast('Marca al menos un corte.'); return; }
           const v=await get(g.key); if(!v||!v.blob){ toast('No se encuentra ese vídeo en «Mis vídeos».'); return; }
           const f=fileOf(v);
-          pick.forEach(e=>{ const x=normExt({name:(evName(e)+' · '+fmt(e.t)+' · '+g.title).slice(0,60),fname:v.name,size:v.size,from:e.start,to:e.end}); externals.push(x); extFiles[x.id]=f; p.items.push('x:'+x.id); });
+          pick.forEach(e=>{ const x=extFromEv(e,g.title,v.name,v.size,e.team==='R'?matchTitleSide(o,'R'):matchTitleSide(o,'L'),e.player?'#'+e.player:''); externals.push(x); extFiles[x.id]=f; p.items.push('x:'+x.id); });
           expClose(); commit(); toast(pick.length+' cortes de «'+g.title+'» añadidos a «'+p.name+'».');
         };
       }
@@ -7425,7 +7426,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       cp.items.forEach(id=>{
         if(isCoverId(id)){ const c=coverOf(id); if(c){ const n=normCover(Object.assign({},c,{id:uid()})); o.covers.push(n); items.push('c:'+n.id); } }
         else if(isExtId(id)){ const x=extOf(id); if(x){ const n=normExt(Object.assign({},x,{id:uid()})); o.externals.push(n); items.push('x:'+n.id); } }
-        else { const e=events.find(v=>v.id===id); if(e){ const n=normExt({name:(evName(e)+' · '+fmt(e.t)+' · '+myTitle).slice(0,60),fname:videoName,size,from:e.start,to:e.end}); o.externals.push(n); items.push('x:'+n.id); } }
+        else { const e=events.find(v=>v.id===id); if(e){ const n=extFromEv(e,myTitle,videoName,size,teamName(e.team),e.player?playerLabel(e.team,e.player):''); o.externals.push(n); items.push('x:'+n.id); } }
       });
       if(!items.length){ toast('El montaje no tiene clips válidos.'); return; }
       o.playlists.push({id:uid(),name:(cp.name+' · de '+myTitle).slice(0,60),folder:cp.folder||'',items});
@@ -8399,7 +8400,7 @@ function renderPlaylists(){
     if(isExtId(id)){
       const x=extOf(id); if(!x) return '';
       const ok=!!extFiles[x.id], pl_=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
-      return '<li class="prow'+(pl_?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:#4DA3FF" title="Vídeo externo: '+esc(x.name)+'"><span class="rn">'+(i+1)+'</span><span class="rt"><b>🎞 '+esc(x.name)+'</b><span class="rm">'+(ok?'Vídeo externo · '+x.from.toFixed(1)+'–'+x.to.toFixed(1)+' s':'⚠ Falta el archivo «'+esc(x.fname)+'» — pulsa ✎ para elegirlo')+'</span></span><span class="ra"><button data-act="up" title="Subir">▲</button><button data-act="dn" title="Bajar">▼</button><button data-act="play" title="Ver">▶</button><button data-act="edit" title="Editar">✎</button><button data-act="rm" title="Quitar">✕</button></span></li>';
+      return '<li class="prow'+(pl_?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(x.color||'#4DA3FF')+'" title="'+esc(x.name+(x.src?' — de '+x.src:''))+'"><span class="rn">'+(i+1)+'</span><span class="rt"><b>🎞 '+esc(x.name)+'</b><span class="rm">'+(ok?esc((x.src?'De «'+x.src+'»':'Vídeo externo')+(x.tm?' · '+x.tm:'')+' · '+x.from.toFixed(1)+'–'+x.to.toFixed(1)+' s'):'⚠ Falta el archivo «'+esc(x.fname)+'» — pulsa ✎ para elegirlo')+'</span></span><span class="ra"><button data-act="up" title="Subir">▲</button><button data-act="dn" title="Bajar">▼</button><button data-act="play" title="Ver">▶</button><button data-act="edit" title="Editar">✎</button><button data-act="rm" title="Quitar">✕</button></span></li>';
     }
     const e=events.find(x=>x.id===id); if(!e) return '';
     const inf=info(e), playing=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
