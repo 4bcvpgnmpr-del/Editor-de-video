@@ -7409,7 +7409,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 01:50 · cola de exportación';
+  const BUILD='13/10/2026 · 02:20 · menú de escritorio';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -8049,6 +8049,30 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement&&document.body.classList.contains('vfull')){ document.body.classList.remove('vfull'); setTimeout(()=>{try{layoutTele();}catch(er){} apply();},80);} });
 })();
 
+
+/* ===== App de escritorio: acciones del menú de arriba (Archivo, Edición…) ===== */
+(function(){
+  const D=window.scoutDesktop; if(!D||!D.onMenu) return;
+  const clk=id=>{ const b=document.getElementById(id); if(b) b.click(); else toast('Esa opción no está disponible ahora.'); };
+  const inSettings=(id)=>{ if(window.openSettings) window.openSettings(); setTimeout(()=>clk(id),350); };
+  D.onMenu(a=>{
+    switch(a){
+      case 'open': clk('bOpen'); break;
+      case 'saveProject': clk('bJson'); break;
+      case 'loadProject': clk('bLoad'); break;
+      case 'production': clk('bProd'); break;
+      case 'csv': clk('bCsv'); break;
+      case 'backupExport': inSettings('stExp'); break;
+      case 'backupImport': inSettings('stImp'); break;
+      case 'settings': if(window.openSettings) window.openSettings(); break;
+      case 'help': inSettings('stHelp'); break;
+      case 'undo': clk('bUndo'); break;
+      case 'redo': clk('bRedo'); break;
+      case 'buttons': clk('bTgBot'); break;
+      case 'layout': clk('bLayout'); break;
+    }
+  });
+})();
 /* ===== Pausar al etiquetar + guardar proyecto en pantalla completa ===== */
 (function(){
   let was=document.body.classList.contains('lowOn');
