@@ -7433,6 +7433,33 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       expClose(); toast('Montaje llevado a «'+g.title+'» ('+items.length+' clips). Ábrelo desde «Mis vídeos».');
     });
   }
+  /* unir dos montajes en uno */
+  function mergeMontages(){
+    if(playlists.length<2){ toast('Necesitas al menos dos montajes para unirlos.'); return; }
+    const cur=curPl();
+    const opts=playlists.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' ('+x.items.length+')</option>').join('');
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Unir dos montajes</h3><div id="mgB"></div>');
+    d.firstElementChild.style.width='min(560px,100%)';
+    const B=d.querySelector('#mgB'), sel='width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);margin:4px 0 10px';
+    B.innerHTML='<p class="hint" style="margin:0 0 8px">Crea un montaje nuevo con los clips del primero y, a continuación, los del segundo. Los originales no cambian.</p>'+
+      '<label>Primero<select id="mgA" style="'+sel+'">'+opts+'</select></label><label>Después<select id="mgC" style="'+sel+'">'+opts+'</select></label>'+
+      '<label>Nombre<input id="mgN" style="'+sel+'"></label>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="mgNo">Cancelar</button><button class="btn primary" id="mgOk">Unir</button></div>';
+    const A=B.querySelector('#mgA'), C=B.querySelector('#mgC'), N=B.querySelector('#mgN');
+    A.value=cur?cur.id:playlists[0].id; C.value=(playlists.find(x=>x.id!==A.value)||playlists[0]).id;
+    const nm=()=>{ const a=playlists.find(x=>x.id===A.value), c=playlists.find(x=>x.id===C.value); N.value=((a&&a.name)||'')+' + '+((c&&c.name)||''); };
+    nm(); A.onchange=nm; C.onchange=nm;
+    B.querySelector('#mgNo').onclick=expClose;
+    B.querySelector('#mgOk').onclick=()=>{
+      const a=playlists.find(x=>x.id===A.value), c=playlists.find(x=>x.id===C.value);
+      if(!a||!c||a===c){ toast('Elige dos montajes distintos.'); return; }
+      const items=a.items.concat(c.items.filter(i=>!a.items.includes(i)));
+      const np={id:uid(),name:(N.value.trim()||'Montaje unido').slice(0,60),folder:a.folder||'',items};
+      playlists.push(np); plCur=np.id; expClose(); commit(); toast('Montaje «'+np.name+'» creado con '+items.length+' clips.');
+    };
+  }
+  const b3=document.createElement('button'); b3.className='mini'; b3.id='plMerge'; b3.title='Unir dos montajes en uno nuevo'; b3.textContent='⧉ Unir montajes';
+  b.after(b3); b3.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; mergeMontages(); };
   const b2=document.createElement('button'); b2.className='mini'; b2.id='plSend'; b2.title='Copiar este montaje a otro partido guardado'; b2.textContent='⇢ Llevar a otro partido';
   b.after(b2); b2.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; sendMontage(); };
 })();
