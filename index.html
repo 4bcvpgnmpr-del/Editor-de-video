@@ -4569,21 +4569,48 @@ function openPlayerPicker(k,n){
     o.querySelectorAll('[data-b]').forEach(x=>x.onclick=()=>{
       const b=btnById(x.dataset.b); if(!b) return;
       ev=tagFor(b,k,p.n,t0); flash(b.id);
-      if(cfg.descs.some(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]))) stepDesc(b); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
+      if(pkAll(b).length) stepDesc(b, !pkGs(b).length); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
     });
   }
-  function stepDesc(b){
-    const gs=cfg.descs.filter(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]));
-    o.innerHTML='<div class="pk">'+head+'<div class="pk-s">'+esc(b.label)+' · descriptores</div>'+
-      gs.map(g=>'<div class="pk-s" style="margin-top:8px">'+esc(g.name)+(g.multi?' · varios':'')+'</div><div class="pk-d" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+g.items.map(it=>{ const on=ev.desc.some(q=>q.d===g.id&&q.i===it.id); return '<button data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+'</button>'; }).join('')+'</div>').join('')+
-      '<div class="pk-f"><button id="pkMore">＋ Otra categoría</button><button class="pri" id="pkOk">✓ Listo</button></div></div>';
+  const pkHide=()=>{ try{ return JSON.parse(lsGet('bbtag.pkHide')||'{}')||{}; }catch(_){ return {}; } };
+  const pkAll=b=>cfg.descs.filter(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]));
+  const pkGs=b=>{ const h=pkHide()[b.group]||[]; return pkAll(b).filter(g=>!h.includes(g.id)); };
+  function stepDesc(b,edit){
+    const all=pkAll(b), h=pkHide()[b.group]||[], gs=edit?all:all.filter(g=>!h.includes(g.id));
+    o.innerHTML='<div class="pk">'+head+'<div class="pk-s">'+esc(b.label)+' · descriptores'+(edit?' · elige cuáles ver en «'+esc(b.group||'Otros')+'»':'')+'</div>'+
+      (edit?'<div class="pk-d">'+all.map(g=>'<button data-hg="'+esc(g.id)+'" aria-pressed="'+!h.includes(g.id)+'" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+esc(g.name)+'</button>').join('')+'</div><p class="hint" style="margin:8px 0 0;font-size:12px">Los marcados se mostrarán siempre que etiquetes una jugada de «'+esc(b.group||'Otros')+'».</p>'
+      :gs.map(g=>'<div class="pk-s" style="margin-top:8px">'+esc(g.name)+(g.multi?' · varios':'')+'</div><div class="pk-d" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+g.items.map(it=>{ const on=ev.desc.some(q=>q.d===g.id&&q.i===it.id); return '<button data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+'</button>'; }).join('')+'</div>').join(''))+
+      '<div class="pk-f">'+(edit?'':'<button id="pkMore">＋ Otra categoría</button><button id="pkEd" title="Elegir qué descriptores se muestran">⚙</button>')+'<button class="pri" id="pkOk">'+(edit?'✓ Guardar':'✓ Listo')+'</button></div></div>';
     wire();
+    if(edit){
+      o.querySelectorAll('[data-hg]').forEach(x=>x.onclick=()=>x.setAttribute('aria-pressed',x.getAttribute('aria-pressed')!=='true'));
+      o.querySelector('#pkOk').onclick=()=>{ const m=pkHide(); m[b.group]=[...o.querySelectorAll('[data-hg]')].filter(x=>x.getAttribute('aria-pressed')!=='true').map(x=>x.dataset.hg); lsSet('bbtag.pkHide',JSON.stringify(m)); stepDesc(b); };
+      return;
+    }
     o.querySelectorAll('[data-dg]').forEach(x=>x.onclick=()=>{ toggleDesc(ev,x.dataset.dg,x.dataset.di); const g=descGroup(x.dataset.dg); if(!g) return;
       o.querySelectorAll('[data-dg="'+x.dataset.dg+'"]').forEach(y=>y.setAttribute('aria-pressed',ev.desc.some(q=>q.d===x.dataset.dg&&q.i===y.dataset.di))); });
     o.querySelector('#pkMore').onclick=()=>{ ev=null; stepCat(); };
+    o.querySelector('#pkEd').onclick=()=>stepDesc(b,true);
     o.querySelector('#pkOk').onclick=()=>{ toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); };
   }
-  function wire(){ o.querySelector('#pkX').onclick=closePlayerPicker; }
+  const pkPos=()=>{ try{ return JSON.parse(lsGet('bbtag.pkPos')||'null'); }catch(_){ return null; } };
+  function pkPlace(){
+    const k=o.querySelector('.pk'); if(!k) return; const pos=pkPos();
+    if(!pos){ k.style.position=''; k.style.left=k.style.top=''; k.style.margin=''; return; }
+    k.style.position='fixed'; k.style.margin='0';
+    const r=k.getBoundingClientRect(), W=innerWidth, H=innerHeight;
+    k.style.left=Math.max(4,Math.min(pos.x,W-Math.min(r.width,W)-4))+'px'; k.style.top=Math.max(4,Math.min(pos.y,H-60))+'px';
+  }
+  function wire(){ o.querySelector('#pkX').onclick=closePlayerPicker; const h=o.querySelector('.pk-h'); if(h){ h.title='Arrastra para mover (se recuerda) · doble clic para centrar'; h.style.cursor='grab'; h.style.touchAction='none'; } pkPlace(); }
+  o.addEventListener('pointerdown',e=>{
+    const h=e.target.closest('.pk-h'); if(!h||e.target.closest('.pk-x')) return;
+    const k=o.querySelector('.pk'); const r=k.getBoundingClientRect(); const dx=e.clientX-r.left, dy=e.clientY-r.top;
+    k.style.position='fixed'; k.style.margin='0'; k.style.left=r.left+'px'; k.style.top=r.top+'px';
+    const mv=ev=>{ k.style.left=Math.max(4,Math.min(ev.clientX-dx,innerWidth-80))+'px'; k.style.top=Math.max(4,Math.min(ev.clientY-dy,innerHeight-50))+'px'; };
+    const up=()=>{ removeEventListener('pointermove',mv); removeEventListener('pointerup',up); const b=k.getBoundingClientRect(); lsSet('bbtag.pkPos',JSON.stringify({x:b.left,y:b.top})); };
+    addEventListener('pointermove',mv); addEventListener('pointerup',up); e.preventDefault();
+  });
+  o.addEventListener('dblclick',e=>{ if(!e.target.closest('.pk-h')||e.target.closest('.pk-x')) return; try{ localStorage.removeItem('bbtag.pkPos'); }catch(_){} pkPlace(); });
   o.addEventListener('click',e=>{ if(e.target===o) closePlayerPicker(); });
   stepCat();
 }
@@ -7479,7 +7506,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 03:00 · selector de jugadora translúcido';
+  const BUILD='13/10/2026 · 03:40 · selector de jugadora movible';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
