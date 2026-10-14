@@ -7518,7 +7518,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 18:30 · presentación en mesa de producción';
+  const BUILD='13/10/2026 · 19:10 · presentación abre en la ventana de la mesa';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -9003,49 +9003,75 @@ $('#plPlay').onclick=playPlaylist;
   bar.innerHTML='<button id="prvP" title="Clip anterior (←)">⏮</button><button id="prvPl" title="Pausa / reproducir (espacio)">⏯</button><button id="prvN" title="Clip siguiente (→)">⏭</button><span id="prvT"></span><button id="prvE" title="Parar y abrir el editor de este clip">✎ Editar clip</button><button id="prvR" title="Volver a verlo desde el principio" hidden>↻ Repetir</button><button id="prvX" title="Salir (Esc)">✕ Salir</button>';
   document.body.appendChild(bar);
   const g=id=>bar.querySelector('#'+id);
-  let tm=0, hideT=0, on=false;
-  const relayout=()=>setTimeout(()=>{ try{ layoutTele&&layoutTele(); }catch(e){} },90);
+  let tm=0, hideT=0, on=false, tdoc=document, vparent=null, vnext=null, hk=null;
+  const relayout=()=>setTimeout(()=>{ try{ layoutTele&&layoutTele(); }catch(e){} },120);
   const upd=()=>{
     if(!on) return;
     const t=g('prvT'), ed=g('prvE'), rp=g('prvR');
     if(clip&&clip.queue){
       const id=clip.queue[clip.idx], ev=events.find(x=>x.id===id);
       t.textContent='Clip '+(clip.idx+1)+' de '+clip.queue.length+(ev?' · '+evName(ev):(isCoverId(id)?' · Portada':' · Vídeo extra'));
-      ed.disabled=!ev; rp.hidden=true;
+      ed.disabled=!(ev||isExtId(id)); rp.hidden=true;
     } else { t.textContent='Fin del montaje'; ed.disabled=true; rp.hidden=false; bar.classList.remove('idle'); }
   };
   const wake=()=>{ bar.classList.remove('idle'); clearTimeout(hideT); hideT=setTimeout(()=>{ if(on&&clip) bar.classList.add('idle'); },2600); };
-  const enter=()=>{
-    const q=curPl(); if(!q) return;
-    playPlaylist(); if(!clip) return;
-    on=true; document.body.classList.add('presOn'); bar.hidden=false;
-    try{ const d=document.documentElement; if(d.requestFullscreen&&!document.fullscreenElement) d.requestFullscreen().catch(()=>{}); }catch(e){}
-    try{ window.focus(); }catch(e){}
-    relayout(); upd(); wake(); clearInterval(tm); tm=setInterval(upd,250);
-  };
-  const leave=()=>{
-    if(!on) return; on=false; clearInterval(tm); clearTimeout(hideT);
-    document.body.classList.remove('presOn'); bar.hidden=true;
-    try{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){}
-    relayout();
-  };
-  btn.onclick=enter;
-  g('prvX').onclick=()=>{ leave(); if(clip) stopClip(true); };
-  g('prvR').onclick=()=>{ playPlaylist(); upd(); wake(); };
-  g('prvPl').onclick=()=>{ if(clip&&clip.cover){ return; } togglePlay(); };
-  g('prvN').onclick=()=>{ if(clip&&clip.idx<clip.queue.length-1) startClipAt(clip.idx+1); else if(clip) stopClip(true); upd(); };
-  g('prvP').onclick=()=>{ if(clip) startClipAt(Math.max(0,clip.idx-1)); upd(); };
-  g('prvE').onclick=()=>{ if(!clip) return; const id=clip.queue[clip.idx]; if(!events.some(x=>x.id===id)) return; leave(); stopClip(true); openClipEditor(id); };
-  bar.addEventListener('pointermove',wake);
-  document.addEventListener('pointermove',()=>{ if(on) wake(); });
-  document.addEventListener('keydown',e=>{
+  const onFs=()=>{ if(on&&!tdoc.fullscreenElement) g('prvX').click(); };
+  const onMove=()=>{ if(on) wake(); };
+  const onKeyP=e=>{
     if(!on) return;
     if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); g('prvX').click(); }
     else if(e.key==='ArrowRight'){ e.preventDefault(); e.stopPropagation(); g('prvN').click(); }
     else if(e.key==='ArrowLeft'){ e.preventDefault(); e.stopPropagation(); g('prvP').click(); }
     else if(e.key===' '){ e.preventDefault(); e.stopPropagation(); g('prvPl').click(); }
-  },true);
-  document.addEventListener('fullscreenchange',()=>{ if(on&&!document.fullscreenElement) g('prvX').click(); });
+  };
+  let hd=document, ph=null, phB=null;
+  const relayout2=()=>{ relayout(); setTimeout(()=>{ try{ if(clip) startClipAt(clip.idx); }catch(e){} },160); };
+  const enter=(e)=>{
+    const q=curPl(); if(!q) return;
+    playPlaylist(); if(!clip) return;
+    const src=e&&e.currentTarget&&e.currentTarget.ownerDocument; hd=(src&&src!==document)?src:document;
+    const vw=document.getElementById('vwrap');
+    if(hd!==document&&vw){
+      ph=document.createComment('vw'); vw.parentNode.insertBefore(ph,vw); hd.body.appendChild(hd.adoptNode(vw));
+      phB=document.createComment('pb'); bar.parentNode.insertBefore(phB,bar); hd.body.appendChild(hd.adoptNode(bar));
+      hd.addEventListener('keydown',kd,true); hd.addEventListener('pointermove',mv); hd.addEventListener('fullscreenchange',fc);
+    }
+    on=true; hd.body.classList.add('presOn'); bar.hidden=false;
+    try{ const d=hd.documentElement; if(d.requestFullscreen&&!hd.fullscreenElement) d.requestFullscreen().catch(()=>{}); }catch(e){}
+    try{ (hd.defaultView||window).focus(); }catch(e){}
+    (hd===document?relayout:relayout2)(); upd(); wake(); clearInterval(tm); tm=setInterval(upd,250);
+  };
+  const leave=()=>{
+    if(!on) return; on=false; clearInterval(tm); clearTimeout(hideT);
+    hd.body.classList.remove('presOn'); bar.hidden=true;
+    try{ if(hd.fullscreenElement) hd.exitFullscreen().catch(()=>{}); }catch(e){}
+    if(hd!==document){
+      const vw=hd.getElementById('vwrap');
+      hd.removeEventListener('keydown',kd,true); hd.removeEventListener('pointermove',mv); hd.removeEventListener('fullscreenchange',fc);
+      if(vw&&ph&&ph.parentNode){ ph.parentNode.insertBefore(document.adoptNode(vw),ph); ph.remove(); }
+      if(phB&&phB.parentNode){ phB.parentNode.insertBefore(document.adoptNode(bar),phB); phB.remove(); }
+      ph=phB=null; hd=document;
+    }
+    relayout();
+  };
+  btn.onclick=enter;
+  g('prvX').onclick=()=>{ const had=clip; leave(); if(had) stopClip(true); };
+  g('prvR').onclick=()=>{ playPlaylist(); upd(); wake(); };
+  g('prvPl').onclick=()=>{ if(clip&&clip.cover){ return; } togglePlay(); };
+  g('prvN').onclick=()=>{ if(clip&&clip.idx<clip.queue.length-1) startClipAt(clip.idx+1); else if(clip) stopClip(true); upd(); };
+  g('prvP').onclick=()=>{ if(clip) startClipAt(Math.max(0,clip.idx-1)); upd(); };
+  g('prvE').onclick=()=>{ if(!clip) return; const id=clip.queue[clip.idx], d0=tdoc; if(isExtId(id)&&extOf(id)){ leave(); stopClip(true); DLGDOC=d0; openExtEditor(id.slice(2),false); return; } if(!events.some(x=>x.id===id)) return; leave(); stopClip(true); openClipEditor(id); };
+  bar.addEventListener('pointermove',wake);
+  const mv=()=>{ if(on) wake(); };
+  const kd=e=>{
+    if(!on) return;
+    if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); g('prvX').click(); }
+    else if(e.key==='ArrowRight'){ e.preventDefault(); e.stopPropagation(); g('prvN').click(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); e.stopPropagation(); g('prvP').click(); }
+    else if(e.key===' '){ e.preventDefault(); e.stopPropagation(); g('prvPl').click(); }
+  };
+  const fc=()=>{ if(on&&!hd.fullscreenElement) g('prvX').click(); };
+  document.addEventListener('pointermove',mv); document.addEventListener('keydown',kd,true); document.addEventListener('fullscreenchange',fc);
 })();
 $('#plCsv').onclick=ev=>{
   const p=curPl(); if(!p) return;
