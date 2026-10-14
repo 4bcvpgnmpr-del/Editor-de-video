@@ -1008,6 +1008,14 @@ body.descFloat:not(.ipad) #pTags #ipLow,body.descFloat:not(.ipad) #pTags #ipAuto
 body.descFloat:not(.ipad).lowOn #pTags #ipLow,body.descFloat:not(.ipad) #pTags #ipAuto[aria-pressed=true]{background:var(--accent);color:var(--on-accent,#111);border-color:var(--accent)}
 .dfDrag{display:none}
 body.plSetOn:not(.ipad):not(.lowOn) #pTags .bb-low{display:none}
+/* panel de descriptores flotante: translúcido y compacto */
+body.plSetOn:not(.ipad).lowOn:not(.descFloat) #pTags .bb-low{display:block;position:fixed;right:14px;bottom:70px;width:300px;max-width:92vw;max-height:52vh;z-index:58;border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:10px;resize:both;overflow:auto;min-width:240px;min-height:130px}
+body.ipad.lowOn #pTags .bb-low,body.descFloat:not(.ipad).lowOn #pTags .bb-low,body.plSetOn:not(.ipad).lowOn #pTags .bb-low{background:rgba(18,22,28,.55)!important;-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.2)!important;box-shadow:0 10px 34px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)!important;border-radius:18px!important;padding:10px!important}
+body.descFloat:not(.ipad).lowOn #pTags .bb-low{width:300px;max-height:52vh}
+body.ipad.lowOn #pTags .bb-low{width:280px}
+body.ipad.vfull.lowOn #pTags .bb-low{width:270px}
+body.ipad.lowOn #pTags .bb-low button,body.descFloat:not(.ipad).lowOn #pTags .bb-low button,body.plSetOn:not(.ipad).lowOn #pTags .bb-low button{min-height:30px;padding:3px 9px;font-size:12px;border-radius:9px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;backdrop-filter:none}
+body.ipad.lowOn #pTags .bb-low .dfDrag,body.descFloat:not(.ipad).lowOn #pTags .bb-low .dfDrag,body.plSetOn:not(.ipad).lowOn #pTags .bb-low .dfDrag{background:rgba(255,255,255,.08);color:rgba(255,255,255,.7)}
 body.descFloat:not(.ipad) #pTags .bb-low .dfDrag{display:flex;align-items:center;gap:8px;margin:-4px -4px 8px;padding:6px 8px;border-radius:10px;background:var(--panel2);color:var(--muted);font:700 12px var(--f-body);cursor:grab;user-select:none;touch-action:none}
 body.descFloat:not(.ipad) #pTags .bb-low .dfDrag:active{cursor:grabbing}
 body.descFloat:not(.ipad).lowOn #pTags .bb-low{resize:both;overflow:auto;min-width:260px;min-height:150px;max-width:96vw;max-height:92vh}
