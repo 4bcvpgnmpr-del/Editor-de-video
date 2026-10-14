@@ -782,6 +782,10 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 #plPick .pk-f{margin-top:10px}
 #plPick .pk-f button{min-height:38px;font-size:14px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18)}
 #plPick .pk-f button.pri{background:var(--accent)}
+#plPick .pk-v{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:2px 0 6px}
+#plPick .pk-v span{font:700 10px var(--f-head);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-right:2px}
+#plPick .pk-v button{min-height:28px;padding:0 11px;border-radius:999px;border:1.5px solid var(--c);background:transparent;color:rgba(255,255,255,.75);font:700 12px var(--f-head);cursor:pointer}
+#plPick .pk-v button[aria-pressed=true]{background:var(--c);color:#111}
 .ph-row{display:flex;align-items:center;gap:12px}
 .ph-row .ph-img{width:72px;height:72px;border-radius:50%;background:#2b3038 center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;font:800 24px var(--f-head);color:#8d99aa}
 
@@ -4562,35 +4566,34 @@ function openPlayerPicker(k,n){
   const o=document.createElement('div'); o.id='plPick'; (document.fullscreenElement&&document.fullscreenElement!==document.documentElement?document.fullscreenElement:document.body).appendChild(o);
   let ev=null;
   const head='<div class="pk-h"><span class="pk-ph" '+phStyle(p)+'>'+(p.photo?'':esc((p.name||'#'+p.n).trim()[0]||''))+'</span><span class="pk-t"><b>#'+esc(p.n)+' '+esc(p.name||'')+'</b><small>'+esc(teamName(k))+' · '+fmt(t0)+'</small></span><button class="pk-x" id="pkX" aria-label="Cerrar">✕</button></div>';
+  const pkHide=()=>{ try{ return JSON.parse(lsGet('bbtag.pkHide')||'{}')||{}; }catch(_){ return {}; } };
+  const pkSetsOff=()=>{ try{ return JSON.parse(lsGet('bbtag.pkSetsOff')||'[]')||[]; }catch(_){ return []; } };
+  const pkAll=b=>cfg.descs.filter(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]));
+  const chipRow=(label,items)=>'<div class="pk-v"><span>'+label+'</span>'+items.map(i=>'<button data-'+i.k+'="'+esc(i.id)+'" aria-pressed="'+i.on+'" style="--c:'+i.c+'">'+esc(i.t)+'</button>').join('')+'</div>';
   function stepCat(){
-    const sets=cfg.pages.filter(s=>!isPlSet(s)).map(s=>({s,b:cfg.buttons.filter(b=>!b.hidden&&(b.page||cfg.pages[0])===s)})).filter(x=>x.b.length);
-    o.innerHTML='<div class="pk">'+head+(sets.length?sets.map(x=>(sets.length>1?'<div class="pk-s">'+esc(x.s)+'</div>':'<div class="pk-s">¿Qué ha hecho?</div>')+'<div class="pk-g">'+x.b.map(b=>'<button class="pk-c" data-b="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'">'+esc(b.label)+'</button>').join('')+'</div>').join(''):'<p class="hint">No hay categorías. Crea alguna en 🎛 Botonera.</p>')+'</div>';
+    const all=cfg.pages.filter(s=>!isPlSet(s)).map(s=>({s,b:cfg.buttons.filter(b=>!b.hidden&&(b.page||cfg.pages[0])===s)})).filter(x=>x.b.length);
+    const off=pkSetsOff(), sets=all.filter(x=>!off.includes(x.s));
+    o.innerHTML='<div class="pk">'+head+(all.length>1?chipRow('Ver',all.map(x=>({k:'vs',id:x.s,t:x.s,on:!off.includes(x.s),c:'var(--accent)'}))):'')+
+      (sets.length?sets.map(x=>(sets.length>1?'<div class="pk-s">'+esc(x.s)+'</div>':'<div class="pk-s">¿Qué ha hecho?</div>')+'<div class="pk-g">'+x.b.map(b=>'<button class="pk-c" data-b="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'">'+esc(b.label)+'</button>').join('')+'</div>').join(''):(all.length?'<p class="hint">Activa arriba qué grupos quieres ver.</p>':'<p class="hint">No hay categorías. Crea alguna en 🎛 Botonera.</p>'))+'</div>';
     wire();
+    o.querySelectorAll('[data-vs]').forEach(x=>x.onclick=()=>{ const m=pkSetsOff(), n=x.dataset.vs, i=m.indexOf(n); if(i>=0) m.splice(i,1); else m.push(n); lsSet('bbtag.pkSetsOff',JSON.stringify(m)); stepCat(); });
     o.querySelectorAll('[data-b]').forEach(x=>x.onclick=()=>{
       const b=btnById(x.dataset.b); if(!b) return;
       ev=tagFor(b,k,p.n,t0); flash(b.id);
-      if(pkAll(b).length) stepDesc(b, !pkGs(b).length); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
+      if(pkAll(b).length) stepDesc(b); else { toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); }
     });
   }
-  const pkHide=()=>{ try{ return JSON.parse(lsGet('bbtag.pkHide')||'{}')||{}; }catch(_){ return {}; } };
-  const pkAll=b=>cfg.descs.filter(g=>g.items.length&&descApplies(g,b.group,b.page||cfg.pages[0]));
-  const pkGs=b=>{ const h=pkHide()[b.group]||[]; return pkAll(b).filter(g=>!h.includes(g.id)); };
-  function stepDesc(b,edit){
-    const all=pkAll(b), h=pkHide()[b.group]||[], gs=edit?all:all.filter(g=>!h.includes(g.id));
-    o.innerHTML='<div class="pk">'+head+'<div class="pk-s">'+esc(b.label)+' · descriptores'+(edit?' · elige cuáles ver en «'+esc(b.group||'Otros')+'»':'')+'</div>'+
-      (edit?'<div class="pk-d">'+all.map(g=>'<button data-hg="'+esc(g.id)+'" aria-pressed="'+!h.includes(g.id)+'" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+esc(g.name)+'</button>').join('')+'</div><p class="hint" style="margin:8px 0 0;font-size:12px">Los marcados se mostrarán siempre que etiquetes una jugada de «'+esc(b.group||'Otros')+'».</p>'
-      :gs.map(g=>'<div class="pk-s" style="margin-top:8px">'+esc(g.name)+(g.multi?' · varios':'')+'</div><div class="pk-d" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+g.items.map(it=>{ const on=ev.desc.some(q=>q.d===g.id&&q.i===it.id); return '<button data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+'</button>'; }).join('')+'</div>').join(''))+
-      '<div class="pk-f">'+(edit?'':'<button id="pkMore">＋ Otra categoría</button><button id="pkEd" title="Elegir qué descriptores se muestran">⚙</button>')+'<button class="pri" id="pkOk">'+(edit?'✓ Guardar':'✓ Listo')+'</button></div></div>';
+  function stepDesc(b){
+    const all=pkAll(b), h=pkHide()[b.group]||[], gs=all.filter(g=>!h.includes(g.id));
+    o.innerHTML='<div class="pk">'+head+'<div class="pk-s">'+esc(b.label)+' · descriptores</div>'+
+      (all.length>1?chipRow('Ver',all.map(g=>({k:'hg',id:g.id,t:g.name,on:!h.includes(g.id),c:safeColor(g.color)}))):'')+
+      (gs.length?gs.map(g=>'<div class="pk-s" style="margin-top:8px">'+esc(g.name)+(g.multi?' · varios':'')+'</div><div class="pk-d" style="--c:'+safeColor(g.color)+';--ink:'+inkOf(g.color)+'">'+g.items.map(it=>{ const on=ev.desc.some(q=>q.d===g.id&&q.i===it.id); return '<button data-dg="'+esc(g.id)+'" data-di="'+esc(it.id)+'" aria-pressed="'+on+'">'+esc(it.label)+'</button>'; }).join('')+'</div>').join(''):'<p class="hint">Activa arriba qué descriptores quieres ver.</p>')+
+      '<div class="pk-f"><button id="pkMore">＋ Otra categoría</button><button class="pri" id="pkOk">✓ Listo</button></div></div>';
     wire();
-    if(edit){
-      o.querySelectorAll('[data-hg]').forEach(x=>x.onclick=()=>x.setAttribute('aria-pressed',x.getAttribute('aria-pressed')!=='true'));
-      o.querySelector('#pkOk').onclick=()=>{ const m=pkHide(); m[b.group]=[...o.querySelectorAll('[data-hg]')].filter(x=>x.getAttribute('aria-pressed')!=='true').map(x=>x.dataset.hg); lsSet('bbtag.pkHide',JSON.stringify(m)); stepDesc(b); };
-      return;
-    }
+    o.querySelectorAll('[data-hg]').forEach(x=>x.onclick=()=>{ const m=pkHide(), l=m[b.group]||[], n=x.dataset.hg, i=l.indexOf(n); if(i>=0) l.splice(i,1); else l.push(n); m[b.group]=l; lsSet('bbtag.pkHide',JSON.stringify(m)); stepDesc(b); });
     o.querySelectorAll('[data-dg]').forEach(x=>x.onclick=()=>{ toggleDesc(ev,x.dataset.dg,x.dataset.di); const g=descGroup(x.dataset.dg); if(!g) return;
       o.querySelectorAll('[data-dg="'+x.dataset.dg+'"]').forEach(y=>y.setAttribute('aria-pressed',ev.desc.some(q=>q.d===x.dataset.dg&&q.i===y.dataset.di))); });
     o.querySelector('#pkMore').onclick=()=>{ ev=null; stepCat(); };
-    o.querySelector('#pkEd').onclick=()=>stepDesc(b,true);
     o.querySelector('#pkOk').onclick=()=>{ toast('✓ '+b.label+' · '+(p.name||'#'+p.n)); closePlayerPicker(); };
   }
   const pkPos=()=>{ try{ return JSON.parse(lsGet('bbtag.pkPos')||'null'); }catch(_){ return null; } };
@@ -7506,7 +7509,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 03:40 · selector de jugadora movible';
+  const BUILD='13/10/2026 · 04:00 · selector de jugadora con grupos elegibles';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
