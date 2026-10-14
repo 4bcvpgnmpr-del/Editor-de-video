@@ -997,6 +997,11 @@ body.descFloat:not(.ipad) #pTags .bb-low{display:none}
 body.descFloat:not(.ipad).lowOn #pTags .bb-low{display:block;position:fixed;right:14px;bottom:70px;width:400px;max-width:92vw;max-height:62vh;z-index:58;background:var(--panel);border:2px solid var(--accent);border-radius:16px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.6);border-left:2px solid var(--accent)}
 body.descFloat:not(.ipad) #pTags #ipLow,body.descFloat:not(.ipad) #pTags #ipAuto{display:inline-flex!important;align-items:center;justify-content:center;min-height:30px;min-width:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:0 8px;cursor:pointer;font-size:14px}
 body.descFloat:not(.ipad).lowOn #pTags #ipLow,body.descFloat:not(.ipad) #pTags #ipAuto[aria-pressed=true]{background:var(--accent);color:var(--on-accent,#111);border-color:var(--accent)}
+.dfDrag{display:none}
+body.plSetOn:not(.ipad):not(.lowOn) #pTags .bb-low{display:none}
+body.descFloat:not(.ipad) #pTags .bb-low .dfDrag{display:flex;align-items:center;gap:8px;margin:-4px -4px 8px;padding:6px 8px;border-radius:10px;background:var(--panel2);color:var(--muted);font:700 12px var(--f-body);cursor:grab;user-select:none;touch-action:none}
+body.descFloat:not(.ipad) #pTags .bb-low .dfDrag:active{cursor:grabbing}
+body.descFloat:not(.ipad).lowOn #pTags .bb-low{resize:both;overflow:auto;min-width:260px;min-height:150px;max-width:96vw;max-height:92vh}
 .pset-g .pcard .nm{font-size:var(--pf,10px)}
 .pset-g .pcard .no{font-size:var(--pn,10px)}
 body.ipad #pTags #ipLow{margin-left:auto;width:46px;padding:0;display:inline-flex;align-items:center;justify-content:center}
@@ -3794,7 +3799,8 @@ function descLabel(o){const g=descGroup(o.d), it=g&&g.items.find(x=>x.id===o.i);
 const descText=ev=>ev.desc.map(o=>descLabel(o).l).filter(Boolean).join(' · ');
 const descApplies=(g,cat,page)=>!g.scope.length||g.scope.includes(cat)||(!!page&&g.scope.includes('set:'+page));
 const evPage=ev=>{ const b=btnById(ev&&ev.btnId); return b?(b.page||cfg.pages[0]):''; };
-const descForEv=ev=>cfg.descs.filter(g=>g.items.length&&(!ev||descApplies(g,info(ev).group,evPage(ev))));
+const descForSet=g=>{ const set=(typeof IPS!=='undefined'&&IPS)?IPS.set:'*'; if(!set||set==='*'||!g.scope.length) return true; if(g.scope.includes('set:'+set)) return true; const cats=cfg.buttons.filter(b=>(b.page||cfg.pages[0])===set).map(b=>b.group); return cats.some(c=>g.scope.includes(c)); };
+const descForEv=ev=>cfg.descs.filter(g=>g.items.length&&(ev?descApplies(g,info(ev).group,evPage(ev)):descForSet(g)));
 const scopeOpts=()=>[['','Todas'] ].concat((cfg.pages||[]).filter(x=>!isPlSet(x)).map(x=>['set:'+x,'Botonera: '+x])).concat((cfg.cats||[]).map(c=>['c:'+c,c]));
 const scopeOn=(g,k)=>k===''?!g.scope.length:(k.indexOf('c:')===0?g.scope.includes(k.slice(2)):g.scope.includes(k));
 function scopeToggle(g,k){ if(k===''){ g.scope=[]; return; } const v=k.indexOf('c:')===0?k.slice(2):k; const i=g.scope.indexOf(v); if(i>=0) g.scope.splice(i,1); else g.scope.push(v); }
@@ -4061,6 +4067,7 @@ function renderCodes(){
   const btnHtml=b=>'<button class="code '+(b.size||'m')+'" data-id="'+esc(b.id)+'" style="--c:'+safeColor(b.color)+';--ink:'+inkOf(b.color)+'" title="'+esc(b.label)+(b.key?' (tecla '+esc(b.key.toUpperCase())+')':'')+'"><span class="cl">'+(b.icon?'<span class="ci" aria-hidden="true">'+esc(b.icon)+'</span>':'')+esc(b.label)+'<b class="x"></b></span><span class="cm">'+(b.key?'<kbd>'+esc(b.key.toUpperCase())+'</kbd>':'')+'</span></button>';
   try{ renderSetQuick(); }catch(e){}
   try{ renderDescStrip(); }catch(e){}
+  document.body.classList.toggle('plSetOn',typeof IPS!=='undefined'&&!!IPS&&isPlSet(IPS.set));
   if(typeof IPS!=='undefined'&&IPS&&isPlSet(IPS.set)){ codes.innerHTML=plSetHTML(); fitPlSet(); return; }
   codes.innerHTML=items.length?items.map(btnHtml).join(''):
     '<p class="hint" style="grid-column:1/-1">No hay categorías. Crea una con «+ Categoría».</p>';
@@ -7432,7 +7439,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 03:40 · botonera: jugadoras abajo vuelven';
+  const BUILD='13/10/2026 · 04:40 · descriptores según botonera';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -8075,6 +8082,40 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 })();
 
 
+
+/* ===== Descriptores flotantes: se mueven y cambian de tamaño donde quieras (se recuerda) ===== */
+(function(){
+  const low=document.querySelector('#pTags .bb-low'); if(!low) return;
+  const KEY='bbtag.descBox';
+  const h=document.createElement('div'); h.className='dfDrag'; h.title='Arrastra para mover · doble clic para volver al sitio de origen'; h.innerHTML='<span>⠿</span><span style="flex:1">Descriptores · arrastra para mover; tira de la esquina para cambiar el tamaño</span>';
+  low.insertBefore(h,low.firstChild);
+  let box=null; try{ box=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){}
+  const clamp=b=>{ const W=innerWidth,H=innerHeight; const w=Math.max(260,Math.min(b.w||400,W-10)), hh=Math.max(150,Math.min(b.h||0,H-10)); return {w,h:b.h?hh:0,x:Math.max(0,Math.min(b.x,W-Math.min(w,120))),y:Math.max(0,Math.min(b.y,H-60))}; };
+  const apply=()=>{
+    if(!document.body.classList.contains('descFloat')||document.body.classList.contains('ipad')||!document.body.classList.contains('lowOn')) return;
+    if(!box){ low.style.left=low.style.top=low.style.width=low.style.height=''; low.style.right=''; low.style.bottom=''; return; }
+    const b=clamp(box); low.style.right='auto'; low.style.bottom='auto'; low.style.left=b.x+'px'; low.style.top=b.y+'px'; low.style.width=b.w+'px'; low.style.height=b.h?b.h+'px':'';
+  };
+  const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(box)); }catch(_){} };
+  new MutationObserver(()=>setTimeout(apply,0)).observe(document.body,{attributes:true,attributeFilter:['class']});
+  h.addEventListener('pointerdown',e=>{
+    if(e.button!==0) return; e.preventDefault();
+    const r=low.getBoundingClientRect(), dx=e.clientX-r.left, dy=e.clientY-r.top;
+    box=Object.assign({},box||{},{w:r.width,h:box&&box.h?box.h:0,x:r.left,y:r.top}); try{ h.setPointerCapture(e.pointerId); }catch(_){}
+    const mv=ev=>{ box.x=Math.max(0,Math.min(ev.clientX-dx,innerWidth-80)); box.y=Math.max(0,Math.min(ev.clientY-dy,innerHeight-50)); apply(); };
+    const up=()=>{ h.removeEventListener('pointermove',mv); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up); save(); };
+    h.addEventListener('pointermove',mv); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up);
+  });
+  h.addEventListener('dblclick',()=>{ box=null; try{ localStorage.removeItem(KEY); }catch(_){} apply(); });
+  try{ new ResizeObserver(()=>{
+    if(!document.body.classList.contains('lowOn')||!document.body.classList.contains('descFloat')||document.body.classList.contains('ipad')) return;
+    const r=low.getBoundingClientRect(); if(r.width<50) return;
+    if(!box) return;   // aún sin mover: tamaño por defecto
+    if(Math.abs(r.width-(box.w||0))>2||Math.abs(r.height-(box.h||0))>2){ box.w=r.width; box.h=r.height; box.x=r.left; box.y=r.top; save(); }
+  }).observe(low); }catch(_){}
+  /* si solo cambia el tamaño (sin haberlo movido), también se recuerda */
+  low.addEventListener('pointerup',e=>{ if(e.target!==low||!document.body.classList.contains('descFloat')) return; const r=low.getBoundingClientRect(); box=Object.assign({},box||{},{x:r.left,y:r.top,w:r.width,h:r.height}); save(); });
+})();
 /* ===== App de escritorio: acciones del menú de arriba (Archivo, Edición…) ===== */
 (function(){
   const D=window.scoutDesktop; if(!D||!D.onMenu) return;
