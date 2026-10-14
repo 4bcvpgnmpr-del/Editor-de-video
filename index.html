@@ -6264,8 +6264,8 @@ async function ffRun(list,o,prog){
         const TL=o.teles||teles; const ovT=(o.draw&&!e.ext)?TL.filter(x=>x.mode==='overlay'&&x.t<to&&x.t+x.hold>from):[];
         const fzT=(o.draw&&!e.ext)?TL.filter(x=>x.mode==='freeze'&&x.t>=from&&x.t<to).sort((a,b)=>a.t-b.t):[];
         const png={}, lensOf={}; for(const tl of ovT.concat(fzT)){ png[tl.id]='o'+i+'_'+tl.id+'.png'; await ff.writeFile(png[tl.id],await ffOverlayPng(tl,W,H)); lensOf[tl.id]=[]; let li=0; for(const sh of tl.items){ if(sh.type!=='lens') continue; const nm='m'+i+'_'+tl.id+'_'+(li++)+'.png'; await ff.writeFile(nm,await ffMaskPng(2*Math.max(8,Math.round(sh.r*W)))); lensOf[tl.id].push({cx:sh.cx,cy:sh.cy,r:sh.r,zoom:sh.zoom,mask:nm}); } }
-        const build=(inArgs,ovs,audioMode,dur,outName)=>{
-          const a=inArgs.slice(); let idx=1, fc='[0:v]'+vf+'[v0]', last='v0';
+        const build=(inArgs,ovs,audioMode,dur,outName,pre)=>{
+          const a=inArgs.slice(); let idx=1, fc='[0:v]'+(pre?'trim=start='+pre.toFixed(3)+',setpts=PTS-STARTPTS,':'')+vf+'[v0]', last='v0';
           let nn=0; const en=ov=>ov.en?":enable='between(t,"+ov.en[0].toFixed(3)+","+ov.en[1].toFixed(3)+")'":'';
           ovs.forEach(ov=>{
             (ov.lens||[]).forEach(L=>{
@@ -6279,7 +6279,7 @@ async function ffRun(list,o,prog){
           });
           fc+=';['+last+']format=yuv420p[v]';
           let amap, af=[];
-          if(audioMode){ amap='0:a:0'; af=['-af','aresample=async=1:first_pts=0']; }
+          if(audioMode){ if(pre){ fc+=';[0:a:0]atrim=start='+pre.toFixed(3)+',asetpts=PTS-STARTPTS,aresample=async=1:first_pts=0[a0]'; amap='[a0]'; } else { amap='0:a:0'; af=['-af','aresample=async=1:first_pts=0']; } }
           else { a.push('-f','lavfi','-t',String(dur),'-i','anullsrc=r=48000:cl=stereo'); amap=idx+':a'; }
           a.push('-filter_complex',fc,'-map','[v]','-map',amap,...af,...enc,'-shortest',outName); return a;
         };
@@ -6290,14 +6290,15 @@ async function ffRun(list,o,prog){
           if(dur>=0.04||(pts.length===2)){
             const d=Math.max(0.2,dur), nm='seg'+i+'_'+(part++)+'.mp4';
             const ovs=titleOv.concat(ovT.filter(x=>x.t<p1&&x.t+x.hold>p0).map(x=>({png:png[x.id],lens:lensOf[x.id],en:[Math.max(0,x.t-p0),x.t+x.hold-p0]})));
-            const base=['-y','-ss',String(p0),'-t',String(d),'-i',src];
-            let rc=mute?1:await ff.exec(build(base,ovs,true,d,nm)); if(rc!==0) rc=await ff.exec(build(base,ovs,false,d,nm));
+            /* se empieza a leer unos segundos antes y se recorta: así el vídeo de origen (emisión con GOP abierto) tiene tiempo de recomponerse y no sale pixelado al inicio del corte */
+            const PRE=Math.min(3,p0), base=['-y','-ss',String(Math.max(0,p0-PRE)),'-t',String(d+PRE),'-i',src];
+            let rc=mute?1:await ff.exec(build(base,ovs,true,d,nm,PRE)); if(rc!==0) rc=await ff.exec(build(base,ovs,false,d,nm,PRE));
             if(rc!==0) throw new Error('ffmpeg no pudo procesar el clip '+(i+1)+'.');
             segs.push(nm);
           }
           if(j<fzT.length){
             const f=fzT[j], hold=Math.max(0.5,f.hold||2), still='s'+i+'_'+j+'.png', nm='seg'+i+'_'+(part++)+'.mp4';
-            let rc=await ff.exec(['-y','-ss',String(f.t),'-i',src,'-frames:v','1','-vf','scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black',still]);
+            const PRE2=Math.min(3,f.t); let rc=await ff.exec(['-y','-ss',String(Math.max(0,f.t-PRE2)),'-i',src,'-frames:v','1','-vf',(PRE2?'trim=start='+PRE2.toFixed(3)+',setpts=PTS-STARTPTS,':'')+'scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black',still]);
             if(rc!==0) throw new Error('No se pudo congelar la imagen.');
             const base=['-y','-loop','1','-framerate',String(FPS),'-t',String(hold),'-i',still];
             rc=await ff.exec(build(base,titleOv.concat([{png:png[f.id],lens:lensOf[f.id]}]),false,hold,nm));
@@ -7519,7 +7520,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='14/10/2026 · 20:15 · motor sin pixelado y cortes nítidos';
+  const BUILD='14/10/2026 · 20:40 · motor: sin pixelado al inicio de cada corte';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
