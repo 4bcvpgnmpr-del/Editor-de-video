@@ -5826,7 +5826,7 @@ async function fxRun(list,o,prog){
   const imgs=new Map();
   if(o.draw) for(const tl of teles){ imgs.set(tl.id,await expSvgImg(tl,ow,oh)); }
   const total=Math.max(1,expDur(list,o.draw));
-  let base=0, nFrames=0, firstA=true, lastA=-1, doneSecs=0;
+  let kfNext=true, base=0, nFrames=0, firstA=true, lastA=-1, doneSecs=0;
   try{
     for(let i=0;i<list.length&&!EXP.cancel;i++){
       const ev=list[i]; prog(i,list.length,ev);
@@ -5847,6 +5847,7 @@ async function fxRun(list,o,prog){
       while(V.length&&!V[0].is_sync) V.shift();
       if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
       const frz=(o.draw&&!ev.ext)?teles.filter(x=>x.mode==='freeze'&&x.t>=ev.start&&x.t<ev.end).sort((a,b)=>a.t-b.t):[];
+      kfNext=true;
       const done=new Set(); let shift=0, decErr=null, lastSlot=-1;
       const cts0=V.map(x=>x.cts), spanS=(Math.max(...cts0)-Math.min(...cts0))/V[0].timescale, srcRate=V.length>1&&spanS>0?(V.length-1)/spanS:fps, vfr=(()=>{ if(V.length<6) return false; const c=cts0.slice().sort((a,b)=>a-b), d=[]; for(let i=1;i<c.length;i++) d.push(c[i]-c[i-1]); const m=d.slice().sort((a,b)=>a-b)[d.length>>1]||1; return d.some(x=>x>m*1.6||x<m*0.55); })(), useGrid=Math.abs(srcRate/fps-1)>0.04||vfr;
       const emit=(frame,tl,out,al)=>{
@@ -5859,7 +5860,7 @@ async function fxRun(list,o,prog){
           ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(nm,fs*0.6+pad,fs*0.6+fs*0.75);
         }
         const vf=new VideoFrame(cv,{timestamp:Math.round(out*1e6),duration:Math.round(1e6/fps)});
-        enc.encode(vf,{keyFrame:nFrames%(fps*2)===0}); vf.close(); nFrames++;
+        enc.encode(vf,{keyFrame:kfNext||nFrames%(fps*2)===0}); kfNext=false; vf.close(); nFrames++;
       };
       const onFrame=frame=>{
         try{
@@ -6131,7 +6132,7 @@ function openExport(list,defName){
   d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,defName,d.querySelector('#exMode').value,{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
   d.querySelector('#exGo').onclick=()=>{
     if(EXP.busy){ toast('Hay una exportación de la cola en marcha. Usa «A la cola».'); return; }
-    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
+    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
     try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(e){}
     runExport(list,defName,d.querySelector('#exMode').value,o);
@@ -6243,7 +6244,7 @@ async function ffRun(list,o,prog){
   const mountFor=async file=>{ if(mounts.has(file)) return mounts.get(file); const dir='/in'+(mi++); await ff.createDir(dir); await ff.mount('WORKERFS',{files:[file]},dir); const p=dir+'/'+file.name; mounts.set(file,p); return p; };
   const mute=o.mute!==undefined?o.mute:window.__expMute();
   const vf='scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps='+FPS;
-  const enc=['-c:v','libx264','-preset',window.scoutDesktop?'veryfast':'ultrafast','-crf','18','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-g',String(FPS*2),'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
+  const enc=['-c:v','libx264','-preset',window.scoutDesktop?'veryfast':'superfast','-crf','18','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-g',String(FPS*2),'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
   const segs=[];
   try{
     for(let i=0;i<list.length&&!EXP.cancel;i++){
@@ -6992,7 +6993,7 @@ function openIpExport(list,defName){
     if((b=t.closest('.ex-row'))){ const id=b.dataset.id; st.sel.has(id)?st.sel.delete(id):st.sel.add(id); draw(); return; }
     if(t.closest('#exGo2')){
       const chosen=list.filter(x=>st.sel.has(x.id)); if(!chosen.length) return;
-      const q=+el.querySelector('#exQ2').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?16e6:q>=1080?8e6:q>=720?4.5e6:2.5e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
+      const q=+el.querySelector('#exQ2').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
       efPerm().then(ok=>{EXPF.ok=ok;}); el.remove();
       try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(er){}
       runExport(chosen,defName,chosen.length>1?st.mode:'one',o);
