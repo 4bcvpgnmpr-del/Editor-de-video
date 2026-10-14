@@ -389,6 +389,15 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .pr-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px}
 .pr-bar select{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:var(--text);min-width:150px;max-width:240px}
 .pr-bar .sp{flex:1}
+.pr-bar{gap:6px;padding:6px 10px}
+.pr-bar #plInfo{margin:0 4px!important;white-space:nowrap;font-size:12.5px}
+.prMenu{position:relative;display:inline-flex}
+.prDrop{position:fixed;z-index:9500;min-width:220px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:2px}
+.prDrop[hidden]{display:none}
+.prDrop .mini,.prDrop .btn{justify-content:flex-start;text-align:left;width:100%;background:transparent;border:0;padding:8px 10px;font-size:14px;border-radius:7px;min-height:0;box-shadow:none;color:var(--text)}
+.prDrop .mini:hover,.prDrop .btn:hover{background:var(--panel2)}
+.prDrop .mini:disabled,.prDrop .btn:disabled{opacity:.4}
+#plNudge{margin:0 10px 4px!important}
 .seq-wrap{flex:1;min-height:0;min-width:0;overflow:auto}
 .seq{list-style:none;margin:0;padding:0;min-height:100%}
 .seq.drop{outline:2px dashed var(--accent);outline-offset:-4px}
@@ -1483,7 +1492,7 @@ body:not(.ipad) .ipfz .fz-top #fzMin{display:none}
                 <button class="btn primary" id="plPlay">▶ Reproducir</button><button class="btn" id="plExp" title="Guardar la playlist como archivo de vídeo">🎞 Vídeo</button><button class="btn" id="plCsv">Exportar</button>
               </div>
               <p class="hint" id="plInfo" style="margin:0 10px 2px"></p>
-              <div id="plPrevBox" hidden style="margin:2px 10px 6px"><video id="plPrev" controls playsinline style="width:100%;max-height:34vh;background:#000;border-radius:8px"></video><div class="hint" id="plPrevTx" style="margin:2px 0 0"></div></div><div id="plNudge" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 10px 6px"><span class="hint" id="nudTxt" style="margin:0;flex:1;min-width:150px"></span><button class="mini" data-n="s-">◄ Ini</button><button class="mini" data-n="s+">Ini ►</button><button class="mini" data-n="e-">◄ Fin</button><button class="mini" data-n="e+">Fin ►</button><select id="nudStep" aria-label="Salto"><option value="0.1">0,1 s</option><option value="0.5" selected>0,5 s</option><option value="1">1 s</option></select></div>
+              <div id="plPrevBox" hidden style="margin:2px 10px 6px"><video id="plPrev" controls playsinline style="width:100%;max-height:48vh;background:#000;border-radius:8px"></video><div class="hint" id="plPrevTx" style="margin:2px 0 0"></div></div><div id="plNudge" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 10px 6px"><span class="hint" id="nudTxt" style="margin:0;flex:1;min-width:150px"></span><button class="mini" data-n="s-" title="Empieza antes: alarga el clip por el principio">◄ Inicio</button><button class="mini" data-n="s+" title="Empieza después: recorta el principio">Inicio ►</button><button class="mini" data-n="e-" title="Termina antes: recorta el final (por si se pasó)">◄ Final</button><button class="mini" data-n="e+" title="Termina después: alarga el final">Final ►</button><select id="nudStep" aria-label="Salto"><option value="0.1">0,1 s</option><option value="0.5" selected>0,5 s</option><option value="1">1 s</option></select></div>
               <div class="seq-wrap"><ul class="seq" id="plList" aria-label="Clips de la playlist"></ul></div>
             </div>
           </div>
@@ -7439,7 +7448,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 04:40 · descriptores según botonera';
+  const BUILD='13/10/2026 · 05:20 · mesa de producción más limpia';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -8115,6 +8124,26 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   }).observe(low); }catch(_){}
   /* si solo cambia el tamaño (sin haberlo movido), también se recuerda */
   low.addEventListener('pointerup',e=>{ if(e.target!==low||!document.body.classList.contains('descFloat')) return; const r=low.getBoundingClientRect(); box=Object.assign({},box||{},{x:r.left,y:r.top,w:r.width,h:r.height}); save(); });
+})();
+
+/* ===== Mesa de producción: barra de arriba más limpia (menús desplegables) ===== */
+(function(){
+  const bar=document.querySelector('#pProd .pr-bar'); if(!bar||bar.dataset.tidy) return;
+  const g=id=>document.getElementById(id);
+  if(!g('plSel')||!g('plNew')||!g('plPlay')) return;
+  bar.dataset.tidy='1';
+  const mk=(label,title)=>{ const w=document.createElement('span'); w.className='prMenu'; const t=document.createElement('button'); t.type='button'; t.className='mini prMore'; t.textContent=label; t.title=title; const d=document.createElement('div'); d.className='prDrop'; d.hidden=true; w.appendChild(t); w.appendChild(d);
+    const close=()=>{ d.hidden=true; };
+    const outside=ev=>{ if(!w.contains(ev.target)) close(); };
+    t.addEventListener('click',ev=>{ ev.stopPropagation(); const open=d.hidden; document.querySelectorAll('.prDrop').forEach(x=>{x.hidden=true;}); if(open){ d.hidden=false; const r=t.getBoundingClientRect(), dw=d.offsetWidth||230; d.style.left=Math.max(6,Math.min(r.left,t.ownerDocument.defaultView.innerWidth-dw-6))+'px'; d.style.top=(r.bottom+4)+'px'; t.ownerDocument.addEventListener('pointerdown',outside,{capture:true,once:true}); } });
+    d.addEventListener('click',()=>setTimeout(close,0));
+    return {w,d}; };
+  const add=mk('＋ Añadir ▾','Portada, otro vídeo o cortes de otro partido'), mon=mk('⋯ Montaje ▾','Renombrar, borrar, guardar en carpeta, unir o llevar a otro partido'), ex=mk('Exportar ▾','CSV y formato para editores profesionales');
+  const put=(m,ids)=>ids.forEach(id=>{ const b=g(id); if(b){ b.classList.remove('primary'); m.d.appendChild(b); } });
+  put(add,['plCover','plExtV','plOther']); put(mon,['plRen','plDel','plFolder','plMerge','plSend']); put(ex,['plCsv','plPro']);
+  g('plNew').after(add.w); add.w.after(mon.w);
+  const info=g('plInfo'); if(info) mon.w.after(info);
+  const exp=g('plExp'); if(exp) exp.after(ex.w);
 })();
 /* ===== App de escritorio: acciones del menú de arriba (Archivo, Edición…) ===== */
 (function(){
@@ -8813,7 +8842,7 @@ function renderPlaylists(){
   const list=$('#plList');
   if(!cur) list.innerHTML='<li class="none">Pulsa «Nueva» para crear una playlist. Por ejemplo: SCOUT RIVAL, Buenos ataques, Errores.</li>';
   else if(!(valid.length||covs.length||exts.length)) list.innerHTML='<li class="none">Playlist vacía. Arrastra clips hasta aquí, o pulsa «+» en la lista de clips.</li>';
-  else { const vmap={}; const VCOL=['#4DA3FF','#F5C542','#3FBF7F','#FF7A7A','#C792FF','#38C6D9']; list.innerHTML=cur.items.map((id,i)=>{
+  else { const pvEl_=$('#plPrev'), pvId=(pvEl_&&pvEl_._ev&&!$('#plPrevBox').hidden)?pvEl_._ev:null; const vmap={}; const VCOL=['#4DA3FF','#F5C542','#3FBF7F','#FF7A7A','#C792FF','#38C6D9']; list.innerHTML=cur.items.map((id,i)=>{
     if(isCoverId(id)){
       const c=coverOf(id); if(!c) return '';
       const pl_=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
@@ -8828,7 +8857,7 @@ function renderPlaylists(){
       return '<li class="prow'+(pl_?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(x.color||'#4DA3FF')+'" title="'+esc(x.name+(x.src?' — de '+x.src:''))+'"><span class="rn">'+(i+1)+'</span><span class="rt"><b><span style="display:inline-block;min-width:20px;text-align:center;border-radius:5px;background:'+VCOL[(vmap[x.fname]-1)%VCOL.length]+';color:#111;font-size:.8em;padding:0 5px;margin-right:6px" title="'+esc(x.fname)+'">'+vl+'</span>'+esc(x.name)+'</b><span class="rm">'+(ok?esc('Vídeo '+vl+' · '+x.fname+(x.src&&x.src!==x.fname?' · '+x.src:'')+(x.tm?' · '+x.tm:'')+' · '+x.from.toFixed(1)+'–'+x.to.toFixed(1)+' s'):'⚠ Falta el archivo «'+esc(x.fname)+'» — pulsa ✎ para elegirlo')+'</span></span><span class="ra"><button data-act="up" title="Subir">▲</button><button data-act="dn" title="Bajar">▼</button><button data-act="play" title="Ver">▶</button><button data-act="edit" title="Editar">✎</button><button data-act="rm" title="Quitar">✕</button></span></li>';
     }
     const e=events.find(x=>x.id===id); if(!e) return '';
-    const inf=info(e), playing=!!(clip&&clip.title&&clip.queue[clip.idx]===id);
+    const inf=info(e), playing=!!(clip&&clip.title&&clip.queue[clip.idx]===id)||pvId===id;
     const meta=[fmt(e.t),e.period,teamName(e.team),playerLabel(e.team,e.player),descText(e)].concat(e.tags.map(t=>'#'+t)).filter(Boolean).join(' · ');
     return '<li class="prow'+(playing?' playing':'')+'" draggable="true" data-src="item" data-id="'+id+'" tabindex="0" style="--tc:'+safeColor(inf.color)+'" title="'+esc(evName(e)+' — '+meta)+'">'+
       '<span class="rn">'+(i+1)+'</span><span class="rt"><b>'+esc(evName(e))+'</b><span class="rm">'+esc(meta)+'</span></span>'+
@@ -8942,12 +8971,20 @@ $('#plList').addEventListener('dblclick',e=>{ const li=e.target.closest('.prow')
 $('#plExtV').onclick=e=>{ if(!curPl()){toast('Primero crea una playlist con «Nueva».');return;} DLGDOC=e.currentTarget.ownerDocument; openExtEditor(null,true); };
 $('#plCover').onclick=e=>{ if(!curPl()){toast('Primero crea una playlist con «Nueva».');return;} DLGDOC=e.currentTarget.ownerDocument; openCoverEditor(null,true); };
 /* vista previa del clip dentro de la mesa */
+function markPrev(id){
+  const l=$('#plList'); if(!l) return;
+  l.querySelectorAll('.prow.playing').forEach(x=>{ if(x.dataset.id!==id) x.classList.remove('playing'); });
+  const r=[...l.querySelectorAll('.prow')].find(x=>x.dataset.id===id);
+  if(r){ r.classList.add('playing'); try{ r.scrollIntoView({block:'nearest'}); }catch(_){} }
+}
 function prevClip(id){
   const pv=$('#plPrev'); if(!pv) return; const e=events.find(x=>x.id===id); if(!e) return;
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
   const src=video.currentSrc||video.src; $('#plPrevBox').hidden=false; try{$('#plPrevBox').scrollIntoView({block:'nearest'});}catch(_){}
   if(pv.dataset.src!==src){ pv.src=src; pv.dataset.src=src; }
   pv._ev=id; video.pause();
+  if(selectedId!==id){ try{ selectEv(id); }catch(_){} }
+  try{ updateNudge(); markPrev(id); }catch(_){}
   const go=()=>{ pv.currentTime=e.start; pv.play().catch(()=>{}); };
   if(pv.readyState>=1) go(); else pv.addEventListener('loadedmetadata',go,{once:true});
   const p=curPl(), n=p?p.items.indexOf(id)+1:0;
