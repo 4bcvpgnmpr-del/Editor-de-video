@@ -782,6 +782,15 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 #plPick .pk-f{margin-top:10px}
 #plPick .pk-f button{min-height:38px;font-size:14px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18)}
 #plPick .pk-f button.pri{background:var(--accent)}
+body.presOn #vwrap{position:fixed!important;inset:0!important;z-index:100;border-radius:0!important;background:#000;width:auto!important;height:auto!important;max-height:none!important}
+body.presOn .badge{display:none!important}
+#presBar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:101;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:16px;background:rgba(18,22,28,.6);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.2);box-shadow:0 10px 34px rgba(0,0,0,.5);transition:opacity .3s;max-width:96vw}
+#presBar[hidden]{display:none}
+#presBar.idle{opacity:0;pointer-events:none}
+#presBar button{min-height:38px;min-width:42px;padding:0 12px;border-radius:11px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font:700 14px var(--f-head);cursor:pointer}
+#presBar button:disabled{opacity:.4;cursor:default}
+#presBar #prvE{background:var(--accent);border-color:var(--accent)}
+#presBar #prvT{color:#fff;font:700 14px var(--f-head);padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
 #plPick .pk-v{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:2px 0 6px}
 #plPick .pk-v span{font:700 10px var(--f-head);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-right:2px}
 #plPick .pk-v button{min-height:28px;padding:0 11px;border-radius:999px;border:1.5px solid var(--c);background:transparent;color:rgba(255,255,255,.75);font:700 12px var(--f-head);cursor:pointer}
@@ -7509,7 +7518,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 04:00 · selector de jugadora con grupos elegibles';
+  const BUILD='13/10/2026 · 18:30 · presentación en mesa de producción';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -8897,6 +8906,7 @@ function renderPlaylists(){
   const covs=cur?cur.items.filter(id=>isCoverId(id)).map(coverOf).filter(Boolean):[];
   const exts=cur?cur.items.filter(id=>isExtId(id)).map(extOf).filter(Boolean):[];
   $('#plPlay').disabled=!cur||!(valid.length||covs.length||exts.length)||!hasVideo;
+  { const pp=$('#plPres'); if(pp) pp.disabled=$('#plPlay').disabled; }
   const tot=valid.reduce((a,e)=>a+clipDur(e),0)+covs.reduce((a,c)=>a+c.dur,0)+exts.reduce((a,x)=>a+Math.max(0,x.to-x.from),0);
   $('#plInfo').textContent=cur?(valid.length+' clip'+(valid.length===1?'':'s')+(covs.length?' + '+covs.length+' portada'+(covs.length===1?'':'s'):'')+(exts.length?' + '+exts.length+' vídeo'+(exts.length===1?'':'s')+' ext.':'')+' · duración ≈ '+fmt(tot)):'Crea una playlist para empezar.';
   { const pc=$('#plCover'); if(pc) pc.disabled=!cur; const pe=$('#plExtV'); if(pe) pe.disabled=!cur; }
@@ -8984,6 +8994,59 @@ function playPlaylist(){
   playClip(q[0],q,p.name);
 }
 $('#plPlay').onclick=playPlaylist;
+/* ===== Presentación: el montaje a pantalla completa tal y como saldrá, con barra para saltar y editar ===== */
+(function(){
+  const pl=$('#plPlay'); if(!pl) return;
+  const btn=document.createElement('button'); btn.className='btn'; btn.id='plPres'; btn.textContent='🎬 Presentación'; btn.title='Ver el montaje a pantalla completa tal y como se verá, para corregir antes de exportar';
+  pl.after(btn);
+  const bar=document.createElement('div'); bar.id='presBar'; bar.hidden=true;
+  bar.innerHTML='<button id="prvP" title="Clip anterior (←)">⏮</button><button id="prvPl" title="Pausa / reproducir (espacio)">⏯</button><button id="prvN" title="Clip siguiente (→)">⏭</button><span id="prvT"></span><button id="prvE" title="Parar y abrir el editor de este clip">✎ Editar clip</button><button id="prvR" title="Volver a verlo desde el principio" hidden>↻ Repetir</button><button id="prvX" title="Salir (Esc)">✕ Salir</button>';
+  document.body.appendChild(bar);
+  const g=id=>bar.querySelector('#'+id);
+  let tm=0, hideT=0, on=false;
+  const relayout=()=>setTimeout(()=>{ try{ layoutTele&&layoutTele(); }catch(e){} },90);
+  const upd=()=>{
+    if(!on) return;
+    const t=g('prvT'), ed=g('prvE'), rp=g('prvR');
+    if(clip&&clip.queue){
+      const id=clip.queue[clip.idx], ev=events.find(x=>x.id===id);
+      t.textContent='Clip '+(clip.idx+1)+' de '+clip.queue.length+(ev?' · '+evName(ev):(isCoverId(id)?' · Portada':' · Vídeo extra'));
+      ed.disabled=!ev; rp.hidden=true;
+    } else { t.textContent='Fin del montaje'; ed.disabled=true; rp.hidden=false; bar.classList.remove('idle'); }
+  };
+  const wake=()=>{ bar.classList.remove('idle'); clearTimeout(hideT); hideT=setTimeout(()=>{ if(on&&clip) bar.classList.add('idle'); },2600); };
+  const enter=()=>{
+    const q=curPl(); if(!q) return;
+    playPlaylist(); if(!clip) return;
+    on=true; document.body.classList.add('presOn'); bar.hidden=false;
+    try{ const d=document.documentElement; if(d.requestFullscreen&&!document.fullscreenElement) d.requestFullscreen().catch(()=>{}); }catch(e){}
+    try{ window.focus(); }catch(e){}
+    relayout(); upd(); wake(); clearInterval(tm); tm=setInterval(upd,250);
+  };
+  const leave=()=>{
+    if(!on) return; on=false; clearInterval(tm); clearTimeout(hideT);
+    document.body.classList.remove('presOn'); bar.hidden=true;
+    try{ if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){}
+    relayout();
+  };
+  btn.onclick=enter;
+  g('prvX').onclick=()=>{ leave(); if(clip) stopClip(true); };
+  g('prvR').onclick=()=>{ playPlaylist(); upd(); wake(); };
+  g('prvPl').onclick=()=>{ if(clip&&clip.cover){ return; } togglePlay(); };
+  g('prvN').onclick=()=>{ if(clip&&clip.idx<clip.queue.length-1) startClipAt(clip.idx+1); else if(clip) stopClip(true); upd(); };
+  g('prvP').onclick=()=>{ if(clip) startClipAt(Math.max(0,clip.idx-1)); upd(); };
+  g('prvE').onclick=()=>{ if(!clip) return; const id=clip.queue[clip.idx]; if(!events.some(x=>x.id===id)) return; leave(); stopClip(true); openClipEditor(id); };
+  bar.addEventListener('pointermove',wake);
+  document.addEventListener('pointermove',()=>{ if(on) wake(); });
+  document.addEventListener('keydown',e=>{
+    if(!on) return;
+    if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); g('prvX').click(); }
+    else if(e.key==='ArrowRight'){ e.preventDefault(); e.stopPropagation(); g('prvN').click(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); e.stopPropagation(); g('prvP').click(); }
+    else if(e.key===' '){ e.preventDefault(); e.stopPropagation(); g('prvPl').click(); }
+  },true);
+  document.addEventListener('fullscreenchange',()=>{ if(on&&!document.fullscreenElement) g('prvX').click(); });
+})();
 $('#plCsv').onclick=ev=>{
   const p=curPl(); if(!p) return;
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
