@@ -528,6 +528,11 @@ body.ceIn .ce-vwrap>.tele{z-index:5}
 .ce-h.e{margin-left:0;border-left-width:1px;border-radius:0 7px 7px 0}
 .ce-h{position:absolute;top:-4px;width:14px;height:36px;margin-left:-7px;background:var(--panel);border:3px solid var(--accent);border-radius:5px;cursor:ew-resize;z-index:2;touch-action:none}
 .ce-ctx{display:flex;align-items:center;gap:6px}
+.ce-meta{display:flex;flex-direction:column;gap:6px;margin:0 0 8px}
+.ce-mt{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.ce-mt select{flex:1;min-width:0}
+.ce-dd{display:flex;flex-direction:column;gap:6px;max-height:190px;overflow:auto}
+.ce-dd .dg{margin:0}
 .ce-times{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ce-times label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
 .ce-times input{width:104px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--text);font:600 16px var(--f-body);font-variant-numeric:tabular-nums}
@@ -1560,6 +1565,7 @@ body:not(.ipad) .ipfz .fz-top #fzMin{display:none}
               <button class="btn danger" id="ceDel" aria-label="Borrar anotación">Borrar</button>
             </div>
           </div>
+          <div class="ce-meta" id="ceMeta"><label class="ce-mt"><span>Categoría</span><select id="ceCat" aria-label="Categoría del clip"></select></label><div class="ce-dd" id="ceDesc"></div></div>
           <input class="ce-name" id="ceName" maxlength="80" placeholder="Título del clip (se muestra sobre el vídeo)…" aria-label="Título del clip">
           <textarea class="ce-note" id="ceNote" rows="3" maxlength="400" placeholder="Nota del clip…" aria-label="Nota del clip"></textarea>
           </div>
@@ -7456,7 +7462,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='13/10/2026 · 05:20 · mesa de producción más limpia';
+  const BUILD='13/10/2026 · 02:40 · categoría y descriptores en editor de clip';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -9803,6 +9809,18 @@ function ceTick(){
   }
   if(tl&&tl.items.some(s=>s.type==='lens')) ceDrawLens(tl);
 }
+function ceMeta(ev){
+  const sel=$('#ceCat'), box=$('#ceDesc'); if(!sel||!box) return;
+  const orphan=!btnById(ev.btnId);
+  const sig=ev.btnId+'|'+ev.team+'|'+ev.desc.map(o=>o.d+':'+o.i).join(',')+'|'+cfg.buttons.length+'|'+(ce&&ce.mSig||'');
+  if(ce.metaSig===sig) return; ce.metaSig=sig;
+  sel.innerHTML=cfg.buttons.map(b=>'<option value="'+esc(b.id)+'"'+(b.id===ev.btnId?' selected':'')+'>'+esc(b.label)+(b.group?' · '+esc(b.group):'')+'</option>').join('')+(orphan?'<option value="'+esc(ev.btnId)+'" selected>'+esc(ev.label)+'</option>':'');
+  box.innerHTML=descChipsHTML(ev);
+  if(!sel._w){ sel._w=1;
+    sel.onchange=e=>{ const x=ceEv(); const b=btnById(e.target.value); if(!x||!b) return; x.btnId=b.id;x.label=b.label;x.color=b.color;x.pts=b.pts||0;x.cat=b.group; e.target.blur(); commit(); renderDetail(); renderDescStrip(); ce.metaSig=''; ceRender(); };
+    box.addEventListener('click',e=>{ const c=e.target.closest('.dchip'); if(!c) return; const x=ceEv(); if(!x) return; toggleDesc(x,c.dataset.dg,c.dataset.di); ce.metaSig=''; ceRender(); });
+  }
+}
 function ceRender(){
   if(!ce) return;
   const ev=ceEv(); if(!ev){ceClose();return;}
@@ -9811,6 +9829,7 @@ function ceRender(){
   const inf=info(ev);
   $('#ceDot').style.setProperty('--c',safeColor(inf.color));
   $('#ceTitleTxt').textContent=evName(ev);
+  try{ ceMeta(ev); }catch(_){}
   set('ceStart',fmt(ev.start,true)); set('ceEnd',fmt(ev.end,true)); set('ceName',ev.name); set('ceNote',ev.note);
   $('#ceDur').textContent='('+fmtMS(ev.end-ev.start)+')';
   const cap=$('#ceCap'); cap.hidden=!ev.name; cap.textContent=ev.name;
