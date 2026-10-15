@@ -6156,7 +6156,7 @@ async function runExport(list,defName,mode,o){
     const groups=mode==='each'?list.map(e=>[e]):[list];
     for(let g=0;g<groups.length&&!EXP.cancel;g++){
       const r=await (o.ff?ffRun:expRun)(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
-      if(r) out.push({blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])):expClean(defName||baseName())});
+      if(r) out.push({evs:groups[g],blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])):expClean(defName||baseName())});
     }
   }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p><div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
   clearInterval(tick); EXP.busy=false;
@@ -6442,12 +6442,56 @@ async function showExported(out){
     '<video src="'+urls[i]+'" controls playsinline style="width:100%;max-height:240px;background:#000;border-radius:6px"></video>'+
     '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><span style="flex:1;min-width:120px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(fn)+' · '+(o.blob.size/1048576).toFixed(1)+' MB</span>'+
     '<a class="btn primary" href="'+urls[i]+'" download="'+esc(fn)+'" style="text-decoration:none">Descargar</a>'+
-    (canShare(new File([o.blob],fn,{type:o.mime}))?'<button class="btn" data-sh="'+i+'">Compartir</button>':'')+'</div></div>'; }).join('');
+    (canShare(new File([o.blob],fn,{type:o.mime}))?'<button class="btn" data-sh="'+i+'">Compartir</button>':'')+'<button class="btn" data-ent="'+i+'" title="Guardarlo en la sección Vídeos de ScoutFlow Entrenador">📥 Guardar en Entrenador</button></div><div data-entf="'+i+'"></div></div>'; }).join('');
   let savedMsg=''; if(EXPF.use&&EXPF.ok){ try{ savedMsg='<p style="color:#4ade80;font-size:13px;margin:0 0 8px">✔ Guardado en la carpeta «'+esc(await efSave(out))+'».</p>'; }catch(e){ savedMsg='<p style="color:#ffb020;font-size:13px;margin:0 0 8px">No se pudo guardar en la carpeta ('+esc((e&&e.message)||e)+'). Usa «Descargar».</p>'; } }
   const d=expDlgShell('<h3 style="margin:0 0 8px;font:700 20px var(--f-head)">¡Listo!</h3>'+savedMsg+(out.some(o=>/webm/.test(o.mime)||(o.codecs&&!/avc1|h264/i.test(o.codecs)))?'<p style="color:#ffb020;font-size:13px;margin:0 0 8px">⚠ Este navegador solo sabe grabar en formato WebM/VP9. QuickTime, Fotos del iPhone o el Explorador de Windows pueden no abrirlo (VLC sí). Para un MP4 universal exporta desde Safari o desde Chrome actualizado.</p>':'')+(EXP.mutedFb?'<p style="color:var(--muted);font-size:13px">Aviso: este navegador no permitió grabar con sonido; el vídeo sale sin audio.</p>':'')+items+'<div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>');
   d.querySelectorAll('[data-sh]').forEach(b=>b.onclick=async()=>{ const o=out[+b.dataset.sh]; try{await navigator.share({files:[new File([o.blob],o.fn,{type:o.mime})],title:o.fn});}catch(e){} });
+  d.querySelectorAll('[data-ent]').forEach(b=>b.onclick=()=>sfFormEntrenador(d,out[+b.dataset.ent],+b.dataset.ent));
   d.querySelector('#exOk').onclick=()=>{expClose(); setTimeout(()=>urls.forEach(u=>URL.revokeObjectURL(u)),1000);};
 }
+/* ===== Guardar el vídeo exportado en ScoutFlow Entrenador (Vídeos), con equipo, jugadora y categoría ===== */
+const SF_CATS=['Ataque','Defensa','Pick and roll','Transición','Tiro','Rebote','Saque de banda','Saque de fondo','Contraataque','Otra'];
+function sfPrefill(o){
+  const r={equipo:'',jugadora:'',categoria:'',nota:''};
+  try{ const e=(o.evs||[])[0]; if(e){ if(e.team!=null&&e.team!=='') r.equipo=teamName(e.team)||''; if(e.player!=null&&e.player!=='') r.jugadora=playerName(e.team,e.player)||('#'+e.player); try{ r.categoria=(info(e).label||''); }catch(_){} } }catch(_){}
+  try{ const l=JSON.parse(lsGet('bbtag.sf.last')||'{}'); if(!r.equipo) r.equipo=l.equipo||''; }catch(_){}
+  return r;
+}
+function sfFormEntrenador(d,o,i){
+  const box=d.querySelector('[data-entf="'+i+'"]'); if(!box) return;
+  if(box.innerHTML){ box.innerHTML=''; return; }
+  const p=sfPrefill(o), eq=[...new Set(teamsGet().map(t=>t.name).filter(Boolean))];
+  const inp='width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);margin-top:3px';
+  const lab='display:block;margin:8px 0 0;font-size:12.5px;color:var(--muted)';
+  box.innerHTML='<div style="margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:10px">'+
+    '<label style="'+lab+'">Equipo<input data-f="equipo" list="sfEq'+i+'" value="'+esc(p.equipo)+'" style="'+inp+'"></label><datalist id="sfEq'+i+'">'+eq.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
+    '<label style="'+lab+'">Jugadora<input data-f="jugadora" value="'+esc(p.jugadora)+'" placeholder="Ej: Ana Pérez" style="'+inp+'"></label>'+
+    '<label style="'+lab+'">Categoría<input data-f="categoria" list="sfCa'+i+'" value="'+esc(p.categoria)+'" style="'+inp+'"></label><datalist id="sfCa'+i+'">'+SF_CATS.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
+    '<label style="'+lab+'">Nota (opcional)<input data-f="nota" value="" style="'+inp+'"></label>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><button class="btn primary" data-go>Guardar</button><span data-msg style="font-size:12.5px;color:var(--muted)"></span></div></div>';
+  const msg=box.querySelector('[data-msg]'), go=box.querySelector('[data-go]');
+  go.onclick=async()=>{
+    const m={}; box.querySelectorAll('[data-f]').forEach(x=>{ m[x.dataset.f]=x.value.trim(); });
+    go.disabled=true; msg.style.color='var(--muted)'; msg.textContent='Subiendo…';
+    try{ await sfSubir(o,m); try{ lsSet('bbtag.sf.last',JSON.stringify({equipo:m.equipo})); }catch(_){} msg.style.color='#4ade80'; msg.textContent='✔ Guardado en Entrenador → Vídeos'; go.textContent='Guardado'; }
+    catch(e){ go.disabled=false; msg.style.color='#ff7a85'; msg.textContent=(e&&e.message)||String(e); }
+  };
+}
+async function sfSubir(o,m){
+  const C=window.__sfCloud; if(!C||!C.on()) throw new Error('Primero conecta la nube (☁) con tu cuenta de ScoutFlow.');
+  if(o.blob.size>50*1024*1024) throw new Error('Pesa más de 50 MB. Expórtalo en 540p o por partes.');
+  const t=await C.tok(), id='a'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const fn=o.fn||('clip.'+expExt(o.mime)), limpio=fn.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9._-]+/g,'_'), ruta='video/'+id+'-'+limpio, mime=(o.mime||'video/mp4').split(';')[0];
+  const r=await fetch(C.url()+'/storage/v1/object/entrenador/'+ruta,{method:'POST',headers:{apikey:C.key(),Authorization:'Bearer '+t,'Content-Type':mime,'x-upsert':'false'},body:o.blob});
+  if(!r.ok){ let x=''; try{ x=(await r.json()).message||''; }catch(_){} throw new Error('No se pudo subir: '+(x||('error '+r.status))+'. ¿Entraste con la cuenta del entrenador?'); }
+  const nombre=[m.jugadora,m.categoria].filter(Boolean).join(' · ')||fn;
+  const up=(row)=>C.rest('archivos?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
+  await up({id,nombre,tipo:'video',ruta,mime,tamano:o.blob.size});
+  let meta={}; try{ const rows=await C.rest('archivos?select=nombre&id=eq._meta_videos&limit=1'); meta=JSON.parse((rows&&rows[0]&&rows[0].nombre)||'{}')||{}; }catch(_){}
+  meta[id]={equipo:m.equipo||'',jugadora:m.jugadora||'',categoria:m.categoria||'',nota:m.nota||''};
+  await up({id:'_meta_videos',nombre:JSON.stringify(meta),tipo:'ajustes',ruta:'',mime:'',tamano:0});
+}
+window.__sfShowExported=showExported;
 $('#plExp').onclick=e=>{ const p=curPl(); if(!p) return; DLGDOC=e.currentTarget.ownerDocument; openExport(plExpand(p),p.name); };
 function baseName(){return (videoName||'partido').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_').slice(0,60)||'partido';}
 const num=n=>n.toFixed(1).replace('.',',');
@@ -7177,6 +7221,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     if(!r.ok){ let m=tx; try{ m=JSON.parse(tx).message||tx; }catch(e){} throw new Error(String(m).slice(0,200)||('Error '+r.status)); }
     return tx?JSON.parse(tx):null;
   }
+  window.__sfCloud={on:()=>on(),tok:()=>tok(),rest:(p,o)=>rest(p,o),url:()=>CL.url,key:()=>CL.key};
   const upsert=row=>rest('video_projects?on_conflict=user_id,key',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(Object.assign({user_id:CL.s.uid},row))});
   async function pushProject(key){
     const raw=lsGet('bbtag.project.'+key); if(!raw) return;
