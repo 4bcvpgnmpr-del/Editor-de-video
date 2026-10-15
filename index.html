@@ -1532,7 +1532,7 @@ body:not(.ipad) .ipfz .fz-top #fzMin{display:none}
                 <select id="plSel" aria-label="Playlist"></select>
                 <button class="mini" id="plNew">Nueva</button><button class="mini" id="plCover" title="Añadir una portada (diapositiva de título) a la playlist">＋ Portada</button><button class="mini" id="plExtV" title="Añadir otro vídeo al montaje">＋ Vídeo ext.</button><button class="mini" id="plFolder" title="Guardar esta playlist en una carpeta">📁 Carpeta</button><button class="mini" id="plRen">Renombrar</button><button class="mini" id="plDel">Borrar</button>
                 <span class="sp"></span>
-                <button class="btn primary" id="plPlay">▶ Reproducir</button><button class="btn" id="plExp" title="Guardar la playlist como archivo de vídeo">🎞 Vídeo</button><button class="btn" id="plCsv">Exportar</button>
+                <button class="btn primary" id="plPlay">▶ Reproducir</button><button class="btn" id="plExp" title="Guardar la playlist como archivo de vídeo MP4">🎞 Exportar vídeo</button><button class="btn" id="plCsv">Lista en Excel (CSV)</button>
               </div>
               <p class="hint" id="plInfo" style="margin:0 10px 2px"></p>
               <div id="plPrevBox" hidden style="margin:2px 10px 6px"><video id="plPrev" controls playsinline style="width:100%;max-height:48vh;background:#000;border-radius:8px"></video><div class="hint" id="plPrevTx" style="margin:2px 0 0"></div></div><div id="plNudge" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:2px 10px 6px"><span class="hint" id="nudTxt" style="margin:0;flex:1;min-width:150px"></span><button class="mini" data-n="s-" title="Empieza antes: alarga el clip por el principio">◄ Inicio</button><button class="mini" data-n="s+" title="Empieza después: recorta el principio">Inicio ►</button><button class="mini" data-n="e-" title="Termina antes: recorta el final (por si se pasó)">◄ Final</button><button class="mini" data-n="e+" title="Termina después: alarga el final">Final ►</button><select id="nudStep" aria-label="Salto"><option value="0.1">0,1 s</option><option value="0.5" selected>0,5 s</option><option value="1">1 s</option></select></div>
@@ -6122,13 +6122,15 @@ function openExport(list,defName){
     '<p style="margin:0 0 10px;color:var(--muted)">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'. Se procesa lo más rápido que permita el dispositivo; si no puede, se graba en tiempo real.</p>'+
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
-    '<label style="display:block;margin:10px 0 3px;font-weight:600">Calidad</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720">720p (recomendado)</option><option value="540">540p (archivo más ligero)</option><option value="1080">1080p (más pesado y lento)</option><option value="1088">⭐ 1080p PROFESIONAL (máxima calidad · 16 Mbps)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'🎬 MOTOR PRO nativo · rápido (1080p, cortes exactos, con dibujos)':'🎬 MOTOR PRO propio · ffmpeg (1080p, cortes exactos, con dibujos)')+'</option><option value="0">Original · sin recodificar (rápido, sin dibujos)</option></select>'+
+    '<label style="display:block;margin:10px 0 3px;font-weight:600">Tipo de vídeo</label>'+
+    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="9000"'+(document.body.classList.contains('ipad')?'':' selected')+'>MP4 universal · 1080p (recomendado)</option><option value="720"'+(document.body.classList.contains('ipad')?' selected':'')+'>MP4 rápido · 720p (para compartir)</option><option value="0">Original · sin dibujos ni recodificar</option></select>'+
+    '<p id="exQh" style="margin:6px 0 0;font-size:12.5px;color:var(--muted)"></p>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se hace con el MOTOR PRO mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button></div>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
+  { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'9000':'Se abre en cualquier reproductor y editor (iMovie, Premiere, DaVinci, QuickTime, WhatsApp, móvil). Tarda un poco más.','720':'Más rápido y ligero. Bueno para enviar por móvil o WhatsApp.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
   d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,defName,d.querySelector('#exMode').value,{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
   d.querySelector('#exGo').onclick=()=>{
     if(EXP.busy){ toast('Hay una exportación de la cola en marcha. Usa «A la cola».'); return; }
@@ -6158,7 +6160,7 @@ async function runExport(list,defName,mode,o){
       const r=await (o.ff?ffRun:expRun)(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
       if(r) out.push({evs:groups[g],blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])):expClean(defName||baseName())});
     }
-  }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p><div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
+  }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p>'+(o.ff?'<p style="color:var(--muted);font-size:13px">Prueba con «MP4 rápido · 720p», que no necesita el motor.</p>':'')+'<div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
   clearInterval(tick); EXP.busy=false;
   if(EXP.cancel||!out.length){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; }
   showExported(out);
@@ -7018,7 +7020,7 @@ function openIpExport(list,defName){
     const chosen=list.filter(e=>st.sel.has(e.id));
     el.innerHTML='<div class="ex-h"><button class="ib" id="exX">✕</button><b>Exportar vídeo</b><span>'+chosen.length+'/'+list.length+' clips</span></div>'+
     '<div class="ex-b"><h4>Modo</h4><div class="ex-modes"><button data-m="each" aria-pressed="'+(st.mode==='each')+'"><b>Clips sueltos</b><small>Un archivo por clip</small></button><button data-m="one" aria-pressed="'+(st.mode==='one')+'"><b>Secuencia</b><small>Todos en un solo vídeo</small></button></div>'+
-    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Calidad</span><select id="exQ2"><option value="540">540p</option><option value="720">720p</option><option value="1080">1080p</option><option value="1088">⭐ 1080p PRO (16 Mbps)</option><option value="0">Original (sin recodificar)</option></select></label></div>'+efRowHtml()+
+    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Tipo de vídeo</span><select id="exQ2"><option value="720">MP4 rápido · 720p</option><option value="9000">MP4 universal · 1080p</option><option value="0">Original · sin dibujos</option></select></label></div>'+efRowHtml()+
     '<h4>Filtrar por categoría</h4><div class="ex-chips"><button data-c="" aria-pressed="'+(st.cat==='')+'">Todas</button>'+cats.map(c=>'<button data-c="'+esc(c)+'" aria-pressed="'+(st.cat===c)+'">'+esc(c)+'</button>').join('')+'</div>'+
     '<h4>Elegir clips <span class="ex-all"><a id="exAll">Todos</a> · <a id="exNone">Ninguno</a></span></h4>'+
     vis.map(e=>'<div class="ex-row" data-id="'+e.id+'"><span class="ex-ck" aria-pressed="'+st.sel.has(e.id)+'"></span><i style="background:'+info(e).color+'"></i><div><b>'+esc(evName(e))+'</b><small>'+fmt(e.start)+' – '+fmt(e.end)+'</small></div><button class="ib" data-v="'+e.id+'" aria-label="Ver">▶</button></div>').join('')+'</div>'+
@@ -7038,7 +7040,7 @@ function openIpExport(list,defName){
     if((b=t.closest('.ex-row'))){ const id=b.dataset.id; st.sel.has(id)?st.sel.delete(id):st.sel.add(id); draw(); return; }
     if(t.closest('#exGo2')){
       const chosen=list.filter(x=>st.sel.has(x.id)); if(!chosen.length) return;
-      const q=+el.querySelector('#exQ2').value, o=q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
+      const q=+el.querySelector('#exQ2').value, o=q===9000?{ff:true,w:1920,bps:0,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
       efPerm().then(ok=>{EXPF.ok=ok;}); el.remove();
       try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(er){}
       runExport(chosen,defName,chosen.length>1?st.mode:'one',o);
@@ -7988,7 +7990,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       expClose(); toast('Listo. En el editor, importa el archivo y enlaza los vídeos originales si te los pide.');
     };
   }
-  const b=document.createElement('button'); b.className='btn'; b.id='plPro'; b.title='Exportar la lista de cortes (EDL/XML) para Premiere, DaVinci o Final Cut'; b.textContent='🎞 Para editor (EDL/XML)';
+  const b=document.createElement('button'); b.className='btn'; b.id='plPro'; b.title='Exportar la lista de cortes (EDL/XML) para Premiere, DaVinci o Final Cut'; b.textContent='Para Premiere / DaVinci / Final Cut';
   host.after(b); b.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; openDlg(); };
   window.__proEdl=(fps)=>{ const g=gather(); return g?{edl:buildEdl(g,fps),xml:buildXml(g,fps)}:null; };
 })();
@@ -8255,7 +8257,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     t.addEventListener('click',ev=>{ ev.stopPropagation(); const open=d.hidden; document.querySelectorAll('.prDrop').forEach(x=>{x.hidden=true;}); if(open){ d.hidden=false; const r=t.getBoundingClientRect(), dw=d.offsetWidth||230; d.style.left=Math.max(6,Math.min(r.left,t.ownerDocument.defaultView.innerWidth-dw-6))+'px'; d.style.top=(r.bottom+4)+'px'; t.ownerDocument.addEventListener('pointerdown',outside,{capture:true,once:true}); } });
     d.addEventListener('click',()=>setTimeout(close,0));
     return {w,d}; };
-  const add=mk('＋ Añadir ▾','Portada, otro vídeo o cortes de otro partido'), mon=mk('⋯ Montaje ▾','Renombrar, borrar, guardar en carpeta, unir o llevar a otro partido'), ex=mk('Exportar ▾','CSV y formato para editores profesionales');
+  const add=mk('＋ Añadir ▾','Portada, otro vídeo o cortes de otro partido'), mon=mk('⋯ Montaje ▾','Renombrar, borrar, guardar en carpeta, unir o llevar a otro partido'), ex=mk('Más ▾','Lista en Excel y corte para editores profesionales');
   const put=(m,ids)=>ids.forEach(id=>{ const b=g(id); if(b){ b.classList.remove('primary'); m.d.appendChild(b); } });
   put(add,['plCover','plExtV','plOther']); put(mon,['plRen','plDel','plFolder','plMerge','plSend']); put(ex,['plCsv','plPro']);
   g('plNew').after(add.w); add.w.after(mon.w);
