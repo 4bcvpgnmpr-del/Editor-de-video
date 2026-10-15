@@ -6123,18 +6123,18 @@ function openExport(list,defName){
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
     '<label style="display:block;margin:10px 0 3px;font-weight:600">Tipo de vídeo</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="9000"'+(document.body.classList.contains('ipad')?'':' selected')+'>MP4 universal · 1080p (recomendado)</option><option value="720"'+(document.body.classList.contains('ipad')?' selected':'')+'>MP4 rápido · 720p (para compartir)</option><option value="0">Original · sin dibujos ni recodificar</option></select>'+
+    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720"'+(window.scoutDesktop?'':' selected')+'>MP4 rápido · 720p (recomendado)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'MP4 universal · 1080p (motor nativo, rápido)':'MP4 universal · motor propio (lento)')+'</option><option value="0">Original · sin dibujos ni recodificar</option></select>'+
     '<p id="exQh" style="margin:6px 0 0;font-size:12.5px;color:var(--muted)"></p>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
     '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se hace con el MOTOR PRO mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button></div>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
-  { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'9000':'Se abre en cualquier reproductor y editor (iMovie, Premiere, DaVinci, QuickTime, WhatsApp, móvil). Tarda un poco más.','720':'Más rápido y ligero. Bueno para enviar por móvil o WhatsApp.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
-  d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,defName,d.querySelector('#exMode').value,{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
+  { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'9000':window.scoutDesktop?'Cortes exactos en 1080p, compatible con cualquier reproductor y editor. Rápido gracias al motor nativo.':'Compatibilidad máxima (iMovie, Premiere, DaVinci). En el navegador es LENTO: tarda varias veces lo que dura el vídeo. Úsalo solo si el rápido no abre en tu editor.','720':'Rápido y ligero, se abre en QuickTime, iMovie, WhatsApp y el móvil. Se hace casi a la velocidad del vídeo.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
+  d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,defName,d.querySelector('#exMode').value,{ff:true,w:window.scoutDesktop?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
   d.querySelector('#exGo').onclick=()=>{
     if(EXP.busy){ toast('Hay una exportación de la cola en marcha. Usa «A la cola».'); return; }
-    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:1920,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
+    const q=+d.querySelector('#exQ').value, o=q===9000?{ff:true,w:window.scoutDesktop?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
     try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(e){}
     runExport(list,defName,d.querySelector('#exMode').value,o);
@@ -6237,7 +6237,7 @@ function ffTitlePng(text,W,H){
   return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
 }
 async function ffRun(list,o,prog){
-  const W=1920,H=1080,FPS=25;
+  const W=window.scoutDesktop?1920:1280,H=window.scoutDesktop?1080:720,FPS=25;
   prog(0,list.length,{name:window.scoutDesktop?'Preparando…':'Cargando el motor (solo la primera vez, ≈ 31 MB)…'}); try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(true); }catch(_){}
   const ff=await ffLoad(); if(EXP.cancel) return null;
   let cur=0, n=list.length; EXP.frac=0;
@@ -6245,8 +6245,8 @@ async function ffRun(list,o,prog){
   const mounts=new Map(); let mi=0;
   const mountFor=async file=>{ if(mounts.has(file)) return mounts.get(file); const dir='/in'+(mi++); await ff.createDir(dir); await ff.mount('WORKERFS',{files:[file]},dir); const p=dir+'/'+file.name; mounts.set(file,p); return p; };
   const mute=o.mute!==undefined?o.mute:window.__expMute();
-  const vf='scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps='+FPS;
-  const enc=['-c:v','libx264','-preset',window.scoutDesktop?'veryfast':'superfast','-crf','18','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-bf','0','-g',String(FPS*2),'-keyint_min',String(FPS*2),'-sc_threshold','0','-x264-params','open-gop=0','-fps_mode','cfr','-avoid_negative_ts','make_zero','-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
+  const vf='scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags='+(window.scoutDesktop?'lanczos':'bilinear')+',pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps='+FPS;
+  const enc=['-c:v','libx264','-preset',window.scoutDesktop?'veryfast':'ultrafast','-crf',window.scoutDesktop?'18':'23','-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-bf','0','-g',String(FPS*2),'-keyint_min',String(FPS*2),'-sc_threshold','0','-x264-params','open-gop=0','-fps_mode','cfr','-avoid_negative_ts','make_zero','-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
   const segs=[];
   try{
     for(let i=0;i<list.length&&!EXP.cancel;i++){
@@ -7040,7 +7040,7 @@ function openIpExport(list,defName){
     if((b=t.closest('.ex-row'))){ const id=b.dataset.id; st.sel.has(id)?st.sel.delete(id):st.sel.add(id); draw(); return; }
     if(t.closest('#exGo2')){
       const chosen=list.filter(x=>st.sel.has(x.id)); if(!chosen.length) return;
-      const q=+el.querySelector('#exQ2').value, o=q===9000?{ff:true,w:1920,bps:0,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
+      const q=+el.querySelector('#exQ2').value, o=q===9000?{ff:true,w:window.scoutDesktop?1920:1280,bps:0,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:el.querySelector('#exD').checked,title:el.querySelector('#exT').checked};
       efPerm().then(ok=>{EXPF.ok=ok;}); el.remove();
       try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(er){}
       runExport(chosen,defName,chosen.length>1?st.mode:'one',o);
