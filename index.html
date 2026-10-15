@@ -6460,7 +6460,7 @@ async function showExported(out){
 const SF_CATS=['Ataque','Defensa','Pick and roll','Transición','Tiro','Rebote','Saque de banda','Saque de fondo','Contraataque','Otra'];
 function sfPrefill(o){
   const r={equipo:'',jugadora:'',categoria:'',nota:''};
-  try{ const e=(o.evs||[])[0]; if(e){ if(e.team!=null&&e.team!=='') r.equipo=teamName(e.team)||''; if(e.player!=null&&e.player!=='') r.jugadora=playerName(e.team,e.player)||('#'+e.player); try{ r.categoria=(info(e).label||''); }catch(_){} } }catch(_){}
+  try{ const e=(o.evs||[])[0]; if(e){ if(e.team!=null&&e.team!=='') r.equipo=teamName(e.team)||''; if(e.player!=null&&e.player!=='') r.jugadora=playerName(e.team,e.player)||('#'+e.player); try{ r.categoria=(info(e).label||''); }catch(_){} try{ const ds=e.desc||[]; const rs=ds.find(o=>o.g==='Resultado'); r.resultado=rs?rs.l:''; r.tags=descText(e); }catch(_){} } }catch(_){}
   try{ const l=JSON.parse(lsGet('bbtag.sf.last')||'{}'); if(!r.equipo) r.equipo=l.equipo||''; }catch(_){}
   return r;
 }
@@ -6472,13 +6472,13 @@ function sfFormEntrenador(d,o,i){
   const lab='display:block;margin:8px 0 0;font-size:12.5px;color:var(--muted)';
   box.innerHTML='<div style="margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:10px">'+
     '<label style="'+lab+'">Equipo<input data-f="equipo" list="sfEq'+i+'" value="'+esc(p.equipo)+'" style="'+inp+'"></label><datalist id="sfEq'+i+'">'+eq.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
-    '<label style="'+lab+'">Jugadora<input data-f="jugadora" value="'+esc(p.jugadora)+'" placeholder="Ej: Ana Pérez" style="'+inp+'"></label>'+
+    '<label style="'+lab+'">Jugadora<input data-f="jugadora" list="sfJu'+i+'" value="'+esc(p.jugadora)+'" placeholder="Ej: Ana Pérez" style="'+inp+'"></label><datalist id="sfJu'+i+'">'+[...new Set(['L','R'].flatMap(k=>roster(k).map(x=>x.name)).filter(Boolean))].map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
     '<label style="'+lab+'">Categoría<input data-f="categoria" list="sfCa'+i+'" value="'+esc(p.categoria)+'" style="'+inp+'"></label><datalist id="sfCa'+i+'">'+SF_CATS.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
     '<label style="'+lab+'">Nota (opcional)<input data-f="nota" value="" style="'+inp+'"></label>'+
     '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><button class="btn primary" data-go>Guardar</button><span data-msg style="font-size:12.5px;color:var(--muted)"></span></div></div>';
   const msg=box.querySelector('[data-msg]'), go=box.querySelector('[data-go]');
   go.onclick=async()=>{
-    const m={}; box.querySelectorAll('[data-f]').forEach(x=>{ m[x.dataset.f]=x.value.trim(); });
+    const m={resultado:p.resultado||'',tags:p.tags||''}; box.querySelectorAll('[data-f]').forEach(x=>{ m[x.dataset.f]=x.value.trim(); });
     go.disabled=true; msg.style.color='var(--muted)'; msg.textContent='Subiendo…';
     try{ await sfSubir(o,m); try{ lsSet('bbtag.sf.last',JSON.stringify({equipo:m.equipo})); }catch(_){} msg.style.color='#4ade80'; msg.textContent='✔ Guardado en Entrenador → Vídeos'; go.textContent='Guardado'; }
     catch(e){ go.disabled=false; msg.style.color='#ff7a85'; msg.textContent=(e&&e.message)||String(e); }
@@ -6495,7 +6495,7 @@ async function sfSubir(o,m){
   const up=(row)=>C.rest('archivos?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
   await up({id,nombre,tipo:'video',ruta,mime,tamano:o.blob.size});
   let meta={}; try{ const rows=await C.rest('archivos?select=nombre&id=eq._meta_videos&limit=1'); meta=JSON.parse((rows&&rows[0]&&rows[0].nombre)||'{}')||{}; }catch(_){}
-  meta[id]={equipo:m.equipo||'',jugadora:m.jugadora||'',categoria:m.categoria||'',nota:m.nota||''};
+  meta[id]={equipo:m.equipo||'',jugadora:m.jugadora||'',categoria:m.categoria||'',nota:m.nota||'',resultado:m.resultado||'',tags:m.tags||''};
   await up({id:'_meta_videos',nombre:JSON.stringify(meta),tipo:'ajustes',ruta:'',mime:'',tamano:0});
 }
 window.__sfShowExported=showExported;
