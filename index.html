@@ -5790,7 +5790,7 @@ async function fxRun(list,o,prog){
   const vt=info.videoTracks[0]; if(!vt) throw new Error('Sin pista de vídeo.');
   const at=info.audioTracks[0]||null;
   const vcodec=vt.codec;
-  if(!/^(avc1|vp09)/.test(vcodec)) throw new Error('Códec de vídeo no compatible ('+vcodec+').');
+  if(!/^(avc1|vp09|hvc1|hev1)/.test(vcodec)) throw new Error('Códec de vídeo no compatible ('+vcodec+').');
   const sw=vt.video.width, sh=vt.video.height;
   if(video.videoWidth!==sw||video.videoHeight!==sh) throw new Error('Vídeo girado.');
   const ow=Math.max(2,Math.round(Math.min(sw,o.w)/2)*2), oh=Math.max(2,Math.round(ow*sh/sw/2)*2);
@@ -5992,16 +5992,16 @@ function fxVerify(blob){
   });
 }
 async function expRun(list,o,prog){
-  EXP.frac=null;
+  EXP.frac=null; EXP.modo='';
   if(o.copy){
-    try{ const r=await fxCopy(list,o,prog); if(r||EXP.cancel) return r; }
+    try{ const r=await fxCopy(list,o,prog); if(r||EXP.cancel){ EXP.modo='⚡ Copia directa (sin recodificar)'; return r; } }
     catch(e){ EXP.frac=null; console.warn('copia:',e); toast('No se puede copiar sin recodificar ('+((e&&e.message)||e)+'). Se recodifica.'); }
     o=Object.assign({},o,{copy:false,w:1280,bps:4.5e6});
   }
   if(fxOk()){
-    try{ const r=await fxRun(list,o,prog); if(!r) return r; if(await fxVerify(r.blob)) return r; throw new Error('el archivo no se pudo comprobar'); }
-    catch(e){ FX.err=(e&&e.message)||String(e); console.warn('modo rápido:',e); EXP.frac=null; if(EXP.cancel) return null; toast('Modo rápido no disponible ('+FX.err+'). Grabando en tiempo real.'); }
-  }
+    try{ EXP.modo='⚡ Modo rápido (tarjeta de vídeo)'; const r=await fxRun(list,o,prog); if(!r) return r; if(await fxVerify(r.blob)) return r; throw new Error('el archivo no se pudo comprobar'); }
+    catch(e){ FX.err=(e&&e.message)||String(e); console.warn('modo rápido:',e); EXP.frac=null; if(EXP.cancel) return null; toast('Modo rápido no disponible ('+FX.err+'). Grabando en tiempo real.'); EXP.modo='🐢 Tiempo real — modo rápido no disponible: '+FX.err; }
+  } else EXP.modo='🐢 Tiempo real — '+(!lastFile?'el vídeo no es un archivo local (abre el archivo del partido)':'este navegador no tiene el modo rápido');
   return expRecord(list,o,prog);
 }
 /* graba una lista de clips; devuelve {blob, mime} (o null si se cancela) */
@@ -6146,14 +6146,14 @@ async function runExport(list,defName,mode,o){
   EXP.busy=true; EXP.cancel=false;
   const total=expDur(list,o.draw), t0=performance.now();
   const shell=(i,n,ev)=>{
-    const el=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">'+(o.ff?'Exportando…':'Grabando…')+'</h3><p id="exInfo" style="margin:0 0 10px;color:var(--muted)"></p>'+
+    const el=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">'+(o.ff?'Exportando…':'Grabando…')+'</h3><p id="exInfo" style="margin:0 0 4px;color:var(--muted)"></p><p id="exModo" style="margin:0 0 10px;font-weight:700;font-size:13px"></p>'+
       '<div style="height:10px;border-radius:6px;background:var(--panel2);overflow:hidden"><div id="exBar" style="height:100%;width:0;background:var(--accent)"></div></div>'+
       '<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">No cambies de pestaña ni bloquees la pantalla hasta que termine.</p>'+
       '<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn danger" id="exCan">Cancelar</button></div>');
     el.querySelector('#exCan').onclick=()=>{EXP.cancel=true; el.querySelector('#exInfo').textContent='Cancelando…'; if(o.ff){ try{ if(FF.inst) FF.inst.terminate(); }catch(_){} FF.inst=null; FF.loading=null; clearInterval(window.__exTick); EXP.busy=false; EXP.frac=null; expClose(); toast('Exportación cancelada.'); }};
   };
   let info='';
-  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const b=DD_.getElementById('exBar'); if(b) b.style.width=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total)))+'%'; };
+  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=EXP.modo||''; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const b=DD_.getElementById('exBar'); if(b) b.style.width=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total)))+'%'; };
   shell(); const tick=setInterval(upd,400); window.__exTick=tick;
   const out=[];
   try{
