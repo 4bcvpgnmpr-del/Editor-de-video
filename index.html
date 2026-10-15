@@ -3742,7 +3742,7 @@ const EXTRA=[
   B('fallo','Fallo','Resultado','',5,3,0,KO,'Sistemas'),
   B('reb','Rebote','Resultado','',4,3,0,'#38C6D9','Sistemas')
 ];
-const CFG_V=4;
+const CFG_V=5;
 const PERIODS=['1C','2C','3C','4C','PR'];
 const RESERVED=['0',' ',',','.','[',']'];
 const SPEEDS=[0.25,0.5,0.75,1,1.5,2];
@@ -3753,6 +3753,7 @@ const DI=(g,l)=>({id:g+'_'+l.toLowerCase().replace(/[^a-z0-9]+/g,''),label:l,key
 const DESC_DEFAULTS=[
   {id:'dres',name:'Resultado',color:'#3FBF7F',multi:false,scope:[],items:['Canasta','Fallo','Falta','Pérdida'].map(l=>DI('dres',l))},
   {id:'ddef',name:'Defensa rival',color:'#9AA7FF',multi:false,scope:['Defensa'],items:['Individual','Zona','Presión'].map(l=>DI('ddef',l))},
+  {id:'dtip',name:'Tipo de jugada',color:'#E8833A',multi:false,scope:[],items:['Pick and roll','Aislamiento','Transición','Juego de poste','Bloqueo indirecto','Saque de banda','Saque de fondo','Rebote ofensivo'].map(l=>DI('dtip',l))},
   {id:'dval',name:'Valoración',color:'#F5C542',multi:false,scope:[],items:['Bueno','Mejorable','Error'].map(l=>DI('dval',l))}
 ];
 const phOk=x=>(typeof x==='string'&&x.indexOf('data:image/')===0&&x.length<80000)?x:'';
@@ -3786,6 +3787,7 @@ function migrateCfg(o){
   { const pt={}; if(o.pgType&&typeof o.pgType==='object') Object.keys(o.pgType).forEach(k=>{ if(o.pages.includes(k)&&o.pgType[k]==='players') pt[k]='players'; }); o.pgType=pt;
     const a=o.pages.filter(x=>!pt[x]), b=o.pages.filter(x=>pt[x]); if(a.length) o.pages=a.concat(b); else { o.pgType={}; } }
   if(!Array.isArray(o.descs)) o.descs=v0<3?JSON.parse(JSON.stringify(DESC_DEFAULTS)):[];
+  if(v0<5&&v0>=3&&!o.descs.some(g=>g&&g.id==='dtip')){ const d=DESC_DEFAULTS.find(g=>g.id==='dtip'); o.descs.splice(1,0,JSON.parse(JSON.stringify(d))); }
   o.descs=o.descs.filter(g=>g&&g.id).map(g=>({id:String(g.id),name:String(g.name||'Descriptores'),color:safeColor(g.color),multi:!!g.multi,
     scope:Array.isArray(g.scope)?g.scope.map(String):[],
     items:(Array.isArray(g.items)?g.items:[]).filter(it=>it&&it.id).map(it=>({id:String(it.id),label:String(it.label||''),key:String(it.key||'').toLowerCase().slice(0,1)}))}));
@@ -6460,7 +6462,7 @@ async function showExported(out){
 const SF_CATS=['Ataque','Defensa','Pick and roll','Transición','Tiro','Rebote','Saque de banda','Saque de fondo','Contraataque','Otra'];
 function sfPrefill(o){
   const r={equipo:'',jugadora:'',categoria:'',nota:''};
-  try{ const e=(o.evs||[])[0]; if(e){ if(e.team!=null&&e.team!=='') r.equipo=teamName(e.team)||''; if(e.player!=null&&e.player!=='') r.jugadora=playerName(e.team,e.player)||('#'+e.player); try{ r.categoria=(info(e).label||''); }catch(_){} try{ const ds=e.desc||[]; const rs=ds.find(o=>o.g==='Resultado'); r.resultado=rs?rs.l:''; r.tags=descText(e); }catch(_){} } }catch(_){}
+  try{ const e=(o.evs||[])[0]; if(e){ if(e.team!=null&&e.team!=='') r.equipo=teamName(e.team)||''; if(e.player!=null&&e.player!=='') r.jugadora=playerName(e.team,e.player)||('#'+e.player); try{ r.categoria=(info(e).label||''); }catch(_){} try{ const ds=e.desc||[]; const rs=ds.find(o=>o.g==='Resultado'); r.resultado=rs?rs.l:''; const tj=ds.find(o=>o.g==='Tipo de jugada'); if(tj&&tj.l) r.categoria=tj.l; r.tags=descText(e); }catch(_){} } }catch(_){}
   try{ const l=JSON.parse(lsGet('bbtag.sf.last')||'{}'); if(!r.equipo) r.equipo=l.equipo||''; }catch(_){}
   return r;
 }
