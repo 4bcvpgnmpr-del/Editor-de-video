@@ -5747,6 +5747,7 @@ function fxAsc(mp,id){
   return d?new Uint8Array(d.data):undefined;
 }
 const FX_CH=4<<20;
+let fxDecCur=null;
 const FX_STALL=15000;
 const fxRace=(p,ms,msg)=>{ let t; return Promise.race([p,new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(msg)),ms);})]).finally(()=>clearTimeout(t)); };
 function fxOpen(file){
@@ -5813,9 +5814,9 @@ async function fxRun(list,o,prog){
   async function srcFor(f){
     if(f===file) return mainSrc; if(srcCache.has(f)) return srcCache.get(f);
     const o2=await fxOpen(f), vt2=o2.info.videoTracks[0], at2=o2.info.audioTracks[0]||null;
-    if(!vt2||!/^(avc1|vp09)/.test(vt2.codec)) throw new Error('El vídeo externo no es compatible con el modo rápido.');
+    if(!vt2||!/^(avc1|vp09|hvc1|hev1)/.test(vt2.codec)) throw new Error('El vídeo externo no es compatible con el modo rápido ('+(vt2?vt2.codec:'sin vídeo')+').');
     const m2=vt2.matrix; if(m2&&(m2[0]===0&&m2[1]!==0)) throw new Error('El vídeo externo está girado.');
-    const dc2={codec:vt2.codec,codedWidth:vt2.video.width,codedHeight:vt2.video.height}; const ds2=/^avc1/.test(vt2.codec)?fxDesc(o2.mp,vt2.id):undefined; if(ds2) dc2.description=ds2;
+    const dc2={codec:vt2.codec,codedWidth:vt2.video.width,codedHeight:vt2.video.height}; const ds2=/^avc1/.test(vt2.codec)?fxDesc(o2.mp,vt2.id):undefined; if(ds2) dc2.description=ds2; if(o.sw>=2) dc2.hardwareAcceleration='prefer-software';
     if(!(await VideoDecoder.isConfigSupported(dc2)).supported) throw new Error('No se puede decodificar el vídeo externo.');
     const ua=!!(useAudio&&at2&&/^mp4a/.test(at2.codec)&&at2.audio.sample_rate===at.audio.sample_rate&&at2.audio.channel_count===at.audio.channel_count);
     const S={file:f,mp:o2.mp,info:o2.info,vt:vt2,at:at2,dcfg:dc2,useAudio:ua}; srcCache.set(f,S); return S;
@@ -5898,7 +5899,7 @@ async function fxRun(list,o,prog){
           frame.close();
         }catch(e){ decErr=e; try{frame.close();}catch(_){} }
       };
-      const dec=new VideoDecoder({output:onFrame,error:e=>{decErr=e;}});
+      const dec=new VideoDecoder({output:onFrame,error:e=>{decErr=e;}}); fxDecCur=dec;
       dec.configure(S.dcfg);
       for(const s of V){
         if(EXP.cancel||decErr||encErr) break;
@@ -5925,7 +5926,7 @@ async function fxRun(list,o,prog){
     if(EXP.cancel){ try{enc.close();}catch(e){} return null; }
     await fxRace(enc.flush(),60000,'el codificador se quedó parado al terminar'); if(encErr) throw encErr;
     enc.close(); mux.finalize();
-  }catch(e){ try{enc.close();}catch(_){} throw e; }
+  }catch(e){ try{enc.close();}catch(_){} try{if(fxDecCur) fxDecCur.close();}catch(_){} fxDecCur=null; throw e; }
   return {blob:new Blob([target.buffer],{type:'video/mp4'}),mime:'video/mp4',codecs:'avc1 mp4a'};
 }
 /* copia sin recodificar: mismo códec y calidad que el original (corta en el fotograma clave anterior) */
