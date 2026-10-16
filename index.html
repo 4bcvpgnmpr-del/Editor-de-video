@@ -5747,6 +5747,8 @@ function fxAsc(mp,id){
   return d?new Uint8Array(d.data):undefined;
 }
 const FX_CH=4<<20;
+const FX_STALL=15000;
+const fxRace=(p,ms,msg)=>{ let t; return Promise.race([p,new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(msg)),ms);})]).finally(()=>clearTimeout(t)); };
 function fxOpen(file){
   return new Promise((resolve,reject)=>{
     const mp=MP4Box.createFile(); let ready=false, fail=false;
@@ -5795,12 +5797,12 @@ async function fxRun(list,o,prog){
   if(video.videoWidth!==sw||video.videoHeight!==sh) throw new Error('Vídeo girado.');
   const ow=Math.max(2,Math.round(Math.min(sw,o.w)/2)*2), oh=Math.max(2,Math.round(ow*sh/sw/2)*2);
   const fps=Math.max(10,Math.min(60,Math.round(vt.nb_samples/(vt.duration/vt.timescale))||30));
-  const dcfg={codec:vcodec,codedWidth:sw,codedHeight:sh}; const dsc=/^avc1/.test(vcodec)?fxDesc(mp,vt.id):undefined; if(dsc) dcfg.description=dsc;
+  const dcfg={codec:vcodec,codedWidth:sw,codedHeight:sh}; if(o.sw>=2) dcfg.hardwareAcceleration='prefer-software'; const dsc=/^avc1/.test(vcodec)?fxDesc(mp,vt.id):undefined; if(dsc) dcfg.description=dsc;
   if(!(await VideoDecoder.isConfigSupported(dcfg)).supported) throw new Error('El dispositivo no puede decodificar este vídeo.');
   let ecfg=null, mcodec='';
   const prof=o.pro?[['avc1.64002a','avc'],['avc1.640028','avc'],['avc1.4d002a','avc'],['avc1.4d0028','avc'],['avc1.420028','avc']]:[['avc1.420028','avc'],['avc1.42002a','avc'],['avc1.4d0028','avc'],['avc1.640028','avc'],['avc1.42001f','avc']];
   for(const c of prof){
-    const cfg={codec:c[0],width:ow,height:oh,bitrate:o.bps,framerate:fps,latencyMode:o.pro?'quality':'realtime'}; if(o.pro) cfg.bitrateMode='variable'; if(c[1]==='avc') cfg.avc={format:'avc'};
+    const cfg={codec:c[0],width:ow,height:oh,bitrate:o.bps,framerate:fps,latencyMode:o.pro?'quality':'realtime'}; if(o.pro) cfg.bitrateMode='variable'; if(c[1]==='avc') cfg.avc={format:'avc'}; if(o.sw>=1) cfg.hardwareAcceleration='prefer-software';
     try{ const r=await VideoEncoder.isConfigSupported(cfg); if(r&&r.supported){ecfg=cfg;mcodec=c[1];break;} }catch(e){}
   }
   if(!ecfg) throw new Error('Este navegador no codifica H.264 (el único formato que abren todos los reproductores).');
@@ -5838,7 +5840,7 @@ async function fxRun(list,o,prog){
           if(im) ctx.drawImage(im,0,0,ow,oh); else {ctx.fillStyle='#000';ctx.fillRect(0,0,ow,oh);}
           const vf=new VideoFrame(cv,{timestamp:Math.round((base+k/10)*1e6),duration:1e5});
           enc.encode(vf,{keyFrame:k===0}); vf.close(); nFrames++;
-          while(enc.encodeQueueSize>6&&!EXP.cancel) await fxSleep(2);
+          { const w0=performance.now(); while(enc.encodeQueueSize>6&&!EXP.cancel){ await fxSleep(2); if(encErr) break; if(performance.now()-w0>FX_STALL) throw new Error('el codificador se quedó parado'); } }
         }
         if(encErr) throw encErr;
         base+=ev.dur; doneSecs+=ev.dur; EXP.frac=Math.min(1,doneSecs/total); continue;
@@ -5900,11 +5902,11 @@ async function fxRun(list,o,prog){
       dec.configure(S.dcfg);
       for(const s of V){
         if(EXP.cancel||decErr||encErr) break;
-        while((dec.decodeQueueSize>6||enc.encodeQueueSize>6)&&!EXP.cancel) await fxSleep(2);
+        { let n0=nFrames, w0=performance.now(); while((dec.decodeQueueSize>6||enc.encodeQueueSize>6)&&!EXP.cancel){ await fxSleep(2); if(encErr||decErr) break; if(nFrames!==n0){ n0=nFrames; w0=performance.now(); } else if(performance.now()-w0>FX_STALL) throw new Error('el codificador se quedó parado'); } }
         dec.decode(new EncodedVideoChunk({type:s.is_sync?'key':'delta',timestamp:Math.round(s.cts*1e6/s.timescale),duration:Math.round(s.duration*1e6/s.timescale),data:s.data}));
         const tt=s.cts/s.timescale; EXP.frac=Math.min(1,(doneSecs+Math.max(0,Math.min(tt,ev.end)-ev.start))/total);
       }
-      if(!EXP.cancel&&!decErr&&!encErr) await dec.flush();
+      if(!EXP.cancel&&!decErr&&!encErr) await fxRace(dec.flush(),30000,'el decodificador se quedó parado');
       try{dec.close();}catch(e){}
       if(decErr) throw decErr; if(encErr) throw encErr;
       if(useAudio&&S.useAudio&&!EXP.cancel){
@@ -5921,7 +5923,7 @@ async function fxRun(list,o,prog){
       base+=(ev.end-ev.start)+hs; doneSecs+=(ev.end-ev.start)+hs;
     }
     if(EXP.cancel){ try{enc.close();}catch(e){} return null; }
-    await enc.flush(); if(encErr) throw encErr;
+    await fxRace(enc.flush(),60000,'el codificador se quedó parado al terminar'); if(encErr) throw encErr;
     enc.close(); mux.finalize();
   }catch(e){ try{enc.close();}catch(_){} throw e; }
   return {blob:new Blob([target.buffer],{type:'video/mp4'}),mime:'video/mp4',codecs:'avc1 mp4a'};
@@ -5999,8 +6001,14 @@ async function expRun(list,o,prog){
     o=Object.assign({},o,{copy:false,w:1280,bps:4.5e6});
   }
   if(fxOk()){
-    try{ EXP.modo='⚡ Modo rápido (tarjeta de vídeo)'; const r=await fxRun(list,o,prog); if(!r) return r; if(await fxVerify(r.blob)) return r; throw new Error('el archivo no se pudo comprobar'); }
-    catch(e){ FX.err=(e&&e.message)||String(e); console.warn('modo rápido:',e); EXP.frac=null; if(EXP.cancel) return null; toast('Modo rápido no disponible ('+FX.err+'). Grabando en tiempo real.'); EXP.modo='🐢 Tiempo real — modo rápido no disponible: '+FX.err; }
+    for(let intento=0;;intento++){
+      try{ EXP.modo=intento===0?'⚡ Modo rápido (tarjeta de vídeo)':intento===1?'⚡ Modo rápido (codificador por software)':'⚡ Modo rápido (todo por software)'; const r=await fxRun(list,Object.assign({},o,{sw:intento}),prog); if(!r) return r; if(await fxVerify(r.blob)) return r; throw new Error('el archivo no se pudo comprobar'); }
+      catch(e){
+        FX.err=(e&&e.message)||String(e); console.warn('modo rápido:',e); EXP.frac=null; if(EXP.cancel) return null;
+        if(/parado/.test(FX.err)&&intento<2){ toast('El modo rápido se atascó. Reintentando '+(intento===0?'con el codificador por software…':'con todo por software…')); continue; }
+        toast('Modo rápido no disponible ('+FX.err+'). Grabando en tiempo real.'); EXP.modo='🐢 Tiempo real — modo rápido no disponible: '+FX.err; break;
+      }
+    }
   } else EXP.modo='🐢 Tiempo real — '+(!lastFile?'el vídeo no es un archivo local (abre el archivo del partido)':'este navegador no tiene el modo rápido');
   return expRecord(list,o,prog);
 }
