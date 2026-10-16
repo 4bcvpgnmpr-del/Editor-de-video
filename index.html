@@ -5847,6 +5847,7 @@ async function fxRun(list,o,prog){
         base+=ev.dur; doneSecs+=ev.dur; EXP.frac=Math.min(1,doneSecs/total); continue;
       }
       const S=ev.ext?await srcFor(ev.file):mainSrc;
+      S.uses=(S.uses||0)+1; if(S.uses>5){ try{ const nw=await fxOpen(S.file); S.mp=nw.mp; S.uses=1; }catch(e){} }
       const {V,A}=await fxCollect(S.mp,S.file,S.vt,S.at,ev.start,ev.end);
       if(EXP.cancel) break;
       while(V.length&&!V[0].is_sync) V.shift();
@@ -5920,6 +5921,7 @@ async function fxRun(list,o,prog){
           firstA=false;
         }
       }
+      try{ if(V.length) S.mp.releaseUsedSamples(S.vt.id,V[V.length-1].number+1); if(S.at&&A.length) S.mp.releaseUsedSamples(S.at.id,A[A.length-1].number+1); }catch(e){}
       const hs=frz.filter(f=>done.has(f.id)).reduce((a,f)=>a+f.hold,0);
       base+=(ev.end-ev.start)+hs; doneSecs+=(ev.end-ev.start)+hs;
     }
