@@ -6164,7 +6164,7 @@ async function runExport(list,defName,mode,o){
     el.querySelector('#exCan').onclick=()=>{EXP.cancel=true; el.querySelector('#exInfo').textContent='Cancelando…'; if(o.ff){ try{ if(FF.inst) FF.inst.terminate(); }catch(_){} FF.inst=null; FF.loading=null; clearInterval(window.__exTick); EXP.busy=false; EXP.frac=null; expClose(); toast('Exportación cancelada.'); }};
   };
   let info='';
-  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=EXP.modo||''; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const b=DD_.getElementById('exBar'); if(b) b.style.width=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total)))+'%'; };
+  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=(EXP.modo||'')+' · v3'; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const b=DD_.getElementById('exBar'); if(b) b.style.width=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total)))+'%'; };
   shell(); const tick=setInterval(upd,400); window.__exTick=tick;
   const out=[];
   try{
