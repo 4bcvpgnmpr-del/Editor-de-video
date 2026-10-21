@@ -1497,7 +1497,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
             <button class="btn ip-only" id="ipLibMore" style="width:100%">⋯ Herramientas y exportar</button>
             <div class="fg"><span class="fl">Análisis</span><div class="fb"><button class="btn" id="bPerf">👤 Rendimiento</button><button class="btn" id="bQt">🏀 Quinteto</button><button class="btn" id="bTable">📋 Tabla</button><button class="btn" id="bStats">📊 Estadísticas</button></div></div>
             <div class="fg"><span class="fl">Vídeos</span><div class="fb"><button class="btn" id="bInd">🎞 Individual</button><button class="btn" id="bCol">🎞 Colectivo</button></div></div>
-            <div class="fg"><span class="fl">Proyecto</span><div class="fb"><button class="btn" id="bCsv">CSV</button><button class="btn" id="bJson">💾 Guardar</button><button class="btn" id="bLoad">📂 Cargar</button></div></div>
+            <div class="fg"><span class="fl">Proyecto</span><div class="fb"><button class="btn" id="bCsv">CSV</button><button class="btn" id="bJson">💾 Guardar</button><button class="btn" id="bLoad">📂 Cargar</button><button class="btn" id="bYtMarks" title="Traer las marcas hechas viendo YouTube a este vídeo">▶ Marcas de YouTube</button></div></div>
           </div>
         </div>
         <i class="rz rz-e" data-rz="e"></i><i class="rz rz-s" data-rz="s"></i><i class="rz rz-se" data-rz="se"></i>
@@ -6642,6 +6642,32 @@ $('#bCsv').onclick=()=>{
 $('#bJson').onclick=()=>{
   if(!hasVideo){toast('Abre un vídeo para guardar su proyecto.');return;}
   saveFile('proyecto-'+baseName()+'.scout.json',JSON.stringify({app:'scouting-baloncesto',format:'scoutflow-video-project',version:4,meta:matchMeta,videoName,videoKey,exportedAt:new Date().toISOString(),teamNames:cfg.teamNames,rosters:cfg.rosters,pages:cfg.pages,cats:cfg.cats,descs:cfg.descs,buttons:cfg.buttons,events,markers,stints,teles,playlists,covers,externals},null,2));
+};
+/* Traer a este vídeo las marcas hechas viendo un enlace (YouTube, etc.) */
+$('#bYtMarks').onclick=()=>{
+  if(!hasVideo||/^(yt|url|live)\|/.test(videoKey||'')){ toast('Abre primero el archivo de vídeo descargado y luego pulsa este botón.'); return; }
+  const lst=[], tt=titlesGet();
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue; const key=k.slice(14); if(!/^(yt|url)\|/.test(key)) continue;
+    const o=JSON.parse(localStorage.getItem(k)||'null'); const n=o&&Array.isArray(o.events)?o.events.length:0; if(!n) continue;
+    lst.push({key,n,mk:(o.markers||[]).length,t:(tt[key]&&tt[key].t)||key.replace(/^(yt|url)\|/,(m,a)=>a==='yt'?'YouTube ':'Enlace ')}); } }catch(e){}
+  if(!lst.length){ toast('No hay marcas hechas sobre enlaces de YouTube en este dispositivo.'); return; }
+  const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
+  ov.innerHTML='<div style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,100%);max-height:80vh;overflow:auto"><h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Traer marcas de YouTube</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13.5px">Elige el enlace cuyas marcas quieres pasar a este vídeo. Se <b>añaden</b> a las que ya tiene (sin repetir las iguales).</p><div id="ymL"></div><div style="text-align:right;margin-top:10px"><button class="btn" id="ymNo">Cerrar</button></div></div>';
+  document.body.appendChild(ov); const close=()=>ov.remove(); ov.querySelector('#ymNo').onclick=close; ov.addEventListener('keydown',e=>e.stopPropagation());
+  const L=ov.querySelector('#ymL');
+  lst.forEach(r=>{ const d=document.createElement('div'); d.style.cssText='display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)';
+    d.innerHTML='<div style="flex:1;min-width:0"><b></b><div style="font-size:12.5px;color:var(--muted)">'+r.n+' marca'+(r.n===1?'':'s')+(r.mk?' · '+r.mk+' marcador'+(r.mk===1?'':'es'):'')+'</div></div><button class="btn primary">Traer</button>';
+    d.querySelector('b').textContent=r.t;
+    d.querySelector('button').onclick=()=>{
+      let o=null; try{ o=JSON.parse(lsGet('bbtag.project.'+r.key)||'null'); }catch(e){} if(!o) return;
+      const sig=x=>Math.round(x.t*10)+'|'+Math.round(x.start*10)+'|'+Math.round(x.end*10)+'|'+(x.cat||x.code||x.label||'');
+      const have=new Set(events.map(sig)); let add=0;
+      (Array.isArray(o.events)?o.events:[]).filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).forEach(x=>{ if(have.has(sig(x))) return; x.id=uid(); events.push(x); have.add(sig(x)); add++; });
+      const hm=new Set(markers.map(m=>Math.round(m.t*10)+'|'+m.text)); let am=0;
+      (Array.isArray(o.markers)?o.markers:[]).filter(m=>m&&isFinite(m.t)).forEach(m=>{ const k=Math.round(+m.t*10)+'|'+String(m.text||'Marcador'); if(hm.has(k)) return; markers.push({id:uid(),t:+m.t,text:String(m.text||'Marcador')}); hm.add(k); am++; });
+      saveProject(); try{ renderAll(); }catch(e){} close();
+      toast(add||am?('Traídas '+add+' marca'+(add===1?'':'s')+(am?' y '+am+' marcador'+(am===1?'':'es'):'')+'.'):'Ya estaban todas en este vídeo.'); };
+    L.appendChild(d); });
 };
 $('#bLoad').onclick=()=>$('#fileProject').click();
 $('#fileProject').onchange=async e=>{
