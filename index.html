@@ -6211,6 +6211,18 @@ async function ffLoad(){
   if(FF.loading) return FF.loading;
   FF.loading=(async()=>{
     if(window.scoutDesktop){ FF.inst=ffNative(); return FF.inst; }
+    /* hasta 3 intentos: un corte de red o de memoria al bajar los 31 MB no debe tumbar la exportación */
+    let ultimo=null;
+    for(let intento=1; intento<=3; intento++){
+      try{ return await ffLoadUno(); }
+      catch(e){ ultimo=e; FF.inst=null; try{ const w=window.FFmpegWASM; }catch(_){} if(intento<3) await new Promise(r=>setTimeout(r,900*intento)); }
+    }
+    throw new Error((ultimo&&ultimo.message||'Error desconocido')+' (se intentó 3 veces). Comprueba tu conexión y pulsa de nuevo; si sigue igual, recarga la página con Cmd+Shift+R.');
+  })();
+  try{ return await FF.loading; } finally{ FF.loading=null; }
+}
+async function ffLoadUno(){
+  {
     const abs=u=>new URL(u,location.href).href;
     await ffScript(abs('ffmpeg/ffmpeg.js'));
     const f=new window.FFmpegWASM.FFmpeg();
@@ -6231,8 +6243,7 @@ async function ffLoad(){
     const wasmURL=URL.createObjectURL(new Blob(parts,{type:'application/wasm'}));
     await f.load({coreURL:abs('ffmpeg/ffmpeg-core.js'),wasmURL,classWorkerURL:abs('ffmpeg/814.ffmpeg.js')});
     FF.inst=f; return f;
-  })();
-  try{ return await FF.loading; } finally{ FF.loading=null; }
+  }
 }
 async function ffOverlayPng(tl,W,H){
   const im=await expSvgImg(tl,W,H); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); if(im) x.drawImage(im,0,0,W,H);
@@ -7587,7 +7598,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='14/10/2026 · 23:30 · motor: uniones de clips sin B-frames (iMovie)';
+  const BUILD='21/10/2026 · proyectos y biblioteca de cortes';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7916,6 +7927,148 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   b.after(b3); b3.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; mergeMontages(); };
   const b2=document.createElement('button'); b2.className='mini'; b2.id='plSend'; b2.title='Copiar este montaje a otro partido guardado'; b2.textContent='⇢ Llevar a otro partido';
   b.after(b2); b2.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; sendMontage(); };
+})();
+
+/* ===== PROYECTOS: varios partidos en un proyecto y una biblioteca con todos sus cortes ===== */
+(function(){
+  const GK='bbtag.groups', AK='bbtag.group.active';
+  const gGet=()=>{ try{ const a=JSON.parse(lsGet(GK)||'[]'); return Array.isArray(a)?a.filter(g=>g&&g.id):[]; }catch(e){ return []; } };
+  const gSet=a=>lsSet(GK,JSON.stringify(a));
+  const aGet=()=>{ try{ return lsGet(AK)||''; }catch(e){ return ''; } };
+  const isFileKey=k=>!!k&&/\|\d+$/.test(k)&&!/^(yt|url|live)\|/.test(k);
+  const getV=async key=>{ try{ return await vdbTx('readonly',st=>st.get(key)); }catch(e){ return null; } };
+  const q=k=>{ try{ return JSON.parse(localStorage.getItem('bbtag.project.'+k)||'null'); }catch(e){ return null; } };
+  const btn='padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;font-size:13.5px';
+  const inp='padding:7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13.5px';
+  const S={gid:'',cat:'',game:'',side:'',q:'',sel:new Set(),view:'lib'};
+
+  /* un partido nuevo se mete solo en el proyecto activo */
+  video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
+    try{
+      const a=aGet(); if(!a||!isFileKey(videoKey)) return;
+      const gs=gGet(); if(gs.some(g=>g.keys.includes(videoKey))) return;
+      const g=gs.find(x=>x.id===a); if(!g) return;
+      g.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+g.name+'».');
+    }catch(e){}
+  },900); });
+
+  async function openProj(){
+    const vids=await vidList().catch(()=>[]);
+    const T=titlesGet();
+    const gameOf={}; vids.forEach(v=>{ gameOf[v.key]=v; });
+    if(isFileKey(videoKey)&&!gameOf[videoKey]) gameOf[videoKey]={key:videoKey,name:videoName||videoKey,size:0,added:Date.now()};
+    const d=expDlgShell('<div id="pjB"></div>'); d.firstElementChild.style.width='min(1000px,100%)';
+    const B=d.querySelector('#pjB');
+    const titleOf=k=>(T[k]&&T[k].t)||(gameOf[k]&&gameOf[k].name)||k.split('|')[0];
+    const dateOf=k=>(T[k]&&T[k].d)||'';
+    function keysOf(){
+      const gs=gGet(), g=gs.find(x=>x.id===S.gid);
+      if(g) return g.keys.filter(k=>q(k)||k===videoKey);
+      return Object.keys(gameOf).filter(k=>q(k)||k===videoKey);
+    }
+    function rowsAll(){
+      const rows=[]; keysOf().forEach((k,gi)=>{
+        let evs, o=null;
+        if(k===videoKey) evs=events.filter(x=>x&&isFinite(x.start)&&isFinite(x.end));
+        else { o=q(k); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent); }
+        const side=t=>o?((o.meta&&o.meta[t]&&o.meta[t].name)||(t==='R'?'Rival':'Local')):teamName(t);
+        evs.slice().sort((a,b)=>a.t-b.t).forEach(e=>rows.push({id:k+'#'+e.id,key:k,e,gt:titleOf(k),gd:dateOf(k),cat:evName(e),side:side(e.team==='R'?'R':'L'),pl:e.player?(o?'#'+e.player:playerLabel(e.team,e.player)):''}));
+      }); return rows;
+    }
+    function vis(rows){
+      const s=S.q.trim().toLowerCase();
+      return rows.filter(r=>(!S.cat||r.cat===S.cat)&&(!S.game||r.key===S.game)&&(!S.side||r.side===S.side)&&(!s||(r.cat+' '+r.pl+' '+r.gt+' '+r.side).toLowerCase().includes(s)));
+    }
+    function head(){
+      const gs=gGet(), act=aGet();
+      return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font:700 20px var(--f-head)">📚 Proyectos y biblioteca</h3><span style="flex:1"></span><button class="btn" id="pjX">Cerrar</button></div>'+
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><select id="pjG" style="'+inp+';min-width:200px"><option value="">Todos los partidos guardados</option>'+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+' ('+g.keys.length+')</option>').join('')+'</select>'+
+        '<button style="'+btn+'" id="pjNew">＋ Nuevo proyecto</button>'+
+        (S.gid?'<button style="'+btn+'" id="pjParts">🏀 Partidos</button><button style="'+btn+'" id="pjRen">✎ Nombre</button><button style="'+btn+'" id="pjDel">🗑</button><label style="font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer" title="Cada vídeo nuevo que abras se añade solo a este proyecto"><input type="checkbox" id="pjAct"'+(act===S.gid?' checked':'')+'> Proyecto activo</label>':'')+'</div>';
+    }
+    function bind(){
+      B.querySelector('#pjX').onclick=expClose;
+      B.querySelector('#pjG').onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
+      B.querySelector('#pjNew').onclick=()=>{
+        const n=prompt('Nombre del proyecto (por ejemplo «Liga 2026-27» o «Rival: Basket Norte»):'); if(!n||!n.trim()) return;
+        const gs=gGet(), g={id:uid(),name:n.trim().slice(0,60),keys:isFileKey(videoKey)?[videoKey]:[]}; gs.push(g); gSet(gs); lsSet(AK,g.id); S.gid=g.id; S.view=g.keys.length?'lib':'games'; toast('Proyecto creado y activo: los vídeos nuevos que abras se añaden aquí.'); draw();
+      };
+      const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); const n=prompt('Nombre del proyecto:',g.name); if(!n||!n.trim()) return; g.name=n.trim().slice(0,60); gSet(gs); draw(); };
+      const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!confirm('¿Borrar el proyecto «'+g.name+'»?\nLos partidos y sus cortes NO se borran, solo se quita la agrupación.')) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
+      const pa=B.querySelector('#pjParts'); if(pa) pa.onclick=()=>{ S.view=S.view==='games'?'lib':'games'; draw(); };
+      const ac=B.querySelector('#pjAct'); if(ac) ac.onchange=()=>{ lsSet(AK,ac.checked?S.gid:''); toast(ac.checked?'Proyecto activo: los vídeos nuevos se añaden aquí.':'Ya no se añaden vídeos solos.'); };
+    }
+    function drawGames(){
+      const gs=gGet(), g=gs.find(x=>x.id===S.gid); const all=Object.keys(gameOf).sort((a,b)=>(gameOf[b].added||0)-(gameOf[a].added||0));
+      B.innerHTML=head()+'<p class="hint" style="margin:0 0 8px">Marca los partidos que forman parte de «'+esc(g.name)+'». Salen los vídeos guardados en «Mis vídeos» de este dispositivo.</p>'+
+        '<div style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px">'+
+        (all.map(k=>{ const n=(q(k)&&q(k).events||[]).length||(k===videoKey?events.length:0); return '<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;cursor:pointer;border-bottom:1px solid var(--line)"><input type="checkbox" data-k="'+esc(k)+'"'+(g.keys.includes(k)?' checked':'')+'><span style="flex:1"><b>'+esc(titleOf(k))+'</b>'+(dateOf(k)?' · '+esc(matchDate(dateOf(k))):'')+'<br><span style="color:var(--muted);font-size:12.5px">'+n+' cortes</span></span></label>'; }).join('')||'<p style="color:var(--muted);padding:8px">No hay vídeos guardados todavía. Abre un partido y etiquétalo: se guarda solo en «Mis vídeos».</p>')+'</div>'+
+        '<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn primary" id="pjOk">Listo</button></div>';
+      bind();
+      B.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{ const gg=gGet(), x=gg.find(y=>y.id===S.gid); if(c.checked){ if(!x.keys.includes(c.dataset.k)) x.keys.push(c.dataset.k); } else x.keys=x.keys.filter(k=>k!==c.dataset.k); gSet(gg); });
+      B.querySelector('#pjOk').onclick=()=>{ S.view='lib'; draw(); };
+    }
+    function drawLib(){
+      const all=rowsAll(), rows=vis(all);
+      const uniq=a=>[...new Set(a)].sort((x,y)=>x.localeCompare(y,'es'));
+      const opt=(arr,v,all0)=>'<option value="">'+all0+'</option>'+arr.map(x=>'<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>').join('');
+      const games=keysOf();
+      const nSel=[...S.sel].filter(id=>all.some(r=>r.id===id)).length;
+      B.innerHTML=head()+
+        (all.length?'':'<p style="color:var(--muted)">'+(S.gid?'Este proyecto aún no tiene cortes. Pulsa «🏀 Partidos» para elegir los partidos, o abre un vídeo con el proyecto activo.':'Todavía no hay cortes guardados. Abre un partido y etiquétalo.')+'</p>')+
+        (all.length?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+
+          '<select id="pjFg" style="'+inp+'"><option value="">Todos los partidos</option>'+games.map(k=>'<option value="'+esc(k)+'"'+(k===S.game?' selected':'')+'>'+esc(titleOf(k))+'</option>').join('')+'</select>'+
+          '<select id="pjFc" style="'+inp+'">'+opt(uniq(all.map(r=>r.cat)),S.cat,'Todas las categorías')+'</select>'+
+          '<select id="pjFs" style="'+inp+'">'+opt(uniq(all.map(r=>r.side)),S.side,'Todos los equipos')+'</select>'+
+          '<input id="pjQ" placeholder="Buscar jugadora, acción…" value="'+esc(S.q)+'" style="'+inp+';flex:1;min-width:140px"></div>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><span class="hint" style="margin:0">'+rows.length+' de '+all.length+' cortes · <b>'+nSel+'</b> marcados</span><span style="flex:1"></span><button style="'+btn+'" id="pjAll">Marcar los de la lista</button><button style="'+btn+'" id="pjNone">Quitar marcas</button></div>'+
+          '<div style="max-height:44vh;overflow:auto;border:1px solid var(--line);border-radius:10px">'+(rows.slice(0,600).map(r=>'<label style="display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer"><input type="checkbox" data-r="'+esc(r.id)+'"'+(S.sel.has(r.id)?' checked':'')+'><span style="width:10px;height:10px;border-radius:50%;background:'+esc(info(r.e).color||r.e.color||'#888')+';flex:none"></span><span style="flex:1;min-width:0"><b>'+esc(r.cat)+'</b>'+(r.pl?' · '+esc(r.pl):'')+' <span style="color:var(--muted)">· '+esc(r.side)+' · '+esc(r.e.period||'')+' '+esc(fmt(r.e.t))+'</span><br><span style="color:var(--muted);font-size:12px">'+esc(r.gt)+(r.gd?' · '+esc(matchDate(r.gd)):'')+'</span></span></label>').join('')||'<p style="padding:10px;color:var(--muted)">Ningún corte coincide.</p>')+(rows.length>600?'<p style="padding:8px;color:var(--muted)">Se muestran 600; afina con los filtros.</p>':'')+'</div>'+
+          '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button style="'+btn+'" id="pjMont"'+(nSel?'':' disabled')+'>＋ Crear montaje ('+nSel+')</button><button class="btn primary" id="pjProd"'+(nSel?'':' disabled')+'>🎞 Producir vídeo ('+nSel+')</button></div>':'');
+      bind();
+      if(!all.length) return;
+      const rd=()=>{ drawLib(); };
+      B.querySelector('#pjFg').onchange=e=>{ S.game=e.target.value; rd(); };
+      B.querySelector('#pjFc').onchange=e=>{ S.cat=e.target.value; rd(); };
+      B.querySelector('#pjFs').onchange=e=>{ S.side=e.target.value; rd(); };
+      { const i=B.querySelector('#pjQ'); i.oninput=()=>{ S.q=i.value; const p=i.selectionStart; drawLib(); const j=B.querySelector('#pjQ'); j.focus(); try{ j.setSelectionRange(p,p); }catch(e){} }; }
+      B.querySelector('#pjAll').onclick=()=>{ rows.forEach(r=>S.sel.add(r.id)); rd(); };
+      B.querySelector('#pjNone').onclick=()=>{ S.sel=new Set(); rd(); };
+      B.querySelectorAll('[data-r]').forEach(c=>c.onchange=()=>{ if(c.checked) S.sel.add(c.dataset.r); else S.sel.delete(c.dataset.r); const n=[...S.sel].filter(id=>all.some(r=>r.id===id)).length; B.querySelector('#pjMont').textContent='＋ Crear montaje ('+n+')'; B.querySelector('#pjProd').textContent='🎞 Producir vídeo ('+n+')'; B.querySelector('#pjMont').disabled=B.querySelector('#pjProd').disabled=!n; B.querySelector('.hint b').textContent=n; });
+      B.querySelector('#pjMont').onclick=()=>build(all,false);
+      B.querySelector('#pjProd').onclick=()=>build(all,true);
+    }
+    async function build(all,produce){
+      const pick=all.filter(r=>S.sel.has(r.id)); if(!pick.length) return;
+      if(produce&&!hasVideo){ toast('Abre primero cualquiera de tus partidos (la producción necesita un vídeo abierto) y vuelve a pulsar.'); return; }
+      const need=[...new Set(pick.map(r=>r.key).filter(k=>k!==videoKey))], files={}, falta=[];
+      for(const k of need){ const v=await getV(k); if(v&&v.blob) files[k]=new File([v.blob],v.name,{type:v.type||'video/mp4'}); else falta.push(titleOf(k)); }
+      if(falta.length&&!confirm('No encuentro el vídeo de: '+falta.join(', ')+'.\n(Si abriste ese partido con un enlace, o lo borraste de «Mis vídeos»).\n\n¿Seguir sin esos cortes?')) return;
+      const use=pick.filter(r=>r.key===videoKey||files[r.key]); if(!use.length){ toast('Ningún corte tiene su vídeo disponible.'); return; }
+      const g=gGet().find(x=>x.id===S.gid);
+      const p={id:uid(),name:('Biblioteca'+(g?' · '+g.name:'')+' · '+use.length+' cortes').slice(0,60),folder:'',items:[]};
+      use.forEach(r=>{
+        if(r.key===videoKey){ p.items.push(r.e.id); return; }
+        const o=q(r.key), v=files[r.key];
+        const x=extFromEv(r.e,r.gt,v.name,v.size,r.side,r.pl); externals.push(x); extFiles[x.id]=v; p.items.push('x:'+x.id);
+      });
+      playlists.push(p); plCur=p.id; expClose(); commit();
+      if(produce){ DLGDOC=null; openExport(plExpand(p),p.name); }
+      else toast('Montaje «'+p.name+'» creado. Está en Playlists: reordénalo y exporta cuando quieras.');
+    }
+    if(!S.gid&&aGet()&&gGet().some(g=>g.id===aGet())) S.gid=aGet();
+    if(S.gid&&!gGet().some(g=>g.id===S.gid)) S.gid='';
+    S.view==='games'&&S.gid?drawGames():drawLib();
+    function draw(){ S.view==='games'&&S.gid?drawGames():drawLib(); }
+    window.__pjDraw=draw;
+  }
+  const bar=document.querySelector('.top-actions');
+  if(bar){
+    const b=document.createElement('button'); b.className='btn'; b.id='bProj'; b.title='Proyectos: varios partidos y una biblioteca con todos sus cortes'; b.innerHTML='<span class="ic">📚</span><span class="tx">Proyectos</span>';
+    b.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; S.view='lib'; openProj(); };
+    bar.appendChild(b); const m=document.getElementById('moreMenu'); if(m) m.appendChild(b);
+  }
+  window.openProjects=()=>{ DLGDOC=null; S.view='lib'; openProj(); };
+  setTimeout(()=>{ const g=document.querySelector('#ipHome .hm-g'); if(g&&!document.getElementById('hmProj')){ const t=document.createElement('button'); t.className='hm-t'; t.id='hmProj'; t.innerHTML='<i style="background:#2fd0c8"></i><span>Proyectos<small>Partidos y biblioteca de cortes</small></span>'; t.onclick=()=>window.openProjects(); g.appendChild(t); } },400);
 })();
 
 /* ===== Pestañas de vídeo: varios vídeos en el mismo panel ===== */
