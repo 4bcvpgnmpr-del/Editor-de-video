@@ -6715,6 +6715,9 @@ $('#bJson').onclick=()=>{
       sortEvents(); commit(); close(); toast(n+' cortes creados con el jugada a jugada de la FEB. Revísalos en la lista: si ves que todos van algo desplazados, añade más anclas y vuelve a crearlos.'); };
   };
 })();
+(function(){ const bc=document.getElementById('bCfg'), src=document.getElementById('bFebCuts'); if(!bc||!src) return;
+  const b=document.createElement('button'); b.className='btn'; b.id='bFebTop'; b.title='Cortes automáticos con el jugada a jugada de la FEB'; b.innerHTML='<span class="ic">⚡</span><span class="tx">Cortes FEB</span>';
+  bc.parentNode.insertBefore(b,bc); b.onclick=()=>src.click(); })();
 /* Traer a este vídeo las marcas hechas viendo un enlace (YouTube, etc.) */
 $('#bYtMarks').onclick=()=>{
   if(!hasVideo||/^(yt|url|live)\|/.test(videoKey||'')){ toast('Abre primero el archivo de vídeo descargado y luego pulsa este botón.'); return; }
@@ -7715,7 +7718,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='22/10/2026 · cortes FEB';
+  const BUILD='22/10/2026 · cortes FEB (botón arriba)';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
