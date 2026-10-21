@@ -7601,7 +7601,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='21/10/2026 · proyecto nuevo desde cero';
+  const BUILD='21/10/2026 · borrar proyecto en el inicio';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -8012,13 +8012,20 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     const gs=gGet();
     c.innerHTML='<div class="hm-fh" style="margin-top:6px"><h3>Proyectos</h3></div><div class="hm-r" id="hmPg" style="margin-bottom:14px">'+
       gs.map(g=>{ const r=rec.find(x=>g.keys.includes(x.key)&&x.th); const n=g.keys.reduce((a,k)=>{ const o=q(k); return a+((o&&o.events)||[]).length; },0);
-        return '<button class="hm-c" style="width:100%" data-pg="'+esc(g.id)+'"><div class="th" style="'+(r?'background-image:url('+r.th+')':'')+'">'+(r?'':'📚')+'</div><b>'+esc(g.name)+'</b><small>'+g.keys.length+' partidos · '+n+' cortes</small></button>'; }).join('')+
+        return '<div class="hm-w" style="position:relative"><span class="hm-d" data-pdel="'+esc(g.id)+'" role="button" aria-label="Borrar proyecto" title="Borrar proyecto">🗑</span><button class="hm-c" style="width:100%" data-pg="'+esc(g.id)+'"><div class="th" style="'+(r?'background-image:url('+r.th+')':'')+'">'+(r?'':'📚')+'</div><b>'+esc(g.name)+'</b><small>'+g.keys.length+' partidos · '+n+' cortes</small></button></div>'; }).join('')+
       '</div>';
     { const g0=c.querySelector('#hmPg'); const nb=document.createElement('button'); nb.className='hm-c'; nb.id='hmPgNew'; nb.style.width='100%'; nb.innerHTML='<div class="th" style="font-size:44px;background:#1d3a2c">＋</div><b>Proyecto nuevo</b><small>Empieza aquí: crea el proyecto y añade el vídeo</small>'; g0.insertBefore(nb,g0.firstChild); }
     { let mt=c.querySelector('#hmMore'); if(!mt){ mt=document.createElement('button'); mt.id='hmMore'; mt.className='btn'; mt.style.cssText='margin:0 0 10px'; c.appendChild(mt); }
       const on=document.body.classList.contains('pjMore'); mt.textContent=on?'▴ Menos opciones':'▾ Más opciones (botones, equipos, enlace, cámara, ajustes…)'; mt.onclick=()=>{ document.body.classList.toggle('pjMore'); window.__pjHome(); }; }
     c.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{ S.gid=b.dataset.pg; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; DLGDOC=null; openProj(); });
     c.querySelector('#hmPgNew').onclick=newProject;
+    c.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=e=>{
+      e.stopPropagation(); const a=gGet(), g=a.find(x=>x.id===b.dataset.pdel); if(!g) return;
+      if(!confirm('¿Borrar el proyecto «'+g.name+'»?\n\nLos '+g.keys.length+' partidos y sus cortes NO se borran: pasan a «Sin proyecto».')) return;
+      gSet(a.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,'');
+      try{ window.__renderRec&&window.__renderRec(); }catch(er){} try{ window.__vtRender&&window.__vtRender(); }catch(er){}
+      toast('Proyecto «'+g.name+'» borrado.');
+    });
   };
   setTimeout(()=>{ try{ window.__pjHome(); }catch(e){} },500);
 
