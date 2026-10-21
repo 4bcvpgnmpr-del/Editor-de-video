@@ -1257,6 +1257,7 @@ body.ipad .tl-tg,body.ipad .foot-tg{display:none}
 #ytBox iframe,#ytBox #ytHold{position:absolute;inset:0;width:100%;height:100%;border:0}
 #ytLive{position:absolute;left:10px;top:10px;z-index:6;background:rgba(200,20,20,.9);color:#fff;border:0;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:600}
 body.extSrc [data-tool=lens]{display:none!important}
+#ipHome .hm-g{display:none}body.pjMore #ipHome .hm-g{display:grid}#ipHome .hm-t#hmNew{display:none}
 #ipHome .hm-fh{display:flex;align-items:center;justify-content:space-between;gap:10px}
 #ipHome .hm-fh select{background:#1c1c1c;color:#fff;border:1px solid #333;border-radius:10px;padding:8px 10px;font-size:14px;max-width:55%}
 #ipHome .hm-r{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -7598,7 +7599,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='21/10/2026 · proyectos en el inicio';
+  const BUILD='21/10/2026 · inicio con proyectos y enlaces';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7935,7 +7936,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const gGet=()=>{ try{ const a=JSON.parse(lsGet(GK)||'[]'); return Array.isArray(a)?a.filter(g=>g&&g.id):[]; }catch(e){ return []; } };
   const gSet=a=>lsSet(GK,JSON.stringify(a));
   const aGet=()=>{ try{ return lsGet(AK)||''; }catch(e){ return ''; } };
-  const isFileKey=k=>!!k&&/\|\d+$/.test(k)&&!/^(yt|url|live)\|/.test(k);
+  const isFileKey=k=>!!k&&!/^live\|/.test(k);
   const getV=async key=>{ try{ return await vdbTx('readonly',st=>st.get(key)); }catch(e){ return null; } };
   const q=k=>{ try{ return JSON.parse(localStorage.getItem('bbtag.project.'+k)||'null'); }catch(e){ return null; } };
   const btn='padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;font-size:13.5px';
@@ -7968,6 +7969,27 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }catch(e){}
   },1200); });
 
+  /* empezar un partido dentro de un proyecto: elegir de dónde viene el vídeo */
+  function pickSource(g){
+    lsSet(AK,g.id);
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Proyecto «'+esc(g.name)+'»</h3><p class="hint" style="margin:0 0 10px">¿De dónde viene el vídeo del partido?</p><div id="psB" style="display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="psNo">Cerrar</button></div>');
+    d.firstElementChild.style.width='min(440px,100%)';
+    const B=d.querySelector('#psB'), IP=document.body.classList.contains('ipad')||(typeof IPM!=='undefined'&&IPM.on);
+    const items=[['📂',IP?'Desde Fotos':'Elegir vídeo del ordenador',()=>document.getElementById('fileVideo').click()]];
+    if(IP) items.push(['🗂','Desde Archivos (iCloud, Drive…)',()=>{ const f=document.querySelector('body > input[type=file][accept*=".mkv"]'); if(f) f.click(); else document.getElementById('fileVideo').click(); }]);
+    items.push(['🔗','Enlace (YouTube, directo, URL)',()=>{ if(window.openLink) window.openLink(); }],['🔴','Cámara en vivo',()=>{ if(window.openLive) window.openLive(); }]);
+    B.innerHTML=items.map((it,i)=>'<button data-i="'+i+'" style="'+btn+';text-align:left;font-size:15px;padding:12px">'+it[0]+' '+it[1]+'</button>').join('');
+    B.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{ expClose(); items[+b.dataset.i][2](); });
+    d.querySelector('#psNo').onclick=expClose;
+  }
+  function newProject(){
+    const n=prompt('Nombre del proyecto (por ejemplo «Liga 2026-27» o «Rival: Basket Norte»):'); if(!n||!n.trim()) return;
+    const a=gGet(), g={id:uid(),name:n.trim().slice(0,60),keys:[]}; a.push(g); gSet(a);
+    try{ window.__renderRec&&window.__renderRec(); }catch(e){}
+    DLGDOC=null; pickSource(g);
+  }
+  window.__pjNew=newProject;
+
   /* inicio: tarjetas de proyectos */
   window.__pjHome=function(){
     const home=document.getElementById('ipHome'); if(!home) return;
@@ -7978,9 +8000,12 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     c.innerHTML='<div class="hm-fh" style="margin-top:6px"><h3>Proyectos</h3></div><div class="hm-r" id="hmPg" style="margin-bottom:14px">'+
       gs.map(g=>{ const r=rec.find(x=>g.keys.includes(x.key)&&x.th); const n=g.keys.reduce((a,k)=>{ const o=q(k); return a+((o&&o.events)||[]).length; },0);
         return '<button class="hm-c" style="width:100%" data-pg="'+esc(g.id)+'"><div class="th" style="'+(r?'background-image:url('+r.th+')':'')+'">'+(r?'':'📚')+'</div><b>'+esc(g.name)+'</b><small>'+g.keys.length+' partidos · '+n+' cortes</small></button>'; }).join('')+
-      '<button class="hm-c" style="width:100%" id="hmPgNew"><div class="th" style="font-size:34px">＋</div><b>Proyecto nuevo</b><small>Un proyecto agrupa varios partidos</small></button></div>';
+      '</div>';
+    { const g0=c.querySelector('#hmPg'); const nb=document.createElement('button'); nb.className='hm-c'; nb.id='hmPgNew'; nb.style.width='100%'; nb.innerHTML='<div class="th" style="font-size:44px;background:#1d3a2c">＋</div><b>Proyecto nuevo</b><small>Empieza aquí: crea el proyecto y añade el vídeo</small>'; g0.insertBefore(nb,g0.firstChild); }
+    { let mt=c.querySelector('#hmMore'); if(!mt){ mt=document.createElement('button'); mt.id='hmMore'; mt.className='btn'; mt.style.cssText='margin:0 0 10px'; c.appendChild(mt); }
+      const on=document.body.classList.contains('pjMore'); mt.textContent=on?'▴ Menos opciones':'▾ Más opciones (botones, equipos, enlace, cámara, ajustes…)'; mt.onclick=()=>{ document.body.classList.toggle('pjMore'); window.__pjHome(); }; }
     c.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{ S.gid=b.dataset.pg; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; DLGDOC=null; openProj(); });
-    c.querySelector('#hmPgNew').onclick=()=>{ S.gid=''; DLGDOC=null; openProj().then(()=>{ const b=document.getElementById('pjNew'); if(b) b.click(); }); };
+    c.querySelector('#hmPgNew').onclick=newProject;
   };
   setTimeout(()=>{ try{ window.__pjHome(); }catch(e){} },500);
 
@@ -8016,15 +8041,13 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font:700 20px var(--f-head)">📚 Proyectos y biblioteca</h3><span style="flex:1"></span><button class="btn" id="pjX">Cerrar</button></div>'+
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><select id="pjG" style="'+inp+';min-width:200px"><option value="">Todos los partidos guardados</option>'+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+' ('+g.keys.length+')</option>').join('')+'</select>'+
         '<button style="'+btn+'" id="pjNew">＋ Nuevo proyecto</button>'+
-        (S.gid?'<button style="'+btn+'" id="pjParts">🏀 Partidos</button><button style="'+btn+'" id="pjRen">✎ Nombre</button><button style="'+btn+'" id="pjDel">🗑</button><label style="font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer" title="Cada vídeo nuevo que abras se añade solo a este proyecto"><input type="checkbox" id="pjAct"'+(act===S.gid?' checked':'')+'> Proyecto activo</label>':'')+'</div>';
+        (S.gid?'<button class="btn primary" id="pjAdd">＋ Añadir partido</button><button style="'+btn+'" id="pjParts">🏀 Partidos</button><button style="'+btn+'" id="pjRen">✎ Nombre</button><button style="'+btn+'" id="pjDel">🗑</button><label style="font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer" title="Cada vídeo nuevo que abras se añade solo a este proyecto"><input type="checkbox" id="pjAct"'+(act===S.gid?' checked':'')+'> Proyecto activo</label>':'')+'</div>';
     }
     function bind(){
       B.querySelector('#pjX').onclick=expClose;
       B.querySelector('#pjG').onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
-      B.querySelector('#pjNew').onclick=()=>{
-        const n=prompt('Nombre del proyecto (por ejemplo «Liga 2026-27» o «Rival: Basket Norte»):'); if(!n||!n.trim()) return;
-        const gs=gGet(), g={id:uid(),name:n.trim().slice(0,60),keys:isFileKey(videoKey)?[videoKey]:[]}; gs.push(g); gSet(gs); lsSet(AK,g.id); S.gid=g.id; S.view=g.keys.length?'lib':'games'; toast('Proyecto creado y activo: los vídeos nuevos que abras se añaden aquí.'); draw();
-      };
+      B.querySelector('#pjNew').onclick=()=>{ expClose(); newProject(); };
+      const ap=B.querySelector('#pjAdd'); if(ap) ap.onclick=()=>{ const g=gGet().find(x=>x.id===S.gid); expClose(); DLGDOC=null; pickSource(g); };
       const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); const n=prompt('Nombre del proyecto:',g.name); if(!n||!n.trim()) return; g.name=n.trim().slice(0,60); gSet(gs); draw(); };
       const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!confirm('¿Borrar el proyecto «'+g.name+'»?\nLos partidos y sus cortes NO se borran, solo se quita la agrupación.')) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
       const pa=B.querySelector('#pjParts'); if(pa) pa.onclick=()=>{ S.view=S.view==='games'?'lib':'games'; draw(); };
@@ -8059,7 +8082,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
           '<div style="max-height:44vh;overflow:auto;border:1px solid var(--line);border-radius:10px">'+(rows.slice(0,600).map(r=>'<label style="display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer"><input type="checkbox" data-r="'+esc(r.id)+'"'+(S.sel.has(r.id)?' checked':'')+'><span style="width:10px;height:10px;border-radius:50%;background:'+esc(info(r.e).color||r.e.color||'#888')+';flex:none"></span><span style="flex:1;min-width:0"><b>'+esc(r.cat)+'</b>'+(r.pl?' · '+esc(r.pl):'')+' <span style="color:var(--muted)">· '+esc(r.side)+' · '+esc(r.e.period||'')+' '+esc(fmt(r.e.t))+'</span><br><span style="color:var(--muted);font-size:12px">'+esc(r.gt)+(r.gd?' · '+esc(matchDate(r.gd)):'')+'</span></span></label>').join('')||'<p style="padding:10px;color:var(--muted)">Ningún corte coincide.</p>')+(rows.length>600?'<p style="padding:8px;color:var(--muted)">Se muestran 600; afina con los filtros.</p>':'')+'</div>'+
           '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button style="'+btn+'" id="pjMont"'+(nSel?'':' disabled')+'>＋ Crear montaje ('+nSel+')</button><button class="btn primary" id="pjProd"'+(nSel?'':' disabled')+'>🎞 Producir vídeo ('+nSel+')</button></div>':'');
       bind();
-      B.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const k=b.dataset.open; expClose(); if(k===videoKey) return; try{ vidOpenLib(k); }catch(e){ toast('Abre ese vídeo desde «Mis vídeos».'); } });
+      B.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const k=b.dataset.open; expClose(); if(k===videoKey) return; try{ let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){} if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre ese vídeo desde «Mis vídeos».'); } });
       if(!all.length) return;
       const rd=()=>{ drawLib(); };
       B.querySelector('#pjFg').onchange=e=>{ S.game=e.target.value; rd(); };
