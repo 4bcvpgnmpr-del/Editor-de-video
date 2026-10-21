@@ -7601,7 +7601,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='21/10/2026 · inicio limpio sin vídeo';
+  const BUILD='21/10/2026 · proyecto nuevo desde cero';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7971,6 +7971,17 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }catch(e){}
   },1200); });
 
+  /* partido nuevo dentro de un proyecto: empieza desde cero (sin los equipos del partido anterior) */
+  video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
+    try{
+      if(!aGet()||matchMeta||events.length) return;
+      if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
+      cfg.teamNames=Object.assign({},cfg.teamNames,{L:'Local',R:'Rival'}); cfg.rosters=Object.assign({},cfg.rosters,{L:[],R:[]});
+      renderScore(); renderTeamBar(); renderFilters(); renderList(); renderCodes();
+      if(window.__vtRender) window.__vtRender();
+    }catch(e){}
+  },400); });
+
   /* empezar un partido dentro de un proyecto: elegir de dónde viene el vídeo */
   function pickSource(g){
     lsSet(AK,g.id);
@@ -8084,7 +8095,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
           '<div style="max-height:44vh;overflow:auto;border:1px solid var(--line);border-radius:10px">'+(rows.slice(0,600).map(r=>'<label style="display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line);cursor:pointer"><input type="checkbox" data-r="'+esc(r.id)+'"'+(S.sel.has(r.id)?' checked':'')+'><span style="width:10px;height:10px;border-radius:50%;background:'+esc(info(r.e).color||r.e.color||'#888')+';flex:none"></span><span style="flex:1;min-width:0"><b>'+esc(r.cat)+'</b>'+(r.pl?' · '+esc(r.pl):'')+' <span style="color:var(--muted)">· '+esc(r.side)+' · '+esc(r.e.period||'')+' '+esc(fmt(r.e.t))+'</span><br><span style="color:var(--muted);font-size:12px">'+esc(r.gt)+(r.gd?' · '+esc(matchDate(r.gd)):'')+'</span></span></label>').join('')||'<p style="padding:10px;color:var(--muted)">Ningún corte coincide.</p>')+(rows.length>600?'<p style="padding:8px;color:var(--muted)">Se muestran 600; afina con los filtros.</p>':'')+'</div>'+
           '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button style="'+btn+'" id="pjMont"'+(nSel?'':' disabled')+'>＋ Crear montaje ('+nSel+')</button><button class="btn primary" id="pjProd"'+(nSel?'':' disabled')+'>🎞 Producir vídeo ('+nSel+')</button></div>':'');
       bind();
-      B.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const k=b.dataset.open; expClose(); if(k===videoKey) return; try{ let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){} if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre ese vídeo desde «Mis vídeos».'); } });
+      B.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const k=b.dataset.open; if(S.gid) lsSet(AK,S.gid); expClose(); try{ window.__vtRender&&window.__vtRender(); }catch(e){} if(k===videoKey) return; try{ let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){} if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre ese vídeo desde «Mis vídeos».'); } });
       if(!all.length) return;
       const rd=()=>{ drawLib(); };
       B.querySelector('#pjFg').onchange=e=>{ S.game=e.target.value; rd(); };
@@ -8135,7 +8146,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const vw=document.getElementById('vwrap'); if(!vw) return;
   const KEY='bbtag.vtabs';
   const load=()=>{ try{ const a=JSON.parse(lsGet(KEY)||'[]'); return Array.isArray(a)?a.filter(x=>x&&x.key):[]; }catch(e){ return []; } };
-  let tabs=load();
+  let tabs=[]; const hidden=new Set();
   const bar=document.createElement('div'); bar.id='vTabs'; bar.setAttribute('role','tablist');
   vw.parentNode.insertBefore(bar,vw);
   const css=document.createElement('style');
@@ -8150,22 +8161,31 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const save=()=>lsSet(KEY,JSON.stringify(tabs.slice(0,12)));
   const ok=k=>k&&!/^(yt|url|live)\|/.test(k);
   const label=t=>{ const T=titlesGet(); return (T[t.key]&&T[t.key].t)||t.name||t.key; };
+  function curTabs(){
+    let g=null; try{ const a=lsGet('bbtag.group.active'); g=JSON.parse(lsGet('bbtag.groups')||'[]').find(x=>x.id===a); }catch(e){}
+    let keys=g?g.keys.slice():[];
+    if(videoKey&&hasVideo&&ok(videoKey)&&!keys.includes(videoKey)&&!g) keys=[videoKey];
+    if(videoKey&&hasVideo&&g&&!keys.includes(videoKey)) keys.push(videoKey);
+    const T=titlesGet();
+    return keys.filter(k=>!hidden.has(k)||k===videoKey).map(k=>({key:k,name:(T[k]&&T[k].t)||k.split('|')[0]}));
+  }
   function render(){
+    tabs=curTabs();
     bar.innerHTML=tabs.map(t=>'<div class="vt'+(t.key===videoKey?' on':'')+'" role="tab" data-k="'+esc(t.key)+'" title="'+esc(label(t))+'"><span class="n">🎞 '+esc(label(t))+'</span>'+(tabs.length>1?'<span class="x" data-x="1" title="Quitar la pestaña (el vídeo sigue en Mis vídeos)">×</span>':'')+'</div>').join('')+
       '<button class="vadd" id="vtAdd" title="Añadir otro vídeo y seguir trabajando en este mismo panel">＋ Vídeo</button>';
   }
-  function add(){ if(!hasVideo||!ok(videoKey)) return; if(!tabs.some(t=>t.key===videoKey)){ tabs.push({key:videoKey,name:videoName}); save(); } render(); }
+  function add(){ render(); }
   bar.addEventListener('click',e=>{
     if(e.target.closest('#vtAdd')){ const f=document.getElementById('fileVideo'); if(f) f.click(); return; }
     const t=e.target.closest('.vt'); if(!t) return; const k=t.dataset.k;
-    if(e.target.closest('[data-x]')){ tabs=tabs.filter(x=>x.key!==k); save(); render(); return; }
+    if(e.target.closest('[data-x]')){ hidden.add(k); render(); return; }
     if(k===videoKey) return;
     try{ saveProject(); }catch(_){}
     vidOpenLib(k);
   });
   video.addEventListener('loadedmetadata',()=>setTimeout(add,200));
   new MutationObserver(()=>render()).observe(document.getElementById('videoName'),{childList:true,characterData:true,subtree:true});
-  render();
+  window.__vtRender=render; render();
 })();
 
 /* ===== Exportar el montaje para editores profesionales (EDL + XML) ===== */
