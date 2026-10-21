@@ -6224,7 +6224,7 @@ async function ffLoad(){
   })();
   try{ return await FF.loading; } finally{ FF.loading=null; }
 }
-async function ffLoadUno(){
+async function ffLoadUno(fresh){
   {
     const abs=u=>new URL(u,location.href).href;
     await ffScript(abs('ffmpeg/ffmpeg.js'));
@@ -6245,9 +6245,10 @@ async function ffLoadUno(){
     { const h=new Uint8Array(await parts[0].slice(0,4).arrayBuffer()); if(h[0]!==0||h[1]!==0x61||h[2]!==0x73||h[3]!==0x6d) throw new Error('core-p00.bin está dañado (no empieza como un archivo del motor). Súbelo de nuevo sin abrirlo ni editarlo.'); }
     const wasmURL=URL.createObjectURL(new Blob(parts,{type:'application/wasm'}));
     await f.load({coreURL:abs('ffmpeg/ffmpeg-core.js'),wasmURL,classWorkerURL:abs('ffmpeg/814.ffmpeg.js')});
-    FF.inst=f; return f;
+    if(!fresh) FF.inst=f; return f;
   }
 }
+async function ffExtra(){ try{ return await ffLoadUno(true); }catch(e){ return null; } }
 async function ffOverlayPng(tl,W,H){
   const im=await expSvgImg(tl,W,H); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); if(im) x.drawImage(im,0,0,W,H);
   tl.items.forEach(sh=>{ if(sh.type!=='lens') return; x.beginPath(); x.arc(sh.cx*W,sh.cy*H,sh.r*W,0,Math.PI*2); x.strokeStyle=safeColor(sh.color); x.lineWidth=Math.max(2,(sh.sw||4)*W/1000*1.4); x.stroke(); });
@@ -6269,17 +6270,24 @@ async function ffRun(list,o,prog){
   const HQ=!!(window.scoutDesktop||o.hq), W=HQ?1920:1280,H=HQ?1080:720,FPS=25;
   prog(0,list.length,{name:window.scoutDesktop?'Preparando…':'Cargando el motor (solo la primera vez, ≈ 31 MB)…'}); try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(true); }catch(_){}
   const ff=await ffLoad(); if(EXP.cancel) return null;
-  let cur=0, n=list.length; EXP.frac=0;
-  ff.on('progress',({progress})=>{ if(progress>=0&&progress<=1) EXP.frac=Math.min(0.99,(cur+progress)/n); });
-  const mounts=new Map(); let mi=0;
-  const mountFor=async file=>{ if(mounts.has(file)) return mounts.get(file); const dir='/in'+(mi++); await ff.createDir(dir); await ff.mount('WORKERFS',{files:[file]},dir); const p=dir+'/'+file.name; mounts.set(file,p); return p; };
+  let n=list.length, done=0; EXP.frac=0;
+  /* varios motores en paralelo (solo en la web): cada uno hace sus clips y al final se unen */
+  const ctxs=[{ff,mounts:new Map(),mi:0,p:0}];
+  const hook=c=>c.ff.on('progress',({progress})=>{ if(progress>=0&&progress<=1){ c.p=progress; EXP.frac=Math.min(0.99,(done+ctxs.reduce((a,x)=>a+x.p,0))/n); } });
+  hook(ctxs[0]);
+  if(!window.scoutDesktop&&n>=2){
+    const ip=/iPad|iPhone/.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
+    const want=Math.min(n,ip?2:Math.max(1,Math.min(3,(navigator.hardwareConcurrency||4)-1)));
+    for(let k=1;k<want&&!EXP.cancel;k++){ prog(0,n,{name:'Preparando motor '+(k+1)+' de '+want+'…'}); const f2=await ffExtra(); if(!f2) break; const c={ff:f2,mounts:new Map(),mi:0,p:0}; hook(c); ctxs.push(c); }
+  }
+  const mountFor2=async(ctx,file)=>{ if(ctx.mounts.has(file)) return ctx.mounts.get(file); const dir='/in'+(FF.dn=(FF.dn||0)+1); await ctx.ff.createDir(dir); await ctx.ff.mount('WORKERFS',{files:[file]},dir); const p=dir+'/'+file.name; ctx.mounts.set(file,p); return p; };
   const mute=o.mute!==undefined?o.mute:window.__expMute();
   const vf='scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags='+(HQ?'lanczos':'bilinear')+',pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps='+FPS;
   const enc=['-c:v','libx264','-preset',window.scoutDesktop?'veryfast':(o.hq?'superfast':'ultrafast'),'-crf',window.scoutDesktop?'18':(o.hq?'19':'23'),'-profile:v','high','-level','4.2','-pix_fmt','yuv420p','-bf','0','-g',String(FPS*2),'-keyint_min',String(FPS*2),'-sc_threshold','0','-x264-params','open-gop=0','-fps_mode','cfr','-avoid_negative_ts','make_zero','-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart'];
-  const segs=[];
+  const results=new Array(n);
   try{
-    for(let i=0;i<list.length&&!EXP.cancel;i++){
-      cur=i; const e=list[i]; let seg='seg'+i+'.mp4'; prog(i,n,{name:e.name||e.label||''});
+    const doClip=async(i,ctx)=>{
+      const ff=ctx.ff, mountFor=f=>mountFor2(ctx,f), segs=[]; const e=list[i]; let seg='seg'+i+'.mp4'; ctx.p=0; prog(i,n,{name:e.name||e.label||''});
       let dur, args;
       const title=(o.title&&!e.cover)?(e.name||e.label||''):'';
       if(title){ await ff.writeFile('t'+i+'.png',await ffTitlePng(title,W,H)); }
@@ -6341,7 +6349,12 @@ async function ffRun(list,o,prog){
       }
       if(seg) segs.push(seg);
       try{ await ff.deleteFile('t'+i+'.png'); }catch(_){} try{ await ff.deleteFile('c'+i+'.img'); }catch(_){}
-    }
+      results[i]=segs.map(nm=>({nm,ctx})); ctx.p=0; done++;
+    };
+    let nextI=0;
+    await Promise.all(ctxs.map(async ctx=>{ while(!EXP.cancel){ const i=nextI++; if(i>=n) break; await doClip(i,ctx); } }));
+    const segs=[];
+    for(const r of results){ if(!r) continue; for(const x of r){ if(x.ctx.ff!==ff){ const dt=await x.ctx.ff.readFile(x.nm); await ff.writeFile(x.nm,dt); try{ await x.ctx.ff.deleteFile(x.nm); }catch(_){} } segs.push(x.nm); } }
     if(EXP.cancel||!segs.length){ try{ ff.terminate(); }catch(_){} FF.inst=null; return null; }
     prog(n,n,{name:'Uniendo los clips…'}); EXP.frac=0.99;
     let outName=segs[0];
@@ -6358,7 +6371,8 @@ async function ffRun(list,o,prog){
     if(moved) return {saved:moved,mime:'video/mp4'};
     return {blob,mime:'video/mp4',codecs:'avc1.640028 mp4a'};
   } finally {
-    for(const [f,p] of mounts){ try{ await ff.unmount(p.slice(0,p.lastIndexOf('/'))); }catch(_){} }
+    for(const c of ctxs){ for(const [f,p] of c.mounts){ try{ await c.ff.unmount(p.slice(0,p.lastIndexOf('/'))); }catch(_){} } }
+    for(const c of ctxs.slice(1)){ try{ c.ff.terminate(); }catch(_){} }
     EXP.frac=null; try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(false); }catch(_){}
   }
 }
@@ -7601,7 +7615,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='21/10/2026 · borrar proyecto en el inicio';
+  const BUILD='21/10/2026 · exportar con varios motores a la vez';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
