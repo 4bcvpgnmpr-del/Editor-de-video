@@ -7617,7 +7617,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='21/10/2026 · lista única del proyecto';
+  const BUILD='21/10/2026 · proyecto nuevo en app de escritorio';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
@@ -7972,7 +7972,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     B.innerHTML=gs.map(g=>'<button data-g="'+esc(g.id)+'" style="'+btn+';text-align:left"><b>'+esc(g.name)+'</b><br><span style="color:var(--muted);font-size:12.5px">'+g.keys.length+' partidos</span></button>').join('')+'<button id="apNew" class="btn primary">＋ Proyecto nuevo</button>';
     const fin=g=>{ const a=gGet(), x=a.find(y=>y.id===g.id); if(x&&!x.keys.includes(key)) x.keys.push(key); gSet(a); lsSet(AK,g.id); expClose(); toast('Añadido al proyecto «'+g.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} };
     B.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>fin(gGet().find(x=>x.id===b.dataset.g)));
-    B.querySelector('#apNew').onclick=()=>{ const n=prompt('Nombre del proyecto (por ejemplo «Liga 2026-27» o «Rival: Basket Norte»):'); if(!n||!n.trim()) return; const a=gGet(), g={id:uid(),name:n.trim().slice(0,60),keys:[]}; a.push(g); gSet(a); fin(g); };
+    B.querySelector('#apNew').onclick=()=>askName('Nombre del proyecto','',n=>{ const a=gGet(), g={id:uid(),name:n.slice(0,60),keys:[]}; a.push(g); gSet(a); fin(g); });
     d.querySelector('#apNo').onclick=()=>{ const k=skGet(); k.push(key); lsSet(SK,JSON.stringify(k.slice(-200))); expClose(); };
   }
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
@@ -8012,10 +8012,22 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     d.querySelector('#psNo').onclick=expClose;
   }
   function newProject(){
-    const n=prompt('Nombre del proyecto (por ejemplo «Liga 2026-27» o «Rival: Basket Norte»):'); if(!n||!n.trim()) return;
-    const a=gGet(), g={id:uid(),name:n.trim().slice(0,60),keys:[]}; a.push(g); gSet(a);
-    try{ window.__renderRec&&window.__renderRec(); }catch(e){}
-    DLGDOC=null; pickSource(g);
+    askName('Nombre del proyecto','',n=>{
+      const a=gGet(), g={id:uid(),name:n.slice(0,60),keys:[]}; a.push(g); gSet(a);
+      try{ window.__renderRec&&window.__renderRec(); }catch(e){}
+      DLGDOC=null; pickSource(g);
+    });
+  }
+  /* ventana para pedir un nombre (prompt() no existe en la app de escritorio) */
+  function askName(title,def,cb){
+    const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
+    ov.innerHTML='<div style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(440px,100%);box-shadow:0 12px 40px rgba(0,0,0,.4)"><h3 style="margin:0 0 4px;font:700 20px var(--f-head)"></h3><p class="hint" style="margin:0 0 10px">Por ejemplo «Liga 2026-27» o «Rival: Basket Norte».</p><input id="anI" maxlength="60" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:16px;box-sizing:border-box"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" id="anNo">Cancelar</button><button class="btn primary" id="anOk">Aceptar</button></div></div>';
+    ov.querySelector('h3').textContent=title; const i=ov.querySelector('#anI'); i.value=def||'';
+    document.body.appendChild(ov); setTimeout(()=>{ i.focus(); i.select(); },30);
+    const close=()=>ov.remove(), ok=()=>{ const v=i.value.trim(); if(!v) return; close(); cb(v); };
+    ov.querySelector('#anNo').onclick=close; ov.querySelector('#anOk').onclick=ok;
+    i.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') ok(); else if(e.key==='Escape') close(); });
+    ov.addEventListener('keydown',e=>e.stopPropagation());
   }
   window.__pjNew=newProject;
 
@@ -8084,7 +8096,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       B.querySelector('#pjG').onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
       B.querySelector('#pjNew').onclick=()=>{ expClose(); newProject(); };
       const ap=B.querySelector('#pjAdd'); if(ap) ap.onclick=()=>{ const g=gGet().find(x=>x.id===S.gid); expClose(); DLGDOC=null; pickSource(g); };
-      const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); const n=prompt('Nombre del proyecto:',g.name); if(!n||!n.trim()) return; g.name=n.trim().slice(0,60); gSet(gs); draw(); };
+      const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const g0=gGet().find(x=>x.id===S.gid); askName('Nombre del proyecto',g0.name,n=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); g.name=n.slice(0,60); gSet(gs); draw(); }); };
       const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!confirm('¿Borrar el proyecto «'+g.name+'»?\nLos partidos y sus cortes NO se borran, solo se quita la agrupación.')) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
       const pa=B.querySelector('#pjParts'); if(pa) pa.onclick=()=>{ S.view=S.view==='games'?'lib':'games'; draw(); };
       const ac=B.querySelector('#pjAct'); if(ac) ac.onchange=()=>{ lsSet(AK,ac.checked?S.gid:''); toast(ac.checked?'Proyecto activo: los vídeos nuevos se añaden aquí.':'Ya no se añaden vídeos solos.'); };
