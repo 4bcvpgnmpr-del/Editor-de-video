@@ -1298,6 +1298,8 @@ body.ipad #bTgBot{display:none!important}
 body.fz #pDraw{display:none!important}
 .ipfz.ip-only:not([hidden]){display:flex!important}
 body:not(.ipad) .ipfz .fz-top #fzMin{display:none}
+/* sin ningún vídeo abierto no se enseñan marcador, equipo ni cuarto */
+body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#empty:not([hidden])) .top .hdr-per{display:none!important}
 #pClip:fullscreen .ce-name{display:block!important;flex:none;margin:0;min-height:40px}
 </style>
 </head>
@@ -7599,7 +7601,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='21/10/2026 · inicio con proyectos y enlaces';
+  const BUILD='21/10/2026 · inicio limpio sin vídeo';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
