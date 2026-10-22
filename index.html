@@ -6663,12 +6663,12 @@ $('#bJson').onclick=()=>{
   document.getElementById('bFebCuts').onclick=()=>{
     if(!hasVideo){ toast('Abre primero el vídeo del partido.'); return; }
     const A=[]; let partidos=[], acciones=[], equipos=[];
-    const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
-    ov.innerHTML='<div style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(640px,100%);max-height:90vh;overflow:auto"><h3 style="margin:0 0 4px;font:700 20px var(--f-head)">⚡ Cortes con el jugada a jugada de la FEB</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13.5px">1) Elige el partido · 2) Ancla el reloj al vídeo · 3) Elige qué cortar.</p>'+
+    const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9500;pointer-events:none;display:flex;align-items:flex-start;justify-content:flex-end;padding:64px 10px 10px';
+    ov.innerHTML='<div style="pointer-events:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:14px;width:min(430px,100%);max-height:calc(100vh - 80px);overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.55)"><h3 style="margin:0 0 4px;font:700 20px var(--f-head)">⚡ Cortes con el jugada a jugada de la FEB</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13.5px">1) Elige el partido · 2) Marca dónde empieza y termina cada cuarto · 3) Elige qué cortar.</p>'+
     '<div style="display:flex;gap:8px;flex-wrap:wrap"><select id="fbT"><option value="_2026">Temporada 2026/27</option><option value="">Temporada 2025/26</option></select><select id="fbP" style="flex:1;min-width:220px"><option>Cargando partidos…</option></select></div>'+
     '<div id="fbMsg" style="font-size:13px;color:var(--muted);margin:6px 0"></div>'+
-    '<div id="fbSync" hidden><b>2) Anclas de reloj</b><p style="margin:2px 0 6px;color:var(--muted);font-size:13px">Pon el vídeo en un momento donde se vea el reloj del partido, escribe cuarto y reloj (lo que marca, p. ej. 7:32) y pulsa Anclar. Mínimo 2 anclas (inicio y final); <b>mejor 2 por cuarto</b>: el reloj se para en los tiempos muertos y faltas y el vídeo no.</p>'+
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><label>Cuarto <select id="fbQ"><option>1</option><option>2</option><option>3</option><option>4</option><option value="5">Prórroga</option></select></label><label>Reloj <input id="fbR" value="10:00" style="width:70px;text-align:center"></label><button class="btn primary" id="fbAn">⚓ Anclar al momento actual</button></div><div id="fbAL" style="margin-top:6px;font-size:13px"></div></div>'+
+    '<div id="fbSync" hidden><b>2) Dile a la app dónde está cada cuarto en el vídeo</b><p style="margin:2px 0 6px;color:var(--muted);font-size:13.5px">Con esta ventana abierta puedes mover el vídeo de al lado: llévalo al momento que dice cada botón, párala y pulsa el botón. <b>No hace falta escribir nada.</b> Mínimo: «Empieza cuarto 1» y «Termina cuarto 4». Cuantos más marques, mejor salen los cortes.</p>'+
+    '<div id="fbBt" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-size:12.5px"></div><div id="fbAL" style="margin-top:6px;font-size:12.5px;color:var(--muted)"></div></div>'+
     '<div id="fbF" hidden style="margin-top:10px"><b>3) Qué cortar</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><select id="fbEq"></select><select id="fbJ"><option value="">Todas las jugadoras</option></select><label>Antes <input id="fbB" type="number" value="8" min="0" max="60" style="width:56px"> s</label><label>Después <input id="fbAf" type="number" value="3" min="0" max="60" style="width:56px"> s</label></div><div id="fbAc" style="display:flex;gap:4px 14px;flex-wrap:wrap"></div><div id="fbN" style="margin:8px 0;font-size:13.5px"></div></div>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" id="fbNo">Cerrar</button><button class="btn primary" id="fbGo" hidden>Crear cortes</button></div></div>';
     document.body.appendChild(ov); const $o=q=>ov.querySelector(q); const close=()=>ov.remove(); $o('#fbNo').onclick=close; ov.addEventListener('keydown',e=>e.stopPropagation());
@@ -6695,14 +6695,15 @@ $('#bJson').onclick=()=>{
     function pinta(){
       const eq=$o('#fbEq').value; const js=[...new Set(acciones.filter(a=>!eq||a.Equipo===eq).map(a=>a.Jugadora).filter(Boolean))].sort(); const cur=$o('#fbJ').value;
       $o('#fbJ').innerHTML='<option value="">Todas las jugadoras</option>'+js.map(x=>'<option'+(x===cur?' selected':'')+'>'+x.replace(/</g,'&lt;')+'</option>').join('');
-      $o('#fbN').textContent=filtra().length+' cortes se crearían'+(A.length<2?' · pon al menos 2 anclas':'');
-      $o('#fbAL').innerHTML=A.length?A.sort((x,y)=>x.s-y.s).map((a,i)=>'<span style="display:inline-flex;gap:4px;align-items:center;margin:2px 6px 2px 0;padding:2px 8px;border:1px solid var(--line);border-radius:99px">C'+a.q+' '+fmt(a.rest)+' → vídeo '+fmt(a.t)+' <button class="btn" data-d="'+i+'" style="padding:0 6px">✕</button></span>').join(''):'<i style="color:var(--muted)">Todavía no hay anclas</i>';
-      ov.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ A.splice(+b.dataset.d,1); pinta(); }); }
+      $o('#fbN').textContent=filtra().length+' cortes se crearían'+(A.length<2?' · marca al menos «Empieza cuarto 1» y «Termina cuarto 4»':'');
+      const BT=[];[1,2,3,4].forEach(q=>{ BT.push([q,600,'Empieza cuarto '+q]); BT.push([q,0,'Termina cuarto '+q]); });
+      $o('#fbBt').innerHTML=BT.map((x,i)=>{ const a=A.find(y=>y.q===x[0]&&y.rest===x[1]); return '<button class="btn'+(a?'':' primary')+'" data-b="'+i+'" style="text-align:left">'+(a?'✅ ':'⚓ ')+x[2]+(a?' · '+fmt(a.t):'')+'</button>'; }).join('');
+      ov.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{ const x=BT[+b.dataset.b]; const k=A.findIndex(y=>y.q===x[0]&&y.rest===x[1]); if(k>=0) A.splice(k,1); A.push({q:x[0],rest:x[1],s:absSeg(x[0],x[1]),t:video.currentTime}); pinta(); });
+      $o('#fbAL').textContent=A.length?'Marcados: '+A.length+' (pulsa de nuevo un botón para corregirlo)':'';
+    }
     $o('#fbEq').onchange=pinta; $o('#fbJ').onchange=pinta; ov.addEventListener('change',e=>{ if(e.target.dataset&&e.target.dataset.a!==undefined) pinta(); });
-    $o('#fbAn').onclick=()=>{ const q=+$o('#fbQ').value, rest=parseClock($o('#fbR').value); const lim=q<=4?600:300; if(rest==null||rest>lim){ toast('Escribe el reloj como m:ss, entre 0:00 y '+fmt(lim)+'.'); return; }
-      A.push({q,rest,s:absSeg(q,rest),t:video.currentTime}); pinta(); };
     $o('#fbGo').onclick=()=>{
-      if(A.length<2){ toast('Pon al menos 2 anclas (inicio y final del partido).'); return; }
+      if(A.length<2){ toast('Marca al menos «Empieza cuarto 1» y «Termina cuarto 4».'); return; }
       const an=A.slice().sort((x,y)=>x.s-y.s);
       const map=s=>{ let i=0; while(i<an.length-2&&s>an[i+1].s) i++; const a=an[i], b=an[i+1]; const k=(b.t-a.t)/Math.max(1,(b.s-a.s)); return a.t+(s-a.s)*k; };
       const dur=video.duration||1e9, bef=+$o('#fbB').value||0, aft=+$o('#fbAf').value||0; const lista=filtra(); if(!lista.length){ toast('No hay acciones con ese filtro.'); return; }
@@ -6712,7 +6713,7 @@ $('#bJson').onclick=()=>{
       lista.forEach(a=>{ const t=map(a.Seg); if(!(t>=0)||t>dur) return; const info=ACC.find(x=>x[2].includes(a.Accion)); const lab=a.Accion; if(have.has(Math.round(t)+'|'+lab+'|'+a.Jugadora)) return;
         const start=Math.max(0,t-bef); let end=Math.min(dur,t+aft); if(end-start<0.5) end=Math.min(dur,start+0.5);
         events.push(normEvent({id:uid(),btnId:'',label:lab,color:info?info[1]:'#9AA7FF',pts:a.Puntos,t,start,end,team:a.Equipo===eqL?'L':'R',player:a.Jugadora,period:PERIODS[Math.min(4,Math.max(0,a.Cuarto-1))],video:videoName,note:'',cat:'FEB',phase:''})); n++; });
-      sortEvents(); commit(); close(); toast(n+' cortes creados con el jugada a jugada de la FEB. Revísalos en la lista: si ves que todos van algo desplazados, añade más anclas y vuelve a crearlos.'); };
+      sortEvents(); commit(); close(); toast(n+' cortes creados con el jugada a jugada de la FEB. Revísalos en la lista: si ves que van algo desplazados, marca también el inicio y el final de los demás cuartos y vuelve a crearlos.'); };
   };
 })();
 (function(){ const bc=document.getElementById('bCfg'), src=document.getElementById('bFebCuts'); if(!bc||!src) return;
@@ -7718,7 +7719,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
 /* ===== AJUSTES ===== */
 (function(){
-  const BUILD='22/10/2026 · cortes FEB (botón arriba)';
+  const BUILD='22/10/2026 · cortes FEB fácil';
   const dlg=document.createElement('dialog'); dlg.id='dlgSet';
   dlg.innerHTML='<div class="dlg-h"><h2>Ajustes</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="stB"></div><div class="dlg-f"><span class="msg" id="stM" role="alert"></span></div>';
   document.body.appendChild(dlg); dlg.querySelector('[data-x]').onclick=()=>dlg.close();
