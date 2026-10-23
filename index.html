@@ -5026,6 +5026,8 @@ video.addEventListener('loadedmetadata',()=>{
   $('#empty').hidden=true;
   let restored=0;
   try{
+    /* un vídeo que no está en ningún proyecto empieza de cero: se descartan cortes antiguos */
+    try{ if(videoKey&&!/^live\|/.test(videoKey)&&!PART.pending){ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); if(!gs.some(g=>g&&Array.isArray(g.keys)&&g.keys.includes(videoKey))){ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); } } }catch(e){}
     restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
   }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];matchMeta=null;}
   if(PART.pending){ const pd=PART.pending; PART.pending=null;
