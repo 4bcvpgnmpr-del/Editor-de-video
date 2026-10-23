@@ -8843,6 +8843,40 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   const tick=()=>{ const tp=document.querySelector('.top'); if(tp) document.documentElement.style.setProperty('--hmT',Math.round(tp.getBoundingClientRect().bottom)+'px'); B.classList.toggle('ipHome',(!hasVideo||force)); if(!hasVideo) B.classList.remove('hmForce'); };
   setInterval(tick,250); tick(); renderRec();
 })();
+/*HOME2*/
+/* ===== Inicio más claro: 3 acciones grandes, proyectos y herramientas ===== */
+(function(){
+  const css=document.createElement('style'); css.id='home2Css';
+  css.textContent='body.ipHome .top .score,body.ipHome .top .hdr-per{display:none!important}'+
+   '#ipHome .hm-in{display:flex;flex-direction:column}#ipHome .hm-logo{order:0;align-self:center}#ipHome .hm-in>h2{order:1;text-align:center;margin:0}'+
+   '#ipHome .hm-sub{order:1;text-align:center;margin:4px 0 0;color:#9aa3b2;font-size:14px}'+
+   '#hmHero{order:2;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 6px}'+
+   '#hmHero button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:104px;padding:16px 18px;border-radius:16px;border:1px solid #2a2a2a;background:#161616;color:#fff;text-align:left;cursor:pointer}'+
+   '#hmHero button:hover{background:#1d1d1d;border-color:#444}#hmHero button:first-child{background:linear-gradient(135deg,#ff8a1f,#d94f00);border-color:#ff8a1f}#hmHero button:first-child:hover{filter:brightness(1.06)}'+
+   '#hmHero .ic{font-size:26px;line-height:1}#hmHero b{font-size:18px}#hmHero small{opacity:.7;font-size:12.5px}#hmHero button:first-child small{opacity:.9}'+
+   '#ipHome #hmProjs{order:3}#ipHome .hm-in>.hm-fh{order:4}#ipHome .hm-in>.hm-r{order:5}#ipHome .hm-toolsH{order:6}'+
+   '#ipHome .hm-in>.hm-g{order:7;display:flex!important;flex-wrap:wrap;gap:8px}'+
+   '#ipHome .hm-g .hm-t{min-height:42px;padding:0 16px;border-radius:999px;font-size:14px;gap:9px}#ipHome .hm-g .hm-t small{display:none}'+
+   '#ipHome .hm-g #hmPhoto,#ipHome .hm-g #hmLive,#ipHome .hm-g #hmNew,#ipHome #hmMore{display:none!important}'+
+   '#ipHome #hmPgNew{display:none!important}#ipHome #hmProjs.hmEmpty{display:none}'+
+   'body.port #hmHero{grid-template-columns:1fr}@media(max-width:700px){#hmHero{grid-template-columns:1fr}}';
+  document.head.appendChild(css);
+  const home=document.getElementById('ipHome'); if(!home) return;
+  const inn=home.querySelector('.hm-in'), h2=inn.querySelector('h2');
+  const sub=document.createElement('p'); sub.className='hm-sub'; sub.textContent='Elige cómo quieres empezar'; h2.after(sub);
+  const hero=document.createElement('div'); hero.id='hmHero';
+  hero.innerHTML='<button id="hhOpen"><span class="ic">▶</span><b>Abrir un vídeo</b><small>Elige un partido de este equipo y empieza a etiquetar</small></button>'+
+    '<button id="hhPj"><span class="ic">📁</span><b>Proyecto nuevo</b><small>Agrupa varios partidos (liga, rival, temporada)</small></button>'+
+    '<button id="hhLive"><span class="ic" style="color:#ff4d4d">●</span><b>Cámara en vivo</b><small>Graba y etiqueta un partido a la vez</small></button>';
+  sub.after(hero);
+  const th=document.createElement('h3'); th.className='hm-toolsH'; th.textContent='Herramientas'; inn.querySelector('.hm-g').before(th);
+  const clk=id=>{ const b=document.getElementById(id); if(b) b.click(); else if(typeof toast==='function') toast('Esa opción no está disponible ahora.'); };
+  document.getElementById('hhOpen').onclick=()=>clk('hmPhoto');
+  document.getElementById('hhPj').onclick=()=>{ if(window.__pjNew) window.__pjNew(); };
+  document.getElementById('hhLive').onclick=()=>clk('hmLive');
+  const marca=()=>{ const c=document.getElementById('hmProjs'); if(c) c.classList.toggle('hmEmpty',!c.querySelector('#hmPg .hm-w')); };
+  new MutationObserver(marca).observe(home,{childList:true,subtree:true}); marca();
+})();
 
 (function(){ const b=document.getElementById('bFs'); if(!b) return;
   let tmp=false, prev='pc', was=false;
