@@ -8141,6 +8141,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     ov.addEventListener('keydown',e=>e.stopPropagation());
   }
   window.__pjNew=newProject;
+  window.__pjApi={create:(name)=>{ const a=gGet(), g={id:uid(),name:String(name).slice(0,60),keys:[]}; a.push(g); gSet(a); lsSet(AK,g.id); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return g; }};
 
   /* inicio: tarjetas de proyectos */
   window.__pjHome=function(){
@@ -8844,36 +8845,103 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   setInterval(tick,250); tick(); renderRec();
 })();
 /*HOME2*/
-/* ===== Inicio más claro: 3 acciones grandes, proyectos y herramientas ===== */
+/* ===== Inicio limpio: barra de menús, nombre de la app, 3 acciones y asistente de proyecto ===== */
 (function(){
   const css=document.createElement('style'); css.id='home2Css';
-  css.textContent='body.ipHome .top .score,body.ipHome .top .hdr-per{display:none!important}'+
-   '#ipHome .hm-in{display:flex;flex-direction:column}#ipHome .hm-logo{order:0;align-self:center}#ipHome .hm-in>h2{order:1;text-align:center;margin:0}'+
-   '#ipHome .hm-sub{order:1;text-align:center;margin:4px 0 0;color:#9aa3b2;font-size:14px}'+
-   '#hmHero{order:2;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 6px}'+
-   '#hmHero button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:104px;padding:16px 18px;border-radius:16px;border:1px solid #2a2a2a;background:#161616;color:#fff;text-align:left;cursor:pointer}'+
+  css.textContent='body.ipHome .top{display:none!important}body.ipHome #ipHome{padding-top:64px}'+
+   '#hmBar{position:fixed;left:0;right:0;top:0;height:44px;z-index:46;display:flex;align-items:center;gap:2px;padding:0 10px;background:#2a2a2a;border-bottom:1px solid #1a1a1a}'+
+   '#hmBar .hb-brand{font:800 15px var(--f-head,inherit);color:#ff8a1f;margin:0 14px 0 6px;letter-spacing:.02em}#hmBar .hb-brand b{color:#fff}'+
+   '#hmBar .mn{position:relative}#hmBar .mn>button,#hmBar .hb-ic{background:transparent;border:0;color:#eee;font-size:14px;font-weight:600;padding:0 12px;height:44px;cursor:pointer}'+
+   '#hmBar .mn>button:hover,#hmBar .mn.open>button,#hmBar .hb-ic:hover{background:#3a3a3a}'+
+   '#hmBar .dd{display:none;position:absolute;left:0;top:44px;min-width:260px;background:#2f2f2f;border:1px solid #444;border-radius:0 0 10px 10px;box-shadow:0 12px 30px rgba(0,0,0,.5);padding:6px;z-index:5}'+
+   '#hmBar .mn.open .dd{display:block}#hmBar .dd button{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;background:transparent;border:0;color:#fff;font-size:14px;font-weight:600;padding:9px 12px;border-radius:7px;cursor:pointer}'+
+   '#hmBar .dd button small{font-weight:400;opacity:.6;font-size:12px}#hmBar .dd button:hover{background:#444}#hmBar .dd hr{border:0;border-top:1px solid #444;margin:5px 4px}'+
+   '#hmBar .hb-sp{flex:1}#hmBar .hb-ic{font-size:20px;padding:0 14px}'+
+   'body.ipHome.hmForce #ipHome .hm-x{top:6px;right:58px;min-height:32px;padding:0 14px;font-size:13px;z-index:47}'+
+   '#ipHome .hm-in{display:flex;flex-direction:column;padding-top:18px}#ipHome .hm-logo{display:none}'+
+   '#ipHome .hm-word{order:0;text-align:center;font:800 54px/1 var(--f-head,inherit);letter-spacing:-.01em;color:#fff;margin:8px 0 0}#ipHome .hm-word span{color:#ff8a1f}'+
+   '#ipHome .hm-in>h2{order:1;text-align:center;margin:8px 0 0;font:600 15px var(--f-head,inherit);color:#9aa3b2;letter-spacing:.14em;text-transform:uppercase}'+
+   '#ipHome .hm-sub{display:none}'+
+   '#hmHero{order:2;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:30px 0 6px}'+
+   '#hmHero button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:112px;padding:18px 20px;border-radius:16px;border:1px solid #2a2a2a;background:#161616;color:#fff;text-align:left;cursor:pointer}'+
    '#hmHero button:hover{background:#1d1d1d;border-color:#444}#hmHero button:first-child{background:linear-gradient(135deg,#ff8a1f,#d94f00);border-color:#ff8a1f}#hmHero button:first-child:hover{filter:brightness(1.06)}'+
-   '#hmHero .ic{font-size:26px;line-height:1}#hmHero b{font-size:18px}#hmHero small{opacity:.7;font-size:12.5px}#hmHero button:first-child small{opacity:.9}'+
-   '#ipHome #hmProjs{order:3}#ipHome .hm-in>.hm-fh{order:4}#ipHome .hm-in>.hm-r{order:5}#ipHome .hm-toolsH{order:6}'+
-   '#ipHome .hm-in>.hm-g{order:7;display:flex!important;flex-wrap:wrap;gap:8px}'+
-   '#ipHome .hm-g .hm-t{min-height:42px;padding:0 16px;border-radius:999px;font-size:14px;gap:9px}#ipHome .hm-g .hm-t small{display:none}'+
-   '#ipHome .hm-g #hmPhoto,#ipHome .hm-g #hmLive,#ipHome .hm-g #hmNew,#ipHome #hmMore{display:none!important}'+
-   '#ipHome #hmPgNew{display:none!important}#ipHome #hmProjs.hmEmpty{display:none}'+
-   'body.port #hmHero{grid-template-columns:1fr}@media(max-width:700px){#hmHero{grid-template-columns:1fr}}';
+   '#hmHero .ic{font-size:28px;line-height:1}#hmHero b{font-size:18px}#hmHero small{opacity:.7;font-size:12.5px}#hmHero button:first-child small{opacity:.9}'+
+   '#ipHome #hmProjs{order:3}#ipHome .hm-in>.hm-fh{order:4}#ipHome .hm-in>.hm-r{order:5}'+
+   '#ipHome .hm-in>.hm-g,#ipHome .hm-toolsH,#ipHome #hmMore,#ipHome #hmPgNew{display:none!important}#ipHome #hmProjs.hmEmpty{display:none}'+
+   'body.port #hmHero{grid-template-columns:1fr}@media(max-width:700px){#hmHero{grid-template-columns:1fr}#ipHome .hm-word{font-size:40px}}'+
+   /* asistente */
+   '#pwOv{position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:14px}'+
+   '#pwOv .pw{background:var(--panel,#1e1e1e);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:16px;padding:20px;width:min(520px,100%);box-shadow:0 16px 50px rgba(0,0,0,.5)}'+
+   '#pwOv .pw-steps{display:flex;gap:6px;margin-bottom:14px}#pwOv .pw-steps i{flex:1;height:5px;border-radius:3px;background:var(--line,#444)}#pwOv .pw-steps i.on{background:#ff8a1f}'+
+   '#pwOv h3{margin:0 0 4px;font:700 22px var(--f-head,inherit)}#pwOv p{margin:0 0 14px;color:var(--muted,#9aa)}'+
+   '#pwOv input[type=text]{width:100%;box-sizing:border-box;padding:12px 14px;font-size:17px;border-radius:10px;border:1px solid var(--line,#444);background:var(--panel2,#2a2a2a);color:var(--text,#fff)}'+
+   '#pwOv .pw-o{display:flex;flex-direction:column;gap:8px}#pwOv .pw-o button{display:flex;align-items:center;gap:12px;text-align:left;padding:13px 14px;border-radius:12px;border:1px solid var(--line,#444);background:var(--panel2,#2a2a2a);color:var(--text,#fff);font-size:15px;font-weight:600;cursor:pointer}'+
+   '#pwOv .pw-o button:hover{border-color:#ff8a1f}#pwOv .pw-o small{display:block;font-weight:400;opacity:.65;font-size:12.5px}#pwOv .pw-o .e{font-size:22px}'+
+   '#pwOv .pw-f{display:flex;justify-content:space-between;gap:8px;margin-top:16px}#pwOv .pw-f button{padding:10px 16px;border-radius:10px;border:1px solid var(--line,#444);background:var(--panel2,#2a2a2a);color:var(--text,#fff);font-weight:700;cursor:pointer}#pwOv .pw-f .go{background:#ff8a1f;border-color:#ff8a1f;color:#1a0f00}';
   document.head.appendChild(css);
   const home=document.getElementById('ipHome'); if(!home) return;
   const inn=home.querySelector('.hm-in'), h2=inn.querySelector('h2');
-  const sub=document.createElement('p'); sub.className='hm-sub'; sub.textContent='Elige cómo quieres empezar'; h2.after(sub);
+  const clk=id=>{ const b=document.getElementById(id); if(b) b.click(); else if(typeof toast==='function') toast('Esa opción no está disponible ahora.'); };
+  /* nombre de la app */
+  const wd=document.createElement('div'); wd.className='hm-word'; wd.innerHTML='Scout<span>Flow</span> Video'; inn.insertBefore(wd,inn.firstChild);
+  h2.textContent='Sala de análisis';
+  /* tres acciones */
   const hero=document.createElement('div'); hero.id='hmHero';
   hero.innerHTML='<button id="hhOpen"><span class="ic">▶</span><b>Abrir un vídeo</b><small>Elige un partido de este equipo y empieza a etiquetar</small></button>'+
-    '<button id="hhPj"><span class="ic">📁</span><b>Proyecto nuevo</b><small>Agrupa varios partidos (liga, rival, temporada)</small></button>'+
+    '<button id="hhPj"><span class="ic">📁</span><b>Proyecto nuevo</b><small>Te guiamos paso a paso</small></button>'+
     '<button id="hhLive"><span class="ic" style="color:#ff4d4d">●</span><b>Cámara en vivo</b><small>Graba y etiqueta un partido a la vez</small></button>';
-  sub.after(hero);
-  const th=document.createElement('h3'); th.className='hm-toolsH'; th.textContent='Herramientas'; inn.querySelector('.hm-g').before(th);
-  const clk=id=>{ const b=document.getElementById(id); if(b) b.click(); else if(typeof toast==='function') toast('Esa opción no está disponible ahora.'); };
+  h2.after(hero);
   document.getElementById('hhOpen').onclick=()=>clk('hmPhoto');
-  document.getElementById('hhPj').onclick=()=>{ if(window.__pjNew) window.__pjNew(); };
+  document.getElementById('hhPj').onclick=()=>wizard();
   document.getElementById('hhLive').onclick=()=>clk('hmLive');
+  /* barra de menús */
+  const M=[['Archivo',[['Abrir un vídeo','Elegir del equipo','hmPhoto'],['Proyecto nuevo','Paso a paso','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
+    ['Herramientas',[['Análisis previo','Vídeos guardados','hmPrev'],['Editar set de botones','Tu botonera de etiquetas','hmEdit'],['Equipos','Jugadoras guardadas','hmTeams'],['Nube','Sincronizar iPad y ordenador','hmCloud'],['-'],['Ajustes','Preferencias y copia de seguridad','hmSet']]],
+    ['Ayuda',[['Tutorial de cada función','','hmHelp']]]];
+  const bar=document.createElement('div'); bar.id='hmBar';
+  bar.innerHTML='<span class="hb-brand">Scout<b>Flow</b> Video</span>'+M.map((m,i)=>'<div class="mn" data-m="'+i+'"><button type="button">'+m[0]+'</button><div class="dd">'+m[1].map(it=>it[0]==='-'?'<hr>':'<button type="button" data-t="'+it[2]+'">'+it[0]+(it[1]?'<small>'+it[1]+'</small>':'')+'</button>').join('')+'</div></div>').join('')+'<span class="hb-sp"></span><button type="button" class="hb-ic" id="hbGear" title="Ajustes" aria-label="Ajustes">⚙</button>';
+  home.insertBefore(bar,home.firstChild);
+  const closeAll=()=>bar.querySelectorAll('.mn.open').forEach(x=>x.classList.remove('open'));
+  bar.querySelectorAll('.mn>button').forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); const m=b.parentNode, was=m.classList.contains('open'); closeAll(); if(!was) m.classList.add('open'); };
+    b.onmouseenter=()=>{ if(bar.querySelector('.mn.open')){ closeAll(); b.parentNode.classList.add('open'); } }; });
+  bar.querySelectorAll('.dd button').forEach(b=>b.onclick=()=>{ closeAll(); const t=b.dataset.t; if(t==='@wizard') wizard(); else clk(t); });
+  document.getElementById('hbGear').onclick=()=>clk('hmSet');
+  document.addEventListener('click',e=>{ if(!bar.contains(e.target)) closeAll(); });
+  /* asistente: proyecto nuevo paso a paso */
+  function wizard(){
+    if(document.getElementById('pwOv')) return;
+    const ov=document.createElement('div'); ov.id='pwOv'; document.body.appendChild(ov);
+    let name='';
+    const close=()=>ov.remove(), steps=n=>'<div class="pw-steps"><i class="'+(n>=1?'on':'')+'"></i><i class="'+(n>=2?'on':'')+'"></i><i class="'+(n>=3?'on':'')+'"></i></div>';
+    const esc2=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    function p1(){
+      ov.innerHTML='<div class="pw">'+steps(1)+'<h3>Paso 1 de 3 · ¿Cómo se llama?</h3><p>Un proyecto agrupa varios partidos: una liga, un rival o toda la temporada.</p><input type="text" id="pwN" maxlength="60" placeholder="Ej. Liga 2026-27" value="'+esc2(name)+'"><div class="pw-f"><button id="pwC">Cancelar</button><button class="go" id="pwG">Siguiente →</button></div></div>';
+      const i=ov.querySelector('#pwN'); setTimeout(()=>{ i.focus(); i.select(); },30);
+      const go=()=>{ const v=i.value.trim(); if(!v){ i.focus(); return; } name=v; p2(); };
+      ov.querySelector('#pwG').onclick=go; ov.querySelector('#pwC').onclick=close;
+      i.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') go(); else if(e.key==='Escape') close(); });
+    }
+    function p2(){
+      const O=[['📂','Elegir un vídeo de este equipo','El partido que ya tienes guardado','hmPhoto'],['🔗','Pegar un enlace','YouTube, directo o URL','hmLink'],['🔴','Grabar en vivo','Cámara o captura del partido','hmLive'],['⏭','Lo añado después','Crea el proyecto vacío','']];
+      ov.innerHTML='<div class="pw">'+steps(2)+'<h3>Paso 2 de 3 · ¿De dónde viene el vídeo?</h3><p>Proyecto «'+esc2(name)+'». Elige cómo quieres añadir el primer partido.</p><div class="pw-o">'+O.map((o,k)=>'<button data-k="'+k+'"><span class="e">'+o[0]+'</span><span>'+o[1]+'<small>'+o[2]+'</small></span></button>').join('')+'</div><div class="pw-f"><button id="pwB">← Atrás</button><span></span></div></div>';
+      ov.querySelector('#pwB').onclick=p1;
+      ov.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
+        const o=O[+b.dataset.k]; let ok=false;
+        try{ if(window.__pjApi){ window.__pjApi.create(name); ok=true; } }catch(e){}
+        if(!ok){ if(typeof toast==='function') toast('No se pudo crear el proyecto.'); close(); return; }
+        close(); try{ if(window.__pjHome) window.__pjHome(); }catch(e){}
+        if(o[3]) clk(o[3]); else p3(true);
+        if(o[3]&&typeof toast==='function') toast('Paso 3: etiqueta las jugadas con la botonera. Todo se guarda solo en «'+name+'».');
+      });
+    }
+    function p3(vacio){
+      const o2=document.createElement('div'); o2.id='pwOv'; document.body.appendChild(o2);
+      o2.innerHTML='<div class="pw">'+steps(3)+'<h3>¡Proyecto «'+esc2(name)+'» creado!</h3><p>Cuando quieras, pulsa <b>Abrir un vídeo</b> y el partido se añadirá solo a este proyecto. Después etiqueta las jugadas con la botonera.</p><div class="pw-f"><span></span><button class="go" id="pwK">Entendido</button></div></div>';
+      o2.querySelector('#pwK').onclick=()=>o2.remove();
+    }
+    p1();
+  }
+  window.__pjNew=wizard;
   const marca=()=>{ const c=document.getElementById('hmProjs'); if(c) c.classList.toggle('hmEmpty',!c.querySelector('#hmPg .hm-w')); };
   new MutationObserver(marca).observe(home,{childList:true,subtree:true}); marca();
 })();
