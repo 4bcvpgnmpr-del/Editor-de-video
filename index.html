@@ -10078,18 +10078,135 @@ function playDraw(ctx,s,W,H,lt){
 /* dibuja todas las jugadas de un dibujo; lt = segundos desde que empieza el dibujo */
 function playDrawAll(ctx,tl,W,H,lt){ tl.items.forEach(s=>{ if(s.type==='play') playDraw(ctx,s,W,H,lt); }); }
 /* cargar un archivo .jugada.json en una figura */
-function playPick(tl,idx){
+function playPick(tl,idx){ pmkAbrir(tl,idx); }
+function playPickFile(tl,idx,onDone){
   const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
   inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
     f.text().then(t=>{ let d=null; try{d=JSON.parse(t);}catch(e){}
       if(!playOk(d)){ toast('Ese archivo no es una jugada de la pizarra. Descárgala con «Para el editor de vídeo».'); return; }
       const s=tl.items[idx]; if(!s||s.type!=='play') return;
-      s.play=d; s.vista=s.vista||'ambas'; tl.hold=clamp(Math.ceil(d.dur+1),1,60); tl.rev++; teleKey=''; commitTele(); renderDrawPanel(); toast('Jugada «'+(d.nombre||'sin nombre')+'» cargada ('+Math.round(d.dur)+' s).');
+      s.play=d; s.vista=s.vista||'ambas'; tl.hold=clamp(Math.ceil(d.dur+1),1,60); tl.rev++; teleKey=''; commitTele(); renderDrawPanel(); toast('Jugada «'+(d.nombre||'sin nombre')+'» cargada ('+Math.round(d.dur)+' s).'); if(onDone) onDone();
     });
   };
   inp.click();
 }
 /*FINPLAYR*/
+/*PLAYMK*/
+/* ===== MINI PIZARRA DEL EDITOR: crear la jugada sin necesitar ScoutFlow =====
+   Se colocan las jugadoras en cada fase; el editor deduce solo los cortes,
+   botes y pases y anima de una fase a la siguiente. */
+const PMK={m:null,fase:0,tl:null,idx:-1,drag:null,raf:0,t0:0,baked:null,dlg:null};
+function pmkNuevo(){
+  const o={o1:[7.5,10.4],o2:[2.4,7.6],o3:[12.6,7.6],o4:[3.4,3.6],o5:[7.5,3.4]};
+  const d={}; Object.keys(o).forEach(k=>{const a=o[k]; d['d'+k.slice(1)]=[a[0]+(7.5-a[0])*0.14,a[1]+(1.6-a[1])*0.14];});
+  return {nombre:'Mi jugada',campo:'medio',def:true,o,d,fases:[{pos:Object.assign({},o,d),balon:'o1'}]};
+}
+function pmkKeys(m){return Object.keys(m.fases[0].pos).filter(k=>m.def||k[0]!=='d');}
+function pmkFondo(m){return m.campo==='completo'?28:14;}
+const pmkEase=t=>0.5-0.5*Math.cos(Math.PI*Math.max(0,Math.min(1,t)));
+/* cortes / botes / pases entre la fase i y la siguiente */
+function pmkLineas(m,i){
+  const a=m.fases[i],b=m.fases[i+1],L=[]; if(!b) return L;
+  pmkKeys(m).forEach(k=>{
+    const p=a.pos[k],q=b.pos[k]; if(!p||!q||Math.hypot(p[0]-q[0],p[1]-q[1])<0.45) return;
+    L.push({t:k[0]==='d'?'mueve':(a.balon===k?'bote':'corte'),de:k,pts:[[p[0],p[1]],[q[0],q[1]]]});
+  });
+  if(a.balon&&b.balon&&a.balon!==b.balon&&a.pos[a.balon]&&a.pos[b.balon]) L.push({t:'pase',de:a.balon,pts:[[a.pos[a.balon][0],a.pos[a.balon][1]],[a.pos[b.balon][0],a.pos[b.balon][1]]]});
+  return L;
+}
+/* convierte el modelo en el mismo formato que baja la pizarra */
+function pmkHornear(m){
+  const fps=20,REV=0.7,MOV=1.3,PAUSA=0.35, nF=m.fases.length, fondo=pmkFondo(m), keys=pmkKeys(m), r2=v=>Math.round(v*100)/100;
+  const dur=Math.max(1.5,(nF-1)*(REV+MOV+PAUSA)+1), n=Math.floor(dur*fps)+1;
+  const fichas={}; keys.forEach(k=>{fichas[k]={t:k[0],n:k.slice(1),p:new Array(n).fill(null)};});
+  const balon=new Array(n).fill(null), vis=new Array(n), lineas=[], lid=new Map(), fases=[];
+  for(let i=0;i<nF;i++) fases.push({ini:i*(REV+MOV+PAUSA),fin:(i+1)*(REV+MOV+PAUSA),titulo:''});
+  for(let k=0;k<n;k++){
+    const t=k/fps, seg=Math.min(nF-1,Math.floor(t/(REV+MOV+PAUSA))), loc=t-seg*(REV+MOV+PAUSA), a=m.fases[seg], b=m.fases[seg+1]||a, last=seg>=nF-1||t>=(nF-1)*(REV+MOV+PAUSA);
+    const rev=last?0:Math.min(1,loc/REV), mv=last?0:pmkEase((loc-REV)/MOV), at=last?m.fases[nF-1]:a, bt=last?m.fases[nF-1]:b;
+    const pos={}; keys.forEach(key=>{const p=at.pos[key],q=bt.pos[key]; if(!p) return; const e=last?0:mv; pos[key]=[p[0]+((q||p)[0]-p[0])*e,p[1]+((q||p)[1]-p[1])*e]; fichas[key].p[k]=[r2(pos[key][0]),r2(pos[key][1])];});
+    let bp=null;
+    if(at.balon&&pos[at.balon]){
+      if(bt.balon&&bt.balon!==at.balon&&pos[bt.balon]&&!last){ const o=at.pos[at.balon],d=bt.pos[bt.balon]; bp=mv<=0?pos[at.balon]:[o[0]+(pos[bt.balon][0]-o[0])*mv,o[1]+(pos[bt.balon][1]-o[1])*mv]; if(mv>=1) bp=pos[bt.balon]; }
+      else bp=pos[at.balon];
+    }
+    balon[k]=bp?[r2(bp[0]),r2(bp[1])]:null;
+    const v=[]; if(!last&&mv<=0&&rev>0.01){ pmkLineas(m,seg).forEach((l,li)=>{ const id=seg+':'+li; let ix=lid.get(id); if(ix==null){ix=lineas.length;lid.set(id,ix);lineas.push({t:l.t,color:'',pts:l.pts.map(p=>[r2(p[0]),r2(p[1])])});} v.push([ix,r2(pmkEase(rev))]); }); }
+    vis[k]=v;
+  }
+  return {v:1,nombre:m.nombre||'Jugada',campo:m.campo,fondo,fps,n,dur,fichas,balon,lineas,vis,fases,modelo:JSON.parse(JSON.stringify(m))};
+}
+function pmkCss(){
+  if(document.getElementById('pmkCss')) return;
+  const st=document.createElement('style'); st.id='pmkCss';
+  st.textContent='#dlgPmk{width:min(1100px,96vw)}#dlgPmk .pmk-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}#dlgPmk .pmk-h b{font-size:16px;margin-right:auto}'+
+   '#dlgPmk .pmk-b{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 14px}@media(max-width:820px){#dlgPmk .pmk-b{grid-template-columns:1fr}}#dlgPmk canvas{width:100%;background:#0c1018;border-radius:10px;touch-action:none;display:block}'+
+   '#dlgPmk .pmk-f{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0 14px 12px}#dlgPmk .pmk-ch{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:700;cursor:pointer}#dlgPmk .pmk-ch[aria-pressed=true]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}'+
+   '#dlgPmk .pmk-t{font-size:12.5px;color:var(--muted);padding:0 14px 12px}#dlgPmk input[type=text]{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:14px;width:200px}#dlgPmk select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 8px}';
+  document.head.appendChild(st);
+}
+function pmkDlg(){
+  if(PMK.dlg) return PMK.dlg; pmkCss();
+  const d=document.createElement('dialog'); d.id='dlgPmk'; d.setAttribute('aria-label','Crear jugada');
+  d.innerHTML='<div class="pmk-h"><b>Crear jugada</b><input type="text" id="pmkN" maxlength="40" placeholder="Nombre"><select id="pmkC"><option value="medio">Media pista</option><option value="completo">Pista entera</option></select><label style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" id="pmkD" checked> Defensa</label><button class="btn" id="pmkLoad">Cargar archivo…</button><button class="btn" id="pmkSave">Guardar archivo</button></div>'+
+   '<div class="pmk-b"><div><canvas id="pmkEd" width="640" height="560"></canvas></div><div><canvas id="pmkPv" width="640" height="560"></canvas></div></div>'+
+   '<div class="pmk-f" id="pmkFs"></div><div class="pmk-t">Arrastra las jugadoras para colocarlas en cada fase. <b>Doble clic</b> en una jugadora le da el balón. Con <b>+ Fase</b> copias las posiciones y las mueves: los cortes, botes y pases se dibujan solos. A la derecha lo ves animado en 2D y 3D.</div>'+
+   '<div class="pmk-f" style="justify-content:flex-end;border-top:1px solid var(--line);padding-top:12px"><button class="btn" id="pmkCancel">Cancelar</button><button class="btn" id="pmkOk" style="background:var(--accent);color:var(--on-accent);border-color:var(--accent)">Usar esta jugada</button></div>';
+  document.body.appendChild(d); PMK.dlg=d;
+  const $d=s=>d.querySelector(s);
+  $d('#pmkN').oninput=e=>{PMK.m.nombre=e.target.value; pmkRehacer();};
+  $d('#pmkC').onchange=e=>{PMK.m.campo=e.target.value; pmkRehacer();};
+  $d('#pmkD').onchange=e=>{PMK.m.def=e.target.checked; pmkRehacer();};
+  $d('#pmkCancel').onclick=()=>pmkCerrar(false);
+  $d('#pmkOk').onclick=()=>pmkCerrar(true);
+  $d('#pmkLoad').onclick=()=>playPickFile(PMK.tl,PMK.idx,()=>pmkCerrar(false));
+  $d('#pmkSave').onclick=()=>{const b=pmkHornear(PMK.m), a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(b)],{type:'application/json'})); a.download=(PMK.m.nombre||'jugada').replace(/[^\w\-]+/g,'_')+'.jugada.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
+  d.addEventListener('close',()=>{cancelAnimationFrame(PMK.raf);PMK.raf=0;});
+  d.addEventListener('cancel',()=>{cancelAnimationFrame(PMK.raf);PMK.raf=0;});
+  const cv=$d('#pmkEd');
+  const map=()=>{const box={x:8,y:8,w:cv.width-16,h:cv.height-16}, cam=playCam(box,pmkFondo(PMK.m),'2d',0,Math.PI/2); return {cam,box};};
+  const aMundo=(e)=>{const r=cv.getBoundingClientRect(), px=(e.clientX-r.left)*cv.width/r.width, py=(e.clientY-r.top)*cv.height/r.height, {cam}=map(), o=cam.proj(0,0,0), q=cam.proj(15,pmkFondo(PMK.m),0); return [(px-o.x)/(q.x-o.x)*15,(py-o.y)/(q.y-o.y)*pmkFondo(PMK.m),px,py];};
+  const cerca=(w)=>{const f=PMK.m.fases[PMK.fase]; let best=null,bd=1.1; pmkKeys(PMK.m).forEach(k=>{const p=f.pos[k]; if(!p) return; const dd=Math.hypot(p[0]-w[0],p[1]-w[1]); if(dd<bd){bd=dd;best=k;}}); return best;};
+  cv.addEventListener('pointerdown',e=>{const w=aMundo(e),k=cerca(w); if(!k) return; PMK.drag=k; cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{if(!PMK.drag) return; const w=aMundo(e); PMK.m.fases[PMK.fase].pos[PMK.drag]=[Math.max(0.3,Math.min(14.7,w[0])),Math.max(0.3,Math.min(pmkFondo(PMK.m)-0.3,w[1]))]; pmkPintarEd(); });
+  cv.addEventListener('pointerup',()=>{if(PMK.drag){PMK.drag=null; pmkRehacer();}});
+  cv.addEventListener('dblclick',e=>{const w=aMundo(e),k=cerca(w); if(!k||k[0]==='d') return; PMK.m.fases[PMK.fase].balon=k; pmkRehacer();});
+  return d;
+}
+function pmkFasesUi(){
+  const d=PMK.dlg, box=d.querySelector('#pmkFs'), m=PMK.m;
+  box.innerHTML=m.fases.map((f,i)=>'<button class="pmk-ch" data-i="'+i+'" aria-pressed="'+(i===PMK.fase)+'">Fase '+(i+1)+'</button>').join('')+'<button class="btn" id="pmkAdd">＋ Fase</button>'+(m.fases.length>1?'<button class="btn" id="pmkDel">Quitar fase</button>':'');
+  box.querySelectorAll('.pmk-ch').forEach(b=>b.onclick=()=>{PMK.fase=+b.dataset.i; pmkFasesUi(); pmkPintarEd();});
+  box.querySelector('#pmkAdd').onclick=()=>{const f=m.fases[PMK.fase], c=JSON.parse(JSON.stringify(f)); m.fases.splice(PMK.fase+1,0,c); PMK.fase++; pmkFasesUi(); pmkRehacer();};
+  const del=box.querySelector('#pmkDel'); if(del) del.onclick=()=>{m.fases.splice(PMK.fase,1); PMK.fase=Math.max(0,Math.min(PMK.fase,m.fases.length-1)); pmkFasesUi(); pmkRehacer();};
+}
+function pmkPintarEd(){
+  const cv=PMK.dlg.querySelector('#pmkEd'), ctx=cv.getContext('2d'), m=PMK.m, f=m.fases[PMK.fase];
+  ctx.clearRect(0,0,cv.width,cv.height); ctx.fillStyle='#0c1018'; ctx.fillRect(0,0,cv.width,cv.height);
+  const lin=m.fases[PMK.fase+1]?pmkLineas(m,PMK.fase):(PMK.fase>0?pmkLineas(m,PMK.fase-1):[]), p={fondo:pmkFondo(m),lineas:lin.map(l=>({t:l.t,color:'',pts:l.pts}))};
+  const players=pmkKeys(m).filter(k=>f.pos[k]).map(k=>({key:k,t:k[0],n:k.slice(1),x:f.pos[k][0],y:f.pos[k][1]}));
+  const fr={players,ball:f.balon&&f.pos[f.balon]?f.pos[f.balon].slice():null,vis:lin.map((l,i)=>[i,1])};
+  playView(ctx,p,fr,{x:8,y:8,w:cv.width-16,h:cv.height-16},'2d',0,Math.PI/2);
+}
+function pmkRehacer(){
+  PMK.baked=pmkHornear(PMK.m); PMK.t0=performance.now(); pmkPintarEd();
+  if(!PMK.raf){ const loop=()=>{ if(!PMK.dlg||!PMK.dlg.open){PMK.raf=0;return;} const cv=PMK.dlg.querySelector('#pmkPv'), ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); const b=PMK.baked, lt=((performance.now()-PMK.t0)/1000)%(b.dur+0.8); playDraw(ctx,{x:0,y:0,rw:1,rh:1,vista:'ambas',play:b},cv.width,cv.height,lt); PMK.raf=requestAnimationFrame(loop); }; PMK.raf=requestAnimationFrame(loop); }
+}
+function pmkAbrir(tl,idx){
+  const d=pmkDlg(); PMK.tl=tl; PMK.idx=idx;
+  const s=tl.items[idx], prev=s&&s.play&&s.play.modelo;
+  PMK.m=prev?JSON.parse(JSON.stringify(prev)):pmkNuevo(); PMK.fase=0;
+  d.querySelector('#pmkN').value=PMK.m.nombre||''; d.querySelector('#pmkC').value=PMK.m.campo; d.querySelector('#pmkD').checked=!!PMK.m.def;
+  pmkFasesUi(); if(!d.open) d.showModal(); pmkRehacer();
+}
+function pmkCerrar(ok){
+  const d=PMK.dlg; if(ok){
+    const tl=PMK.tl, s=tl&&tl.items[PMK.idx];
+    if(s&&s.type==='play'){ const b=pmkHornear(PMK.m); s.play=b; s.vista=s.vista||'ambas'; tl.hold=clamp(Math.ceil(b.dur+1),1,60); tl.rev++; teleKey=''; commitTele(); renderDrawPanel(); toast('Jugada «'+b.nombre+'» lista ('+Math.round(b.dur)+' s).'); }
+  }
+  cancelAnimationFrame(PMK.raf); PMK.raf=0; if(d&&d.open) d.close();
+}
+/*FINPLAYMK*/
 function hasLens(tl){return tl&&tl.items.some(s=>s.type==='lens'||(s.type==='play'&&s.play));}
 function drawTeleSVG(tl){
   if(!tl){tele.hidden=true;teleSvg.innerHTML='';clearLens();return;}
