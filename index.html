@@ -4547,17 +4547,49 @@ const phInit=p=>p&&p.photo?'':esc((p&&p.name?p.name.trim()[0]:'')||'');
 function fitPlSet(){
   const ps=codes.querySelector('.pset'); if(!ps) return;
   const g=ps.querySelector('.pset-g'), t=ps.querySelector('.pset-t'); if(!g||!g.children.length) return;
-  const n=g.children.length, gap=5, cs=getComputedStyle(codes);
-  const W=codes.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-2;
-  const H=codes.clientHeight-(parseFloat(cs.paddingTop)||0)-(parseFloat(cs.paddingBottom)||0)-(t?t.offsetHeight:0)-gap*2-2;
+  const n=g.children.length, gap=5, cs=getComputedStyle(codes), strip=document.body.classList.contains('vfull')&&document.body.classList.contains('vfStrip');
+  const W=codes.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-2-(strip&&t?t.offsetWidth+8:0);
+  const H=codes.clientHeight-(parseFloat(cs.paddingTop)||0)-(parseFloat(cs.paddingBottom)||0)-(strip?0:(t?t.offsetHeight:0))-gap*2-2;
   if(W<60||H<60) return;
   let best=0,bc=1;
   for(let c=1;c<=n;c++){ const rows=Math.ceil(n/c), sz=Math.min((W-gap*(c-1))/c,(H-gap*(rows-1))/rows); if(sz>best){best=sz;bc=c;} }
-  best=Math.floor(Math.max(46,Math.min(best,150)));
-  g.style.gridTemplateColumns='repeat('+bc+','+best+'px)'; g.style.justifyContent='center';
+  best=Math.floor(Math.max(46,Math.min(best,strip?92:150)));
+  g.style.gridTemplateColumns='repeat('+bc+','+best+'px)'; g.style.justifyContent=strip?'start':'center';
   g.style.setProperty('--pf',Math.max(9,Math.min(15,best/6.2)).toFixed(1)+'px'); g.style.setProperty('--pn',Math.max(9,Math.min(14,best/6.8)).toFixed(1)+'px');
 }
 try{ new ResizeObserver(()=>fitPlSet()).observe(codes); }catch(e){}
+/* pantalla completa: la botonera de jugadoras puede ir al costado, arriba o abajo (tira alargada) */
+(function(){
+  const B=document.body, KEY='bbtag.vfpos', ORD=['side','top','bot'], LB={side:'Costado',top:'Arriba',bot:'Abajo'};
+  let pos=lsGet(KEY); if(!ORD.includes(pos)) pos='side';
+  const css=document.createElement('style'); css.textContent=
+   '#vfPos{display:none}body.ipad.vfull #vfPos{display:inline-flex;align-items:center;justify-content:center;min-width:42px;min-height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(12,12,12,.5);color:#fff;font-size:11px;font-weight:700;padding:0 6px;pointer-events:auto}'+
+   'body.ipad.vfull.vfStrip #dockR{left:0!important;right:0!important;width:auto!important;height:auto!important}'+
+   'body.ipad.vfull.vfStrip.vfTop #dockR{top:0!important;bottom:auto!important}'+
+   'body.ipad.vfull.vfStrip.vfBot #dockR{top:auto!important;bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}'+
+   'body.ipad.vfull.vfStrip #pTags{flex:none!important;display:block!important;position:relative;height:98px!important;padding:6px 252px 6px 8px;overflow:visible}'+
+   'body.ipad.vfull.vfStrip.vfTop #pTags{padding-left:176px;height:calc(98px + env(safe-area-inset-top,0px))!important;padding-top:calc(6px + env(safe-area-inset-top,0px))}'+
+   'body.ipad.vfull.vfStrip #pTags .p-body{height:auto!important;padding:0!important;display:block}'+
+   'body.ipad.vfull.vfStrip #pTags .bb-wrap{height:auto!important;display:block}'+
+   'body.ipad.vfull.vfStrip #pTags .bb-cats{flex-direction:row!important;align-items:stretch;gap:8px;height:auto!important;min-height:0!important}'+
+   'body.ipad.vfull.vfStrip #pTags .bb-sh{position:absolute;right:8px;top:6px;width:236px;margin:0;gap:4px}'+
+   'body.ipad.vfull.vfStrip #pTags #setQuick{flex:none;display:flex!important;flex-direction:column;gap:3px;width:112px;margin:0}'+
+   'body.ipad.vfull.vfStrip #pTags #setQuick button{min-height:24px;font-size:11px;padding:0 6px}'+
+   'body.ipad.vfull.vfStrip #pTags .bb-cats .codes{flex:1 1 auto;min-width:0;height:84px!important;min-height:0!important;overflow:hidden;padding:0}'+
+   'body.ipad.vfull.vfStrip #pTags .pset{display:flex;flex-direction:row;align-items:center;gap:8px;height:100%}'+
+   'body.ipad.vfull.vfStrip #pTags .pset-t{flex-direction:column;width:104px;flex:none}'+
+   'body.ipad.vfull.vfStrip #pTags .pset-g{flex:1 1 auto;min-width:0;overflow-x:auto}'+
+   'body.ipad.vfull.vfStrip #pTags .bb-low{display:none!important}';
+  document.head.appendChild(css);
+  const btn=document.createElement('button'); btn.id='vfPos'; btn.type='button'; btn.title='Dónde va la botonera de jugadoras: costado, arriba o abajo';
+  const sh=document.querySelector('#pTags .bb-sh'); if(sh){ const a=document.getElementById('ipAuto'); if(a&&a.parentNode===sh) a.after(btn); else sh.appendChild(btn); }
+  const upd=()=>{ const has=!!document.querySelector('#pTags .codes .pset');
+    B.classList.toggle('vfTop',pos==='top'); B.classList.toggle('vfBot',pos==='bot'); B.classList.toggle('vfStrip',has&&pos!=='side');
+    btn.textContent=(pos==='top'?'▀ ':pos==='bot'?'▄ ':'▌ ')+LB[pos]; };
+  btn.onclick=e=>{ e.stopPropagation(); pos=ORD[(ORD.indexOf(pos)+1)%3]; lsSet(KEY,pos); upd(); setTimeout(()=>{ try{ fitPlSet(); }catch(er){} },60); setTimeout(()=>{ try{ fitPlSet(); }catch(er){} },300); };
+  upd(); try{ new MutationObserver(()=>{ const was=B.classList.contains('vfStrip'); upd(); if(was!==B.classList.contains('vfStrip')) setTimeout(()=>{ try{ fitPlSet(); }catch(er){} },60); }).observe(codes,{childList:true}); }catch(e){}
+  document.addEventListener('fullscreenchange',()=>setTimeout(()=>{ try{ fitPlSet(); }catch(er){} },200));
+})();
 function plSetHTML(){
   const k=team, r=roster(k).slice().sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0)), tc='var(--'+(k==='L'?'local':'rival')+')';
   return '<div class="pset" style="--tc:'+tc+'"><div class="pset-t">'+['L','R'].map(t=>'<button data-pst="'+t+'" class="'+(t===k?'on':'')+'" style="--tc:var(--'+(t==='L'?'local':'rival')+')">'+esc(teamName(t))+'</button>').join('')+'</div>'+
