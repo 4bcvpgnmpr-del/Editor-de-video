@@ -8197,6 +8197,8 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }
     function head(){
       const gs=gGet(), act=aGet();
+      if(S.gid){ const g=gs.find(x=>x.id===S.gid); if(g){ if(act!==g.id) lsSet(AK,g.id);
+        return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><h3 style="margin:0;font:700 22px var(--f-head)">📁 '+esc(g.name)+'</h3><span style="flex:1"></span><button style="'+btn+'" id="pjRen">✎ Cambiar nombre</button><button style="'+btn+'" id="pjDel" title="Borrar proyecto">🗑 Borrar</button><button class="btn" id="pjX">Cerrar</button></div>'; } }
       return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font:700 20px var(--f-head)">📚 Proyectos y biblioteca</h3><span style="flex:1"></span><button class="btn" id="pjX">Cerrar</button></div>'+
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><select id="pjG" style="'+inp+';min-width:200px"><option value="">Todos los partidos guardados</option>'+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+' ('+g.keys.length+')</option>').join('')+'</select>'+
         '<button style="'+btn+'" id="pjNew">＋ Nuevo proyecto</button>'+
@@ -8204,8 +8206,8 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }
     function bind(){
       B.querySelector('#pjX').onclick=expClose;
-      B.querySelector('#pjG').onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
-      B.querySelector('#pjNew').onclick=()=>{ expClose(); newProject(); };
+      const pg=B.querySelector('#pjG'); if(pg) pg.onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
+      const pn=B.querySelector('#pjNew'); if(pn) pn.onclick=()=>{ expClose(); newProject(); };
       const ap=B.querySelector('#pjAdd'); if(ap) ap.onclick=()=>{ const g=gGet().find(x=>x.id===S.gid); expClose(); DLGDOC=null; pickSource(g); };
       const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const g0=gGet().find(x=>x.id===S.gid); askName('Nombre del proyecto',g0.name,n=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); g.name=n.slice(0,60); gSet(gs); draw(); }); };
       const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!confirm('¿Borrar el proyecto «'+g.name+'»?\nLos partidos y sus cortes NO se borran, solo se quita la agrupación.')) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
@@ -8229,9 +8231,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       const games=keysOf();
       const nSel=[...S.sel].filter(id=>all.some(r=>r.id===id)).length;
       const gsel=gGet().find(x=>x.id===S.gid);
-      const strip=gsel?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+gsel.keys.map(k=>'<button style="'+btn+'" data-open="'+esc(k)+'" title="Abrir este partido">▶ '+esc(titleOf(k))+'</button>').join('')+'</div>':'';
+      const strip=gsel?'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'+(gsel.keys.length?gsel.keys.map(k=>{ const n=k===videoKey?events.length:((q(k)&&q(k).events)||[]).length; return '<button style="'+btn+';display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;font-size:15px" data-open="'+esc(k)+'"><span style="font-size:20px">▶</span><span style="flex:1;min-width:0"><b>'+esc(titleOf(k))+'</b><br><span style="color:var(--muted);font-size:12.5px">'+(dateOf(k)?esc(matchDate(dateOf(k)))+' · ':'')+n+' cortes · toca para abrir</span></span></button>'; }).join(''):'<p style="color:var(--muted);margin:0">Este proyecto está vacío.</p>')+'<button class="btn primary" id="pjAdd" style="align-self:flex-start;padding:11px 18px;font-size:15px">＋ Añadir partido</button></div>':'';
       B.innerHTML=head()+strip+
-        (all.length?'':'<p style="color:var(--muted)">'+(S.gid?'Este proyecto aún no tiene cortes. Pulsa «🏀 Partidos» para elegir los partidos, o abre un vídeo con el proyecto activo.':'Todavía no hay cortes guardados. Abre un partido y etiquétalo.')+'</p>')+
+        (all.length?'':'<p style="color:var(--muted)">'+(S.gid?(gsel&&gsel.keys.length?'Aún no hay cortes. Abre un partido y etiqueta las jugadas con la botonera: aparecerán aquí.':''):'Todavía no hay cortes guardados. Abre un partido y etiquétalo.')+'</p>')+
         (all.length?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+
           '<select id="pjFg" style="'+inp+'"><option value="">Todos los partidos</option>'+games.map(k=>'<option value="'+esc(k)+'"'+(k===S.game?' selected':'')+'>'+esc(titleOf(k))+'</option>').join('')+'</select>'+
           '<select id="pjFc" style="'+inp+'">'+opt(uniq(all.map(r=>r.cat)),S.cat,'Todas las categorías')+'</select>'+
