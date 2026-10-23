@@ -7426,6 +7426,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   /* al abrir un vídeo: bajar o subir según lo más reciente */
   window.__cloudPull=async function(){
     if(!on()||!videoKey) return; const key=videoKey;
+    try{ if(!/^live\|/.test(key)){ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); if(!gs.some(g=>g&&Array.isArray(g.keys)&&g.keys.includes(key))) return; } }catch(e){}
     try{
       const rows=await rest('video_projects?select=ts,data&key=eq.'+encodeURIComponent(key)+'&limit=1');
       if(key!==videoKey) return;
