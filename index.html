@@ -8141,6 +8141,16 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     i.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') ok(); else if(e.key==='Escape') close(); });
     ov.addEventListener('keydown',e=>e.stopPropagation());
   }
+  function askOk(title,msg,label){ return new Promise(res=>{
+    const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9700;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
+    ov.innerHTML='<div style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(440px,100%);box-shadow:0 12px 40px rgba(0,0,0,.4)"><h3 style="margin:0 0 6px;font:700 20px var(--f-head)"></h3><p class="hint" style="margin:0 0 14px;white-space:pre-line"></p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="aoNo">Cancelar</button><button class="btn primary" id="aoOk" style="background:#d83a3a;border-color:#d83a3a;color:#fff"></button></div></div>';
+    ov.querySelector('h3').textContent=title; ov.querySelector('p').textContent=msg; ov.querySelector('#aoOk').textContent=label||'Borrar';
+    document.body.appendChild(ov); const done=v=>{ ov.remove(); res(v); };
+    ov.querySelector('#aoNo').onclick=()=>done(false); ov.querySelector('#aoOk').onclick=()=>done(true);
+    ov.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Escape') done(false); });
+    ov.addEventListener('click',e=>{ if(e.target===ov) done(false); });
+  }); }
+  window.__askOk=askOk;
   window.__pjNew=newProject;
   window.__pjApi={create:(name)=>{ const a=gGet(), g={id:uid(),name:String(name).slice(0,60),keys:[]}; a.push(g); gSet(a); lsSet(AK,g.id); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return g; }};
 
@@ -8167,9 +8177,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       try{ let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){} if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre el vídeo con «Abrir un vídeo»; se añadirá a «'+g.name+'».'); const ph=document.getElementById('hmPhoto'); if(ph) ph.click(); }
     });
     c.querySelector('#hmPgNew').onclick=newProject;
-    c.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=e=>{
+    c.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async e=>{
       e.stopPropagation(); const a=gGet(), g=a.find(x=>x.id===b.dataset.pdel); if(!g) return;
-      if(!confirm('¿Borrar el proyecto «'+g.name+'»?\n\nLos '+g.keys.length+' partidos y sus cortes NO se borran: pasan a «Sin proyecto».')) return;
+      if(!(await askOk('¿Borrar el proyecto «'+g.name+'»?','Se quita el proyecto de la lista. Los vídeos que no estén en otro proyecto empezarán de cero al abrirlos.'))) return;
       gSet(a.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,'');
       try{ window.__renderRec&&window.__renderRec(); }catch(er){} try{ window.__vtRender&&window.__vtRender(); }catch(er){}
       toast('Proyecto «'+g.name+'» borrado.');
@@ -8219,7 +8229,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       const pn=B.querySelector('#pjNew'); if(pn) pn.onclick=()=>{ expClose(); newProject(); };
       const ap=B.querySelector('#pjAdd'); if(ap) ap.onclick=()=>{ const g=gGet().find(x=>x.id===S.gid); expClose(); DLGDOC=null; pickSource(g); };
       const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const g0=gGet().find(x=>x.id===S.gid); askName('Nombre del proyecto',g0.name,n=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); g.name=n.slice(0,60); gSet(gs); draw(); }); };
-      const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!confirm('¿Borrar el proyecto «'+g.name+'»?\nLos partidos y sus cortes NO se borran, solo se quita la agrupación.')) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
+      const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=async()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!(await askOk('¿Borrar el proyecto «'+g.name+'»?','Se quita el proyecto. Los vídeos que no estén en otro proyecto empezarán de cero al abrirlos.'))) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
       const pa=B.querySelector('#pjParts'); if(pa) pa.onclick=()=>{ S.view=S.view==='games'?'lib':'games'; draw(); };
       const ac=B.querySelector('#pjAct'); if(ac) ac.onchange=()=>{ lsSet(AK,ac.checked?S.gid:''); toast(ac.checked?'Proyecto activo: los vídeos nuevos se añaden aquí.':'Ya no se añaden vídeos solos.'); };
     }
@@ -8825,7 +8835,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     el.innerHTML=a.length?a.map((r,i)=>'<div class="hm-w" style="position:relative"><span class="hm-d" data-del="'+i+'" role="button" aria-label="Eliminar proyecto" title="Eliminar proyecto">🗑</span><button class="hm-c" style="width:100%" data-i="'+i+'"><div class="th" style="'+(r.th?'background-image:url('+r.th+')':'')+'">'+(r.th?'':'🎬')+'</div>'+(r.n?'<em>'+r.n+' clips</em>':'')+'<b>'+esc((window.__mt(r.key)||{}).t||r.name)+'</b><small>'+(((window.__mt(r.key)||{}).d)?esc(matchDate(window.__mt(r.key).d)):new Date(r.at).toLocaleDateString())+'</small></button></div>').join(''):'<p style="opacity:.6;grid-column:1/-1;margin:0">Aún no hay vídeos recientes. Abre uno para empezar.</p>';
     el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async e=>{
       e.stopPropagation(); const r=a[+b.dataset.del]; if(!r) return;
-      if(!confirm('¿Eliminar el proyecto «'+r.name+'»?\nSe borran sus etiquetas, clips y dibujos y el vídeo guardado en este dispositivo.')) return;
+      if(!(await window.__askOk('¿Eliminar «'+r.name+'»?','Se borran sus etiquetas, clips y dibujos y el vídeo guardado en este dispositivo.','Eliminar'))) return;
       try{ localStorage.removeItem('bbtag.project.'+r.key); const tm=titlesGet(); delete tm[r.key]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(er){}
       try{ await vdbTx('readwrite',st=>st.delete(r.key)); }catch(er){}
       try{ lsSet(RK,JSON.stringify(getRec().filter(x=>x.key!==r.key))); }catch(er){}
