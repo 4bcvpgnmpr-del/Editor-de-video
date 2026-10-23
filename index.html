@@ -5029,7 +5029,7 @@ video.addEventListener('loadedmetadata',()=>{
   let restored=0;
   try{
     /* un vídeo que no está en ningún proyecto empieza de cero: se descartan cortes antiguos */
-    try{ if(videoKey&&!/^live\|/.test(videoKey)&&!PART.pending){ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); if(!gs.some(g=>g&&Array.isArray(g.keys)&&g.keys.includes(videoKey))){ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); } } }catch(e){}
+    try{ if(videoKey&&!/^live\|/.test(videoKey)&&!PART.pending){ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); if(!gs.some(g=>g&&Array.isArray(g.keys)&&g.keys.includes(videoKey))){ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); localStorage.removeItem('bbtag.asked.'+videoKey); } } }catch(e){}
     restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
   }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];matchMeta=null;}
   if(PART.pending){ const pd=PART.pending; PART.pending=null;
@@ -7596,7 +7596,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   window.__matchAsk=function(){
     const k=videoKey; if(!k) return;
     setTimeout(()=>{
-      if(videoKey!==k||matchMeta||!teamsGet().length||dM.open||dT.open) return;
+      if(videoKey!==k||(matchMeta&&matchMeta.R)||!teamsGet().length||dM.open||dT.open) return;
       try{ if(localStorage.getItem('bbtag.asked.'+k)) return; localStorage.setItem('bbtag.asked.'+k,'1'); }catch(e){}
       window.openMatch();
     },2200);
@@ -8094,7 +8094,8 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
       const gs=gGet(); if(gs.some(g=>g.keys.includes(videoKey))) return;
       const act=gs.find(x=>x.id===aGet());
-      if(act){ act.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
+      if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
+        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
       if(skGet().includes(videoKey)) return;
       if(!(q(videoKey)&&q(videoKey).events&&q(videoKey).events.length)&&!events.length) { /* partido recién abierto: se pregunta igualmente */ }
       DLGDOC=null; askProject(videoKey);
