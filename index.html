@@ -6175,6 +6175,7 @@ async function expRecord(list,o,prog){
   return {blob:new Blob(chunks,{type:mt}), mime:mt, codecs:act};
 }
 function expExt(mime){return /mp4/.test(mime)?'mp4':'webm';}
+function expCleanU(n){return String(n||'').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);}
 function expClean(n){return String(n||'clip').replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,50)||'clip';}
 function expDur(list,draw){return list.reduce((a,e)=>e.cover?a+e.dur:e.ext?a+Math.max(0,e.end-e.start):a+Math.max(0,e.end-e.start)+(draw?teles.filter(t=>t.mode==='freeze'&&t.t>e.start&&t.t<e.end).reduce((x,t)=>x+t.hold,0):0),0);}
 function expDlgShell(html){
@@ -6202,6 +6203,7 @@ function openExport(list,defName){
     '<p style="margin:0 0 10px;color:var(--muted)">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'. Se procesa lo más rápido que permita el dispositivo; si no puede, se graba en tiempo real.</p>'+
     '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
     '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
+    '<div id="exNmBox" style="margin-top:8px"></div>'+
     '<label style="display:block;margin:10px 0 3px;font-weight:600">Tipo de vídeo</label>'+
     '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720"'+(window.scoutDesktop?'':' selected')+'>MP4 rápido · 720p (recomendado)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'MP4 universal · 1080p (motor nativo, rápido)':'MP4 universal · motor propio 720p (lento)')+'</option><option value="1080">MP4 rápido · 1080p (calidad alta)</option>'+(window.scoutDesktop?'':'<option value="9001">MP4 universal · motor propio 1080p (máxima calidad, más lento)</option>')+'<option value="0">Original · sin dibujos ni recodificar</option></select>'+
     '<p id="exQh" style="margin:6px 0 0;font-size:12.5px;color:var(--muted)"></p>'+
@@ -6210,13 +6212,20 @@ function openExport(list,defName){
     ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se hace con el MOTOR PRO mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button></div>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
+  { const box=d.querySelector('#exNmBox'), sel=d.querySelector('#exMode'); const fld='width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);box-sizing:border-box';
+    const defs=list.map((e,i)=>String(i+1).padStart(2,'0')+'_'+expClean(evName(e)));
+    const draw=()=>{ const keep=[...box.querySelectorAll('[data-nm]')].map(x=>x.value), one=(box.querySelector('#exNm')||{}).value;
+      if(sel.value==='one'){ box.innerHTML='<label style="display:block;margin:0 0 3px;font-weight:600">Nombre del archivo</label><input id="exNm" type="text" style="'+fld+'" placeholder="'+esc(expClean(defName||baseName()))+'" value="'+esc(one!=null?one:'')+'">'; }
+      else { box.innerHTML='<label style="display:block;margin:0 0 3px;font-weight:600">Nombre de cada clip <small style="font-weight:400;color:var(--muted)">(déjalo como está o cámbialo)</small></label><div style="max-height:170px;overflow:auto;display:flex;flex-direction:column;gap:5px">'+list.map((e,i)=>'<input data-nm="'+i+'" type="text" style="'+fld+'" value="'+esc(keep[i]!=null?keep[i]:defs[i])+'">').join('')+'</div>'; } };
+    sel.addEventListener('change',draw); draw(); d.__exNames=()=>{ const o={one:'',each:[]}; const a=box.querySelector('#exNm'); if(a) o.one=expCleanU(a.value); box.querySelectorAll('[data-nm]').forEach(x=>o.each.push(expCleanU(x.value))); return o; }; }
   { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'1080':'Igual de rápido que el de 720p (usa la tarjeta de vídeo) pero en 1920×1080 y con más calidad. Si tu vídeo es 1080p, este es el que conserva el detalle.','9001':'Misma compatibilidad que el motor propio, pero en 1080p y con mejor calidad. En el navegador tarda bastante más (puede ser 3-6 veces lo que dura el vídeo) y usa más memoria: déjalo trabajar sin cambiar de pestaña.','9000':window.scoutDesktop?'Cortes exactos en 1080p, compatible con cualquier reproductor y editor. Rápido gracias al motor nativo.':'Compatibilidad máxima (iMovie, Premiere, DaVinci). En el navegador es LENTO: tarda varias veces lo que dura el vídeo. Úsalo solo si el rápido no abre en tu editor.','720':'Rápido y ligero, se abre en QuickTime, iMovie, WhatsApp y el móvil. Se hace casi a la velocidad del vídeo.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
-  d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,defName,d.querySelector('#exMode').value,{ff:true,hq:+d.querySelector('#exQ').value===9001,w:(window.scoutDesktop||+d.querySelector('#exQ').value===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
+  d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,(d.__exNames().one||defName),d.querySelector('#exMode').value,{ff:true,hq:+d.querySelector('#exQ').value===9001,w:(window.scoutDesktop||+d.querySelector('#exQ').value===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
   d.querySelector('#exGo').onclick=()=>{
     if(EXP.busy){ toast('Hay una exportación de la cola en marcha. Usa «A la cola».'); return; }
     const q=+d.querySelector('#exQ').value, o=(q===9000||q===9001)?{ff:true,hq:q===9001,w:(window.scoutDesktop||q===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
     try{ EXP.mutedFb=false; video.muted=false; const pr=video.play(); if(pr&&pr.catch) pr.catch(()=>{}); const AC=window.AudioContext||window.webkitAudioContext; if(AC&&aCtx&&aCtx.state==='suspended') aCtx.resume(); }catch(e){}
+    window.__expNames=d.__exNames();
     runExport(list,defName,d.querySelector('#exMode').value,o);
   };
 }
@@ -6238,10 +6247,10 @@ async function runExport(list,defName,mode,o){
     const groups=mode==='each'?list.map(e=>[e]):[list];
     for(let g=0;g<groups.length&&!EXP.cancel;g++){
       const r=await (o.ff?ffRun:expRun)(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
-      if(r) out.push({evs:groups[g],blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])):expClean(defName||baseName())});
+      if(r) out.push({evs:groups[g],blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?((window.__expNames&&window.__expNames.each[g])||(String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])))):((window.__expNames&&window.__expNames.one)||expClean(defName||baseName()))});
     }
   }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p>'+(o.ff?'<p style="color:var(--muted);font-size:13px">Prueba con «MP4 rápido · 720p», que no necesita el motor.</p>':'')+'<div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
-  clearInterval(tick); EXP.busy=false;
+  clearInterval(tick); EXP.busy=false; window.__expNames=null;
   if(EXP.cancel||!out.length){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; }
   showExported(out);
 }
@@ -6547,7 +6556,8 @@ async function showExported(out){
   const urls=out.map(o=>URL.createObjectURL(o.blob));
   const items=out.map((o,i)=>{ const fn=(out.length===1?o.name:o.name)+'.'+expExt(o.mime); o.fn=fn; return '<div style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">'+
     '<video src="'+urls[i]+'" controls playsinline style="width:100%;max-height:240px;background:#000;border-radius:6px"></video>'+
-    '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><span style="flex:1;min-width:120px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(fn)+' · '+(o.blob.size/1048576).toFixed(1)+' MB</span>'+
+    '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input data-rn="'+i+'" type="text" value="'+esc(o.name)+'" title="Cambia el nombre del archivo" style="flex:1;min-width:0;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13px"><small style="color:var(--muted);white-space:nowrap">.'+expExt(o.mime)+' · '+(o.blob.size/1048576).toFixed(1)+' MB</small></div>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">'+
     '<a class="btn primary" href="'+urls[i]+'" download="'+esc(fn)+'" style="text-decoration:none">Descargar</a>'+
     (canShare(new File([o.blob],fn,{type:o.mime}))?'<button class="btn" data-sh="'+i+'">Compartir</button>':'')+'<button class="btn" data-ent="'+i+'" title="Guardarlo en la sección Vídeos de ScoutFlow Entrenador">📥 Guardar en Entrenador</button></div><div data-entf="'+i+'"></div></div>'; }).join('');
   let savedMsg=''; if(EXPF.use&&EXPF.ok){ try{ savedMsg='<p style="color:#4ade80;font-size:13px;margin:0 0 8px">✔ Guardado en la carpeta «'+esc(await efSave(out))+'».</p>'; }catch(e){ savedMsg='<p style="color:#ffb020;font-size:13px;margin:0 0 8px">No se pudo guardar en la carpeta ('+esc((e&&e.message)||e)+'). Usa «Descargar».</p>'; } }
@@ -6557,6 +6567,7 @@ async function showExported(out){
     for(let i=0;i<out.length;i++){ const o=out[i]; msg.style.color='var(--muted)'; msg.textContent='Subiendo '+(i+1)+' de '+out.length+'…';
       try{ const p=sfPrefill(o); p.nota=''; await sfSubir(o,p); ok++; }catch(e){ fail.push((o.fn||('clip '+(i+1)))+': '+((e&&e.message)||e)); if(/conecta la nube|cuenta del entrenador/.test((e&&e.message)||'')) break; } }
     msg.style.color=fail.length?'#ffb020':'#4ade80'; msg.textContent=(ok?'✔ '+ok+' guardados en Entrenador → Vídeos. ':'')+(fail.length?'Fallaron '+fail.length+': '+fail[0]:''); ea.disabled=!!ok&&!fail.length; };
+  d.querySelectorAll('[data-rn]').forEach(inp=>inp.addEventListener('input',()=>{ const o=out[+inp.dataset.rn], n=expCleanU(inp.value)||'clip'; o.name=n; o.fn=n+'.'+expExt(o.mime); const a=inp.closest('div[style*="border:1px"]').querySelector('a[download]'); if(a) a.setAttribute('download',o.fn); }));
   d.querySelectorAll('[data-sh]').forEach(b=>b.onclick=async()=>{ const o=out[+b.dataset.sh]; try{await navigator.share({files:[new File([o.blob],o.fn,{type:o.mime})],title:o.fn});}catch(e){} });
   d.querySelectorAll('[data-ent]').forEach(b=>b.onclick=()=>sfFormEntrenador(d,out[+b.dataset.ent],+b.dataset.ent));
   d.querySelector('#exOk').onclick=()=>{expClose(); setTimeout(()=>urls.forEach(u=>URL.revokeObjectURL(u)),1000);};
@@ -11381,7 +11392,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-g · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-h · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
