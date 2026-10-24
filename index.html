@@ -3968,7 +3968,10 @@ let baseTeams=null;
 function matchApply(render){
   if(matchMeta&&(matchMeta.L||matchMeta.R)){
     if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
-    ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(rp); } });
+    ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(rp);
+      /* fotos que faltan: se buscan en Equipos (mismo equipo y dorsal, o mismo nombre) */
+      try{ const nm=s=>String(s||'').trim().toLowerCase(); const tl=teamsGet(); const same=tl.filter(x=>nm(x.name)===nm(t.name)); const src=same.concat(tl.filter(x=>same.indexOf(x)<0));
+        cfg.rosters[k].forEach(q=>{ if(q.photo) return; let f=''; for(const x of src){ const m=(x.players||[]).find(y=>phOk(y.photo)&&((same.indexOf(x)>=0&&String(y.n)===String(q.n))||(q.name&&nm(y.name)===nm(q.name)))); if(m){ f=m.photo; break; } } if(f) q.photo=f; }); }catch(e){} } });
   } else if(baseTeams){ try{ const b=JSON.parse(baseTeams); cfg.teamNames=b.teamNames; cfg.rosters=b.rosters; }catch(e){} baseTeams=null; }
   const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')+(matchMeta.gid&&matchMeta.part?' · Parte '+matchMeta.part:'')):videoName;
   if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} try{ renderCodes(); renderDescStrip(); renderTimeline(); }catch(e){} }
