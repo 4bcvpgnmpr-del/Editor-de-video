@@ -741,9 +741,10 @@ body.tbl-open .app{padding-bottom:min(48vh,480px)}
 .pset-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px}
 .pcard{position:relative;display:flex;flex-direction:column;padding:0;border:0;border-radius:10px;overflow:hidden;background:#1c1f24;color:#fff;cursor:pointer;aspect-ratio:1/1;min-height:0;text-align:center;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 2px 6px rgba(0,0,0,.35)}
 .pcard:active{transform:scale(.97)}
-.pcard .ph{flex:1;min-height:0;background:#2b3038 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font:800 22px var(--f-head);color:#6b7686}
+.pcard .ph{position:absolute;left:0;top:0;right:0;bottom:0;width:100%;height:100%;flex:none;min-height:0;background:#2b3038 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font:800 22px var(--f-head);color:#6b7686}
 .pcard .no{position:absolute;top:3px;left:3px;background:var(--tc);color:#fff;border-radius:6px;padding:0 5px;font:800 10px var(--f-head);box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.pcard .nm{padding:2px 2px 3px;font-size:10px;font-weight:700;line-height:1.15;background:rgba(0,0,0,.62);word-break:break-word}
+.pcard .nm{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:2px 2px 3px;font-size:10px;font-weight:700;line-height:1.15;background:rgba(0,0,0,.62);word-break:break-word}
+.pcard .no{z-index:2}
 .pcard.add{background:transparent;border:2px dashed var(--line);box-shadow:none;color:var(--muted);align-items:center;justify-content:center;font:700 13px var(--f-head)}
 .pcard.add b{font-size:30px;line-height:1}
 #plPick{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
@@ -4550,7 +4551,7 @@ function photoFromFile(file){
     im.src=url;
   });
 }
-const phStyle=p=>p&&p.photo?'style="background-image:url('+p.photo+')"':'';
+const phStyle=p=>p&&p.photo?'style="background-image:url(\''+p.photo+'\');background-size:cover;background-position:center;background-repeat:no-repeat"':'';
 const phInit=p=>p&&p.photo?'':esc((p&&p.name?p.name.trim()[0]:'')||'');
 function fitPlSet(){
   const ps=codes.querySelector('.pset'); if(!ps) return;
@@ -11336,7 +11337,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-d · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-e · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
