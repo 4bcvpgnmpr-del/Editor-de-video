@@ -3965,14 +3965,19 @@ function titlesGet(){ try{ return JSON.parse(lsGet('bbtag.titles')||'{}')||{}; }
 function titleSet(key){ if(!key) return; const m=titlesGet(); if(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date)) m[key]={t:matchTitle(matchMeta),d:matchMeta.date||'',n:[matchMeta.L&&matchMeta.L.name,matchMeta.R&&matchMeta.R.name].filter(Boolean)}; else delete m[key]; lsSet('bbtag.titles',JSON.stringify(m)); }
 window.__mt=key=>titlesGet()[key]||null;
 let baseTeams=null;
+/* fotos que faltan: se buscan en Equipos (mismo equipo y dorsal, o mismo nombre) */
+function phFill(k,tname){
+  try{ const nm=s=>String(s||'').trim().toLowerCase(); const tl=teamsGet(); if(!tl.length) return;
+    const same=tl.filter(x=>nm(x.name)===nm(tname)), src=same.concat(tl.filter(x=>same.indexOf(x)<0));
+    (cfg.rosters[k]||[]).forEach(q=>{ if(q.photo) return; let f=''; for(const x of src){ const m=(x.players||[]).find(y=>phOk(y.photo)&&((same.indexOf(x)>=0&&String(y.n)===String(q.n))||(q.name&&nm(y.name)===nm(q.name)))); if(m){ f=m.photo; break; } } if(f) q.photo=f; }); }catch(e){}
+}
 function matchApply(render){
   if(matchMeta&&(matchMeta.L||matchMeta.R)){
     if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
     ['L','R'].forEach(k=>{ const t=matchMeta[k]; if(t&&t.name){ cfg.teamNames[k]=t.name; cfg.rosters[k]=(t.players||[]).map(rp);
-      /* fotos que faltan: se buscan en Equipos (mismo equipo y dorsal, o mismo nombre) */
-      try{ const nm=s=>String(s||'').trim().toLowerCase(); const tl=teamsGet(); const same=tl.filter(x=>nm(x.name)===nm(t.name)); const src=same.concat(tl.filter(x=>same.indexOf(x)<0));
-        cfg.rosters[k].forEach(q=>{ if(q.photo) return; let f=''; for(const x of src){ const m=(x.players||[]).find(y=>phOk(y.photo)&&((same.indexOf(x)>=0&&String(y.n)===String(q.n))||(q.name&&nm(y.name)===nm(q.name)))); if(m){ f=m.photo; break; } } if(f) q.photo=f; }); }catch(e){} } });
+      phFill(k,t.name); } });
   } else if(baseTeams){ try{ const b=JSON.parse(baseTeams); cfg.teamNames=b.teamNames; cfg.rosters=b.rosters; }catch(e){} baseTeams=null; }
+  ['L','R'].forEach(k=>phFill(k,cfg.teamNames&&cfg.teamNames[k]));
   const vn=document.getElementById('videoName'); if(vn&&videoName) vn.textContent=(matchMeta&&(matchMeta.L||matchMeta.R||matchMeta.date))?(matchTitle(matchMeta)+(matchMeta.date?' · '+matchDate(matchMeta.date):'')+(matchMeta.gid&&matchMeta.part?' · Parte '+matchMeta.part:'')):videoName;
   if(render){ try{ renderScore(); renderTeamBar(); renderFilters(); renderList(); renderDetail(); }catch(e){} try{ renderCodes(); renderDescStrip(); renderTimeline(); }catch(e){} }
 }
@@ -7448,7 +7453,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     try{
       const rows=await rest('video_projects?select=ts,data&key=eq.__teams__&limit=1'); const r=rows&&rows[0];
       const tts=num('bbtag.tts'), tsy=num('bbtag.tsy');
-      if(r&&r.ts>tsy&&r.ts>tts&&Array.isArray(r.data)){ lsSet('bbtag.teams',JSON.stringify(r.data)); lsSet('bbtag.tts',String(r.ts)); lsSet('bbtag.tsy',String(r.ts)); if(window.__renderRec) window.__renderRec(); }
+      if(r&&r.ts>tsy&&r.ts>tts&&Array.isArray(r.data)){ lsSet('bbtag.teams',JSON.stringify(r.data)); lsSet('bbtag.tts',String(r.ts)); lsSet('bbtag.tsy',String(r.ts)); if(window.__renderRec) window.__renderRec(); try{ matchApply(true); }catch(e){} }
       else if(tts>(r?r.ts:0)) await pushTeams();
     }catch(e){ setSt('err',e.message); }
   }
@@ -11331,7 +11336,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-c · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-d · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
