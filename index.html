@@ -8975,16 +8975,30 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   /* barra de menús */
   const M=[['Archivo',[['Abrir un vídeo','Elegir del equipo','hmPhoto'],['Proyecto nuevo','Paso a paso','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
     ['Herramientas',[['Análisis previo','Vídeos guardados','hmPrev'],['Editar set de botones','Tu botonera de etiquetas','hmEdit'],['Equipos','Jugadoras guardadas','hmTeams'],['Nube','Sincronizar iPad y ordenador','hmCloud'],['-'],['Ajustes','Preferencias y copia de seguridad','hmSet']]],
-    ['Ayuda',[['Tutorial de cada función','','hmHelp']]]];
+    ['Ayuda',[['Primeros pasos','Equipos, fotos y proyectos','@guide'],['Tutorial de cada función','','hmHelp']]]];
   const bar=document.createElement('div'); bar.id='hmBar';
   bar.innerHTML='<span class="hb-brand">Scout<b>Flow</b> Video</span>'+M.map((m,i)=>'<div class="mn" data-m="'+i+'"><button type="button">'+m[0]+'</button><div class="dd">'+m[1].map(it=>it[0]==='-'?'<hr>':'<button type="button" data-t="'+it[2]+'">'+it[0]+(it[1]?'<small>'+it[1]+'</small>':'')+'</button>').join('')+'</div></div>').join('')+'<span class="hb-sp"></span><button type="button" class="hb-ic" id="hbGear" title="Ajustes" aria-label="Ajustes">⚙</button>';
   home.insertBefore(bar,home.firstChild);
   const closeAll=()=>bar.querySelectorAll('.mn.open').forEach(x=>x.classList.remove('open'));
   bar.querySelectorAll('.mn>button').forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); const m=b.parentNode, was=m.classList.contains('open'); closeAll(); if(!was) m.classList.add('open'); };
     b.onmouseenter=()=>{ if(bar.querySelector('.mn.open')){ closeAll(); b.parentNode.classList.add('open'); } }; });
-  bar.querySelectorAll('.dd button').forEach(b=>b.onclick=()=>{ closeAll(); const t=b.dataset.t; if(t==='@wizard') wizard(); else clk(t); });
+  bar.querySelectorAll('.dd button').forEach(b=>b.onclick=()=>{ closeAll(); const t=b.dataset.t; if(t==='@wizard') wizard(); else if(t==='@guide') guide(); else clk(t); });
   document.getElementById('hbGear').onclick=()=>clk('hmSet');
   document.addEventListener('click',e=>{ if(!bar.contains(e.target)) closeAll(); });
+  /* guía de primeros pasos (se muestra una vez, y desde Ayuda) */
+  function guide(){
+    if(document.getElementById('pwOv')) return;
+    try{ localStorage.setItem('bbtag.welcome','1'); }catch(e){}
+    const ov=document.createElement('div'); ov.id='pwOv'; document.body.appendChild(ov);
+    const S=[['👥','Crea tu equipo','En Herramientas › Equipos escribe las jugadoras (dorsal y nombre) y añade su foto. Puedes subir varias fotos a la vez: se asignan por el nombre del archivo.','hmTeams'],
+      ['📁','Crea un proyecto','Archivo › Proyecto nuevo. Un proyecto agrupa los partidos de una liga, un rival o la temporada.','@wizard'],
+      ['🎬','Abre un partido','Elige el vídeo y, en el botón Partido (📅), asigna tu equipo y el rival: las fotos llegan solas a la botonera.',''],
+      ['🏷️','Etiqueta y analiza','Pulsa jugadora y acción mientras ves el vídeo. Después genera clips, estadísticas y vídeos con dibujos y seguimiento.','']];
+    ov.innerHTML='<div class="pw"><h3>Te damos la bienvenida a ScoutFlow Video</h3><p>Cuatro pasos para empezar:</p><div class="pw-o">'+S.map((s,k)=>'<button data-k="'+k+'"><span class="e">'+s[0]+'</span><span>'+(k+1)+'. '+s[1]+'<small>'+s[2]+'</small></span></button>').join('')+'</div><div class="pw-f"><button id="gdX" class="go">Entendido</button></div></div>';
+    const close=()=>ov.remove(); ov.querySelector('#gdX').onclick=close; ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+    ov.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ const t=S[+b.dataset.k][3]; if(!t) return; close(); if(t==='@wizard') wizard(); else clk(t); });
+  }
+  try{ setTimeout(()=>{ let seen=''; try{ seen=localStorage.getItem('bbtag.welcome')||''; }catch(e){} const gs=JSON.parse(localStorage.getItem('bbtag.groups')||'[]'), tm=JSON.parse(localStorage.getItem('bbtag.teams')||'[]'); if(!seen&&!gs.length&&!tm.length&&!document.getElementById('pwOv')) guide(); },1200); }catch(e){}
   /* asistente: proyecto nuevo paso a paso */
   function wizard(){
     if(document.getElementById('pwOv')) return;
@@ -11337,7 +11351,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-e · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-f · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
