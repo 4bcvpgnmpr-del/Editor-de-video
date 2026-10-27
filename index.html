@@ -5371,7 +5371,7 @@ function expLens(ctx,tl,ow,oh,src,sw0,sh0){
     ctx.restore();
     ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle=safeColor(s.color); ctx.lineWidth=Math.max(2,(s.sw||4)*ow/1000*1.4); ctx.stroke();
   });
-  if(tl.items.some(s=>s.type==='play'||s.type==='track')) playDrawAll(ctx,tl,ow,oh,EXP_LT);
+  if(tl.items.some(s=>s.type==='play'||s.type==='track'||s.type==='ptri')) playDrawAll(ctx,tl,ow,oh,EXP_LT);
 }
 async function expPlay(){
   try{ await video.play(); return true; }catch(e){}
@@ -9715,7 +9715,7 @@ $('#dlgMk').addEventListener('click',e=>{if(e.target===$('#dlgMk')) $('#dlgMk').
    Un dibujo ("tele") está ligado a un instante del vídeo. Un clip que
    contiene ese instante lo reproduce automáticamente.
    ===================================================================== */
-const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move','tline','img','pen','beam','wall','ghost','play','track'];
+const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move','tline','img','pen','beam','wall','ghost','play','track','wave','ptri'];
 function normTele(x){
   if(!x||!isFinite(x.t)) return null;
   return {id:x.id||uid(),t:+x.t,mode:x.mode==='overlay'?'overlay':'freeze',hold:clamp(+x.hold||3,0.5,60),fade:clamp(x.fade==null?0:(+x.fade||0),0,3),
@@ -10184,6 +10184,8 @@ const TOOLS=[
   ['select','Seleccionar y mover','<path d="M6 3l13 8-6 2-3 6z" fill="currentColor" stroke="none"/>'],
   ['arrow','Flecha','<path d="M4 20L19 5"/><path d="M10 5h9v9"/>'],
   ['line','Línea','<path d="M4 20L20 4"/>'],
+  ['wave','Línea ondulada: el bote (arrastra desde el balón hasta donde llega)','<path d="M3 15c2-5 3-5 5 0s3 5 5 0 3-5 5 0"/><path d="M17 9l4 2-3 3"/>'],
+  ['ptri','Triángulo que sigue a 3 jugadoras: pulsa en los pies de la primera y síguela; repites con la 2.ª y la 3.ª','<path d="M12 4L4 19h16z" stroke-dasharray="3 2"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/>'],
   ['curve','Línea curva','<path d="M4 19C7 6 15 4 20 11"/><path d="M15 11h5v-5"/>'],
   ['circle','Círculo','<circle cx="12" cy="12" r="8"/>'],
   ['rect','Rectángulo','<rect x="4" y="6" width="16" height="12" rx="1"/>'],
@@ -10332,6 +10334,14 @@ function text3d(s,i){
   o+='<text x="'+f1(x)+'" y="'+f1(y-fs*0.04)+'" font-size="'+fs+'" font-weight="900" font-family="'+FF+'" fill="#fff" fill-opacity=".22" pointer-events="none" clip-path="inset(0 0 55% 0)">'+t+'</text>';
   return '<g class="sh'+an+'" data-i="'+i+'">'+o+'</g>';
 }
+function wavePts(x1,y1,x2,y2,sw){
+  const len=Math.hypot(x2-x1,y2-y1); if(len<6) return {d:'M'+f1(x1)+' '+f1(y1)+' L'+f1(x2)+' '+f1(y2),h:null};
+  const h=headPts(x1,y1,x2,y2,sw*0.8), end=Math.max(0,len-h.L*0.7), ux=(x2-x1)/len, uy=(y2-y1)/len, nx=-uy, ny=ux;
+  const A=5+sw*1.5, wl=30+sw*5, n=Math.max(2,Math.ceil(end/3)); let d='';
+  for(let k=0;k<=n;k++){ const u=end*k/n, env=Math.min(1,u/wl)*Math.min(1,(end-u)/(wl*0.5)+0.35), o=A*Math.sin(2*Math.PI*u/wl)*Math.min(1,env);
+    d+=(k?'L':'M')+f1(x1+ux*u+nx*o)+' '+f1(y1+uy*u+ny*o)+' '; }
+  return {d:d.trim(),h};
+}
 function shapeSVG(s,i){
   if(s.type==='text'&&s.t3d) return text3d(s,i);
   if(s.est&&s.est!=='clasico'&&!(s.type==='text'&&s.est!=='neon')){ const r=shapePro(s,i,s.est); if(r) return r; }
@@ -10343,6 +10353,16 @@ function shapeSVG(s,i){
     case 'line':{
       const d='M'+f1(X(s.x1))+' '+f1(Y(s.y1))+' L'+f1(X(s.x2))+' '+f1(Y(s.y2));
       return g(hit(d)+'<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+sw+'" stroke-linecap="round"/>');
+    }
+    case 'wave':{
+      const w=wavePts(X(s.x1),Y(s.y1),X(s.x2),Y(s.y2),sw), d=w.d;
+      return g(hit('M'+f1(X(s.x1))+' '+f1(Y(s.y1))+' L'+f1(X(s.x2))+' '+f1(Y(s.y2)))+'<path d="'+d+'" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="'+f1(sw+3)+'" stroke-linecap="round" stroke-linejoin="round"/><path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+f1(sw)+'" stroke-linecap="round" stroke-linejoin="round"/>'+(w.h?'<polygon points="'+fp(w.h.pts)+'" fill="'+c+'" stroke="#fff" stroke-opacity=".85" stroke-width="2" stroke-linejoin="round"/>':''));
+    }
+    case 'ptri':{
+      const Q=(s.paths||[]).map(pp=>pp&&pp[0]?[X(pp[0][1]),Y(pp[0][2])]:null).filter(Boolean); if(!Q.length) return '';
+      const ed0=!!teleEd, r=Math.max(10,X(0.022));
+      return g((Q.length>1?'<polygon points="'+fp(Q)+'" fill="transparent" stroke="transparent" stroke-width="'+f1(r)+'" pointer-events="all"/>':'')+
+        (ed0?Q.map(q=>'<circle cx="'+f1(q[0])+'" cy="'+f1(q[1])+'" r="7" fill="'+c+'" stroke="#fff" stroke-width="2" pointer-events="all"/>').join(''):'<circle cx="'+f1(Q[0][0])+'" cy="'+f1(Q[0][1])+'" r="1" fill="transparent" pointer-events="all"/>'));
     }
     case 'tline':{
       const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2), len=Math.hypot(x2-x1,y2-y1)||1, nx=-(y2-y1)/len, ny=(x2-x1)/len, cp=9+sw*1.6;
@@ -10453,7 +10473,8 @@ function shapeSVG(s,i){
 function bboxOf(s){
   const pts=[];
   switch(s.type){
-    case 'line':case 'tline':case 'arrow':case 'move':pts.push([X(s.x1),Y(s.y1)],[X(s.x2),Y(s.y2)]);break;
+    case 'ptri':(s.paths||[]).forEach(pp=>(pp||[]).forEach(q=>pts.push([X(q[1]),Y(q[2])])));if(!pts.length) pts.push([0,0]);break;
+    case 'line':case 'wave':case 'tline':case 'arrow':case 'move':pts.push([X(s.x1),Y(s.y1)],[X(s.x2),Y(s.y2)]);break;
     case 'curve':pts.push([X(s.x1),Y(s.y1)],[X(s.x2),Y(s.y2)],[X(s.cx),Y(s.cy)]);break;
     case 'cone':{const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2),len=Math.hypot(x2-x1,y2-y1)||1,nx=-(y2-y1)/len,ny=(x2-x1)/len,h=len*0.38;pts.push([x1,y1],[x2+nx*h,y2+ny*h],[x2-nx*h,y2-ny*h]);break;}
     case 'circle':case 'spot':case 'lens':{const r=X(s.r);pts.push([X(s.cx)-r,Y(s.cy)-r],[X(s.cx)+r,Y(s.cy)+r]);break;}
@@ -10472,7 +10493,7 @@ function bboxOf(s){
 }
 function handlesOf(s){
   switch(s.type){
-    case 'arrow':case 'line':case 'tline':case 'move':case 'cone':case 'wall':case 'ghost':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2]];
+    case 'arrow':case 'line':case 'wave':case 'tline':case 'move':case 'cone':case 'wall':case 'ghost':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2]];
     case 'curve':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2],['c',s.cx,s.cy]];
     case 'track':{ const h=[['r',s.cx+(s.r||0.024),s.cy]], P=s.pts||[]; if(P.length>5){ const st=Math.max(1,Math.round(P.length/10)); for(let i=st;i<P.length;i+=st) h.push(['k'+i,P[i][1],P[i][2]]); h.push(['k'+(P.length-1),P[P.length-1][1],P[P.length-1][2]]); } return h; }
     case 'circle':case 'spot':case 'lens':case 'beam':return [['r',s.cx+(s.r||0.024),s.cy]];
@@ -10538,6 +10559,46 @@ function trackDraw(ctx,s,W,H,lt){
     ctx.fillStyle='rgba(255,255,255,.2)'; ctx.beginPath(); ctx.moveTo(x0+w*0.15,y0); ctx.lineTo(x0+w*0.4,y0); ctx.lineTo(x0+w*0.1,y0+h*0.45); ctx.lineTo(x0,y0+h*0.45); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
+}
+/* ===== TRIÁNGULO QUE SIGUE A VARIAS JUGADORAS: cada vértice es el recorrido de una jugadora ===== */
+function ptriDraw(ctx,s,W,H,lt){
+  const col=safeColor(s.color)||'#ffd23f', P=(s.paths||[]).map(pp=>trkPos({pts:pp},Math.max(0,lt))).filter(Boolean).map(q=>[q[0]*W,q[1]*H]); if(!P.length) return;
+  const h=col.replace('#',''), n=h.length===3?h.split('').map(x=>x+x).join(''):h.slice(0,6), rgba=a=>'rgba('+parseInt(n.slice(0,2),16)+','+parseInt(n.slice(2,4),16)+','+parseInt(n.slice(4,6),16)+','+a+')';
+  const lw=Math.max(3,(s.sw||4)*W/1000*1.4), R=Math.max(8,0.022*W);
+  ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
+  if(P.length>1){
+    ctx.beginPath(); P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); if(P.length>2) ctx.closePath();
+    if(P.length>2){ ctx.fillStyle=rgba(0.26); ctx.fill(); }
+    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=lw+3; ctx.stroke();
+    ctx.shadowColor=col; ctx.shadowBlur=lw*2; ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.stroke(); ctx.shadowBlur=0;
+  }
+  P.forEach(q=>{ ctx.fillStyle=rgba(0.3); ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(2,R*0.12); ctx.beginPath(); ctx.ellipse(q[0],q[1],R,R*0.36,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(q[0],q[1],Math.max(3,lw*0.9),0,Math.PI*2); ctx.fill(); });
+  ctx.restore();
+}
+function startPtri(p){
+  const ed=teleEd, tl=ed.tele, t0=tl.t;
+  let s=ed.ptri&&ed.ptri.tl===tl&&tl.items.includes(ed.ptri.s)?ed.ptri.s:null;
+  if(!s){ s={type:'ptri',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,paths:[]}; tl.items.push(s); ed.ptri={tl,s}; }
+  const idx=tl.items.indexOf(s), path=[[0,p.x,p.y]];
+  const oldRate=video.playbackRate, slow=!(window.__srcMode&&window.__srcMode()!=='file');
+  try{ video.playbackRate=slow?0.35:1; }catch(e){}
+  s.paths.push(path); TRK.on=true; teleKey=''; let last=0;
+  try{ if(Math.abs(video.currentTime-t0)>0.05) video.currentTime=t0; }catch(e){}
+  video.play().catch(()=>{});
+  toast('Sigue a la jugadora '+s.paths.length+' de 3 con el dedo o el ratón. Suelta para terminar.');
+  const mv=m=>{ const q=svgPt(m), lt=video.currentTime-t0; if(lt<last+0.04) return; last=lt; path.push([+lt.toFixed(3),q.x,q.y]); tl.rev++; };
+  listen(mv,()=>{
+    try{ video.pause(); video.currentTime=t0; video.playbackRate=oldRate; }catch(e){}
+    TRK.on=false;
+    if(path.length>=4){ const S=path.map((q,i)=>{ if(i===0||i===path.length-1) return q.slice(); let a=0,b=0,c=0; for(let k=Math.max(0,i-2);k<=Math.min(path.length-1,i+2);k++){ a+=path[k][1]; b+=path[k][2]; c++; } return [q[0],a/c,b/c]; }); path.length=0; S.forEach(q=>path.push(q)); }
+    if(s.paths.length>=3||path.length<2){
+      if(path.length<2){ s.paths.pop(); if(!s.paths.length){ tl.items.splice(idx,1); ed.ptri=null; toast('Para que siga a la jugadora, arrastra con ella mientras el vídeo avanza.'); tl.rev++; teleKey=''; return; } }
+      const mx=Math.max(...s.paths.map(pp=>pp[pp.length-1][0]));
+      tl.hold=clamp(Math.ceil(mx+1),Math.max(1,tl.hold||0),60); tl.mode='overlay'; ensureTele(tl); ed.ptri=null; ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
+      toast('Triángulo listo. Pulsa ▶ para verlo.');
+    } else { tl.rev++; teleKey=''; toast('Vértice '+s.paths.length+' listo. Ahora pulsa en los pies de la jugadora '+(s.paths.length+1)+'.'); }
+  });
 }
 /* grabar el seguimiento: pulsa en los pies y sigue a la jugadora mientras el vídeo va a cámara lenta */
 function trkFinish(ed,tl,s,idx){
@@ -10791,7 +10852,7 @@ function playDraw(ctx,s,W,H,lt){
   ctx.save(); ctx.lineWidth=Math.max(1.5,w/300); ctx.strokeStyle='rgba(255,255,255,.35)'; const r2=Math.min(14,w*0.04); ctx.beginPath();ctx.moveTo(x+r2,y);ctx.arcTo(x+w,y,x+w,y+h,r2);ctx.arcTo(x+w,y+h,x,y+h,r2);ctx.arcTo(x,y+h,x,y,r2);ctx.arcTo(x,y,x+w,y,r2);ctx.closePath();ctx.stroke();ctx.restore();
 }
 /* dibuja todas las jugadas de un dibujo; lt = segundos desde que empieza el dibujo */
-function playDrawAll(ctx,tl,W,H,lt){ tl.items.forEach(s=>{ if(s.type==='play') playDraw(ctx,s,W,H,lt); else if(s.type==='track') trackDraw(ctx,s,W,H,lt); }); }
+function playDrawAll(ctx,tl,W,H,lt){ tl.items.forEach(s=>{ if(s.type==='play') playDraw(ctx,s,W,H,lt); else if(s.type==='track') trackDraw(ctx,s,W,H,lt); else if(s.type==='ptri') ptriDraw(ctx,s,W,H,lt); }); }
 /* cargar un archivo .jugada.json en una figura */
 function playPick(tl,idx){ pmkAbrir(tl,idx); }
 function playPickFile(tl,idx,onDone){
@@ -10922,7 +10983,7 @@ function pmkCerrar(ok){
   cancelAnimationFrame(PMK.raf); PMK.raf=0; if(d&&d.open) d.close();
 }
 /*FINPLAYMK*/
-function hasLens(tl){return tl&&tl.items.some(s=>s.type==='lens'||s.type==='track'||(s.type==='play'&&s.play));}
+function hasLens(tl){return tl&&tl.items.some(s=>s.type==='lens'||s.type==='track'||s.type==='ptri'||(s.type==='play'&&s.play));}
 function drawTeleSVG(tl){
   if(!tl){tele.hidden=true;teleSvg.innerHTML='';clearLens();return;}
   const ed=(teleEd&&teleEd.tele===tl)?teleEd:null;
@@ -10962,7 +11023,7 @@ function drawLens(tl){
     try{ctx.drawImage(video,s.cx*vw_-sw_/2,s.cy*vh_-sh_/2,sw_,sh_,cx-r,cy-r,2*r,2*r);}catch(e){}
     ctx.restore();
   });
-  if(tl.items.some(s=>s.type==='play'||s.type==='track')){
+  if(tl.items.some(s=>s.type==='play'||s.type==='track'||s.type==='ptri')){
     let lt;
     if(teleEd&&TRK.on) lt=video.currentTime-tl.t;
     else if(teleEd) lt=(performance.now()/1000)%Math.max(1,(tl.hold||3));
@@ -11112,6 +11173,7 @@ function translated(o,dx,dy){
   ['y1','y2','y','cy'].forEach(k=>{if(typeof s[k]==='number') s[k]+=dy;});
   if(Array.isArray(s.pts)) s.pts=s.pts.map(p=>[p[0]+dx,p[1]+dy]);
   if(s.type==='track'&&Array.isArray(o.pts)) s.pts=o.pts.map(p=>[p[0],p[1]+dx,p[2]+dy]);
+  if(s.type==='ptri') s.paths=(o.paths||[]).map(pp=>pp.map(p=>[p[0],p[1]+dx,p[2]+dy]));
   return s;
 }
 function svgPt(e){const r=teleSvg.getBoundingClientRect();return {x:clamp((e.clientX-r.left)/r.width,0,1),y:clamp((e.clientY-r.top)/r.height,0,1)};}
@@ -11135,6 +11197,7 @@ teleSvg.addEventListener('pointerdown',e=>{
   if(ed.tool==='num') return addNumAt(p);
   if(ed.tool==='img') return addImgAt(p);
   if(ed.tool==='track') return startTrack(p);
+  if(ed.tool==='ptri') return startPtri(p);
   startDraw(ed.tool,p);
 });
 teleSvg.addEventListener('dblclick',e=>{
@@ -11147,7 +11210,7 @@ teleSvg.addEventListener('dblclick',e=>{
 function startDraw(type,p){
   const ed=teleEd, tl=ed.tele, base={type,color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim};
   let s;
-  if(['arrow','line','tline','move','cone','wall','ghost'].includes(type)) s=Object.assign(base,{x1:p.x,y1:p.y,x2:p.x,y2:p.y});
+  if(['arrow','line','wave','tline','move','cone','wall','ghost'].includes(type)) s=Object.assign(base,{x1:p.x,y1:p.y,x2:p.x,y2:p.y});
   else if(type==='curve') s=Object.assign(base,{x1:p.x,y1:p.y,x2:p.x,y2:p.y,cx:p.x,cy:p.y});
   else if(['circle','spot','lens','beam'].includes(type)) s=Object.assign(base,{cx:p.x,cy:p.y,r:0},type==='lens'?{zoom:2}:{});
   else if(type==='rect'||type==='play') s=Object.assign(base,{x:p.x,y:p.y,rw:0,rh:0});
@@ -11541,7 +11604,7 @@ function ceDrawLens(tl){
     try{ctx.drawImage(v,s.cx*vw_-sw_/2,s.cy*vh_-sh_/2,sw_,sh_,cx-r,cy-r,2*r,2*r);}catch(e){}
     ctx.restore();
   });
-  if(tl.items.some(s=>s.type==='play'||s.type==='track')) playDrawAll(ctx,tl,cw,ch,ce.freeze&&ce.freeze.tele===tl?tl.hold-(ce.freeze.until-ce.win.performance.now())/1000:v.currentTime-tl.t);
+  if(tl.items.some(s=>s.type==='play'||s.type==='track'||s.type==='ptri')) playDrawAll(ctx,tl,cw,ch,ce.freeze&&ce.freeze.tele===tl?tl.hold-(ce.freeze.until-ce.win.performance.now())/1000:v.currentTime-tl.t);
 }
 function ceTick(){
   const ev=ceEv(); if(!ev){ceClose();return;}
@@ -11576,7 +11639,7 @@ function ceTick(){
     if(!tl){tw.hidden=true;$('#ceSvg').innerHTML='';ceDrawLens(null);}
     else{tw.hidden=false;$('#ceSvg').setAttribute('viewBox','0 0 '+SW+' '+f1(SH));$('#ceSvg').innerHTML=teleMarkup(tl);}
   }
-  if(tl&&tl.items.some(s=>s.type==='lens'||s.type==='track'||(s.type==='play'&&s.play))) ceDrawLens(tl);
+  if(tl&&tl.items.some(s=>s.type==='lens'||s.type==='track'||s.type==='ptri'||(s.type==='play'&&s.play))) ceDrawLens(tl);
 }
 function ceMeta(ev){
   const sel=$('#ceCat'), box=$('#ceDesc'); if(!sel||!box) return;
