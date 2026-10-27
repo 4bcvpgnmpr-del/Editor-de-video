@@ -5079,6 +5079,7 @@ requestAnimationFrame(loop);
 let lastFile=null;
 function loadFile(file,fromLib){
   if(!file) return;
+  try{ SFILES[file.name+'|'+file.size]=file; }catch(e){}
   if(file.type&&!file.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm|mkv|avi|mts|m2ts|3gp)$/i.test(file.name)){toast('Ese archivo no es un vídeo ('+file.type+').');return;}
   if(window.__extOff) window.__extOff();
   if(objectURL) URL.revokeObjectURL(objectURL);
@@ -5198,21 +5199,24 @@ async function vidFromHandle(key){
   }catch(e){ return null; }
 }
 /* el archivo de un partido guardado: de «Mis vídeos», de la ubicación recordada o, si no hay más remedio, se pide una vez */
+const SFILES={};   /* archivos grandes elegidos en esta sesión */
 async function vidFile(key){
+  if(SFILES[key]) return SFILES[key];
   try{ const v=await vdbTx('readonly',st=>st.get(key)); if(v&&v.blob) return new File([v.blob],v.name,{type:v.type||'video/mp4'}); }catch(e){}
   try{ const f=await vidFromHandle(key); if(f) return f; }catch(e){}
   return null;
 }
-function vidAsk(key,title){
+function vidAsk(key,title,doc){
   return new Promise(res=>{
+    const DD=(doc&&doc!==document)?doc:null; DLGDOC=DD;
     const i=String(key).lastIndexOf('|'), name=i>=0?key.slice(0,i):String(key), size=i>=0?+key.slice(i+1):0;
     const mb=size?(size>=1073741824?(size/1073741824).toFixed(2)+' GB':Math.round(size/1048576)+' MB'):'';
     const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Falta el vídeo de «'+esc(title)+'»</h3><p style="margin:0 0 12px;color:var(--muted)">Para añadir sus cortes, elige una vez este archivo (se recordará):</p><p style="margin:0 0 12px"><b>'+esc(name)+'</b>'+(mb?' · '+mb:'')+'</p><p id="vaE" style="color:var(--danger,#e55);margin:0 0 8px" hidden></p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="vaNo">Ahora no</button><button class="btn primary" id="vaGo">Elegir el vídeo…</button></div>');
-    const done=f=>{ expClose(); res(f); }, bad=n=>{ const e=d.querySelector('#vaE'); e.hidden=false; e.textContent='Ese archivo no coincide («'+n+'»). Tiene que ser «'+name+'».'; };
+    const done=f=>{ if(f) SFILES[key]=f; DLGDOC=DD; expClose(); res(f); }, bad=n=>{ const e=d.querySelector('#vaE'); e.hidden=false; e.textContent='Ese archivo no coincide («'+n+'»). Tiene que ser «'+name+'».'; };
     d.querySelector('#vaNo').onclick=()=>done(null);
     d.querySelector('#vaGo').onclick=async()=>{
       if(FSA()){ const f=await pickWithHandle(); if(f===null) return; if(f){ if(f.name+'|'+f.size===key) done(f); else bad(f.name); return; } }
-      const inp=document.createElement('input'); inp.type='file'; inp.accept='video/*,.mp4,.m4v,.mov,.webm,.mkv,.mts'; inp.style.display='none'; document.body.appendChild(inp);
+      const D_=d.ownerDocument, inp=D_.createElement('input'); inp.type='file'; inp.accept='video/*,.mp4,.m4v,.mov,.webm,.mkv,.mts'; inp.style.display='none'; D_.body.appendChild(inp);
       inp.onchange=()=>{ const f=inp.files&&inp.files[0]; inp.remove(); if(!f) return; if(f.name+'|'+f.size===key) done(f); else bad(f.name); };
       inp.click();
     };
@@ -9867,11 +9871,11 @@ function pjOthers(){
 }
 const pjHasGroup=()=>{ try{ const a=lsGet('bbtag.group.active'), g=JSON.parse(lsGet('bbtag.groups')||'[]').find(x=>x&&x.id===a); return !!(g&&g.keys.length>=2&&videoKey&&g.keys.includes(videoKey)); }catch(e){ return false; } };
 /* añade cortes de otros partidos a la playlist actual: el vídeo se busca solo en «Mis vídeos» */
-async function addXClips(list){
+async function addXClips(list,doc){
   let p=curPl(); if(!p){ p={id:uid(),name:'Montaje',folder:'',items:[]}; playlists.push(p); plCur=p.id; }
   const files={}, falta=[]; let n=0;
   for(const r of list){
-    if(!(r.k in files)){ files[r.k]=await vidFile(r.k); if(!files[r.k]) files[r.k]=await vidAsk(r.k,r.title); if(!files[r.k]) falta.push(r.title); }
+    if(!(r.k in files)){ files[r.k]=await vidFile(r.k); if(!files[r.k]) files[r.k]=await vidAsk(r.k,r.title,doc); if(!files[r.k]) falta.push(r.title); }
     const f=files[r.k]; if(!f) continue;
     const o=JSON.parse(lsGet('bbtag.project.'+r.k)||'null')||{}, sd=tm=>(o.meta&&o.meta[tm]&&o.meta[tm].name)||(tm==='R'?'Rival':'Local');
     const x=extFromEv(r.e,r.title,f.name,f.size,sd(r.e.team==='R'?'R':'L'),r.e.player?'#'+r.e.player:''); externals.push(x); extFiles[x.id]=f; p.items.push('x:'+x.id); n++;
@@ -9997,15 +10001,15 @@ $('#plAddAll').onclick=async()=>{
   const p=curPl(); if(!p) return;
   let n=0; shownAv.slice().forEach(id=>{if(!p.items.includes(id)){p.items.push(id);n++;}});
   const xs=shownAvX.slice(); if(n) commit();
-  if(xs.length){ const m=await addXClips(xs); n+=m; return; }
+  if(xs.length){ const m=await addXClips(xs,$('#plAddAll').ownerDocument); n+=m; return; }
   toast(n?n+' clips añadidos a «'+p.name+'».':'No había clips que añadir.');
 };
 $('#plAvail').addEventListener('click',e=>{
   const li=e.target.closest('.avx'); if(!li) return; e.stopImmediatePropagation(); e.stopPropagation();
   if(!e.target.closest('[data-act="addx"]')) return;
-  const r=shownAvX.find(x=>x.k===li.dataset.vk&&x.e.id===li.dataset.id); if(r) addXClips([r]);
+  const r=shownAvX.find(x=>x.k===li.dataset.vk&&x.e.id===li.dataset.id); if(r) addXClips([r],li.ownerDocument);
 },true);
-$('#plAvail').addEventListener('dblclick',e=>{ const li=e.target.closest('.avx'); if(!li) return; e.stopImmediatePropagation(); e.stopPropagation(); const r=shownAvX.find(x=>x.k===li.dataset.vk&&x.e.id===li.dataset.id); if(r) addXClips([r]); },true);
+$('#plAvail').addEventListener('dblclick',e=>{ const li=e.target.closest('.avx'); if(!li) return; e.stopImmediatePropagation(); e.stopPropagation(); const r=shownAvX.find(x=>x.k===li.dataset.vk&&x.e.id===li.dataset.id); if(r) addXClips([r],li.ownerDocument); },true);
 { const pj=$('#avPj'); if(pj) pj.querySelector('input').onchange=e=>{ lsSet('bbtag.pjmode',e.target.checked?'1':'0'); mfSig=''; renderPlaylists(); try{ renderList(); }catch(_){} }; }
 /* nombre en línea (funciona igual en la ventana principal y en la aparte) */
 let askInCb=null;
