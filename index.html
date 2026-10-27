@@ -3831,6 +3831,7 @@ function loadCfg(){
 let cfg=loadCfg();
 let events=[];      /* etiquetas / clips */
 const CK=new Set();   /* clips marcados con casilla */
+const CKX=new Map();  /* cortes de OTROS partidos del proyecto marcados: clave 'partido#id' */
 let stints=[];       /* quintetos en pista: {id,team,players[],from,to|null} */
 let markers=[];     /* marcadores puntuales */
 let teles=[];       /* dibujos y freeze frames, ligados a un instante del vídeo */
@@ -4847,25 +4848,26 @@ $('#teamR').onclick=()=>setTeam('R');
 function bulkRender(){
   [...CK].forEach(id=>{ if(!events.some(e=>e.id===id)) CK.delete(id); });
   const b=document.getElementById('bulk'); if(!b) return;
-  b.hidden=!CK.size; document.getElementById('bkN').textContent=CK.size+(CK.size===1?' marcado':' marcados');
+  const nT=CK.size+CKX.size; b.hidden=!nT; document.getElementById('bkN').textContent=nT+(nT===1?' marcado':' marcados');
 }
 const ckList=()=>{ const m=new Set(CK); return sortedFiltered().filter(e=>m.has(e.id)).concat(events.filter(e=>m.has(e.id)&&!sortedFiltered().includes(e))); };
 $('#list').addEventListener('change',e=>{
   const c=e.target.closest('.rk'); if(!c) return;
-  if(c.classList.contains('rk-all')){ const f=sortedFiltered(); if(c.checked) f.forEach(x=>CK.add(x.id)); else f.forEach(x=>CK.delete(x.id)); renderList(); return; }
+  if(c.classList.contains('rk-all')){ const f=sortedFiltered(); if(c.checked) f.forEach(x=>CK.add(x.id)); else f.forEach(x=>CK.delete(x.id)); if(window.__xMarkAll) window.__xMarkAll(c.checked); renderList(); return; }
   const li=c.closest('.ev'); if(!li) return;
   if(c.checked) CK.add(li.dataset.id); else CK.delete(li.dataset.id);
   bulkRender(); const f=sortedFiltered(), a=document.querySelector('.rk-all'); if(a) a.checked=f.length>0&&f.every(x=>CK.has(x.id));
 });
-$('#bkNone').onclick=()=>{CK.clear();renderList();};
-$('#bkPlay').onclick=()=>{const l=ckList(); if(l.length) playClip(l[0].id,l.map(x=>x.id));};
+$('#bkNone').onclick=()=>{CK.clear();CKX.clear();renderList();};
+$('#bkPlay').onclick=()=>{const l=ckList(); if(l.length) playClip(l[0].id,l.map(x=>x.id)); else if(CKX.size) toast('Para ver cortes de otro partido, pulsa 🎞 y se arma un vídeo con todos los marcados.');};
 $('#bkStar').onclick=()=>{const l=ckList(); const all=l.every(x=>x.star); l.forEach(x=>x.star=!all); commit(); renderList();};
-$('#bkExp').onclick=()=>{DLGDOC=null; const l=ckList(); if(l.length) openExport(l,'seleccion');};
+$('#bkExp').onclick=()=>{DLGDOC=null; if(CKX.size){ window.__xProduce&&window.__xProduce(true); return; } const l=ckList(); if(l.length) openExport(l,'seleccion');};
 $('#bkDel').onclick=()=>{
   const l=ckList(); if(!l.length) return; if(!confirm('¿Borrar '+l.length+' clips?')) return;
   const ids=new Set(l.map(x=>x.id)); events=events.filter(x=>!ids.has(x.id)); playlists.forEach(p=>{p.items=p.items.filter(x=>!ids.has(x));}); teles.forEach(t=>{if(ids.has(t.clipId)) t.clipId='';}); if(ids.has(selectedId)) selectedId=null; CK.clear(); commit(); renderDetail(); toast(l.length+' clips borrados',{label:'Deshacer',fn:undo});
 };
 $('#bkPl').onclick=()=>{
+  if(CKX.size){ window.__xProduce&&window.__xProduce(false); return; }
   const l=ckList(); if(!l.length) return; const p=curPl();
   if(!p){toast('Primero crea una playlist en la mesa de producción.',{label:'Abrir mesa',fn:openProd});return;}
   let n=0; l.slice().sort((a,b)=>a.t-b.t).forEach(x=>{ if(addToPlaylist(p.id,x.id)) n++; }); commit(); toastPl(n+' clips añadidos a «'+p.name+'».'); CK.clear(); renderList();
@@ -8621,13 +8623,13 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     const pred=filtPred(), order=g.keys, ci=order.indexOf(videoKey);
     const mk=(k)=>{
       const rows=(k===videoKey?events:evsOf(k)).filter(pred).slice().sort((a,b)=>a.t-b.t);
-      const hd=document.createElement('li'); hd.className='evg'+(k===videoKey?' cur':''); hd.textContent=(k===videoKey?'▶ Abierto · ':'')+titleOf(k)+' · '+rows.length+' cortes';
+      const hd=document.createElement('li'); hd.className='evg'+(k===videoKey?' cur':''); hd.innerHTML=(k!==videoKey&&rows.length?'<input type="checkbox" class="rkg" data-vk="'+esc(k)+'" title="Marcar todos los cortes de este partido" style="width:15px;height:15px;margin:0 8px 0 0;vertical-align:-3px;accent-color:var(--accent);cursor:pointer"'+(rows.every(e=>CKX.has(k+'#'+e.id))?' checked':'')+'>':'')+esc((k===videoKey?'▶ Abierto · ':'')+titleOf(k)+' · '+rows.length+' cortes');
       const frag=document.createDocumentFragment(); frag.appendChild(hd);
       if(k!==videoKey) rows.forEach(e=>{
         const inf=info(e), pl=e.player!==''?'#'+e.player:'', d=[descText(e).split(' · ').join(', '),pl].filter(Boolean).join(', ');
         const li=document.createElement('li'); li.className='ev evx t'+e.team; li.dataset.vk=k; li.dataset.id=e.id; li.tabIndex=0; li.title=titleOf(k)+' · '+inf.label+' · '+fmt(e.t)+' (pulsa para ir a este partido y a este corte)';
         li.style.cssText='--c:'+safeColor(inf.color)+';--ink:'+inkOf(inf.color);
-        li.innerHTML='<span class="num">↗</span><span class="cat">'+esc(evName(e))+'</span><span class="dsc2">'+(d?esc(d):'<span style="color:var(--muted)">—</span>')+'</span><span class="t">'+fmt(e.t)+'</span><span class="acts"><button data-go="play" title="Ir y ver el corte" aria-label="Ir y ver el corte">'+ICON.clip+'</button></span>';
+        li.innerHTML='<span class="num"><input type="checkbox" class="rkx" aria-label="Marcar corte" style="width:15px;height:15px;margin:0;accent-color:var(--accent);cursor:pointer"'+(CKX.has(k+'#'+e.id)?' checked':'')+'></span><span class="cat">'+esc(evName(e))+'</span><span class="dsc2">'+(d?esc(d):'<span style="color:var(--muted)">—</span>')+'</span><span class="t">'+fmt(e.t)+'</span><span class="acts"><button data-go="play" title="Ir y ver el corte" aria-label="Ir y ver el corte">'+ICON.clip+'</button></span>';
         frag.appendChild(li);
       });
       return {k,frag,n:rows.length};
@@ -8651,9 +8653,41 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){}
     try{ if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre ese vídeo desde «Mis vídeos».'); }
   }
-  const block=e=>{ const x=e.target.closest&&e.target.closest('.evx'); if(!x) return false; e.stopImmediatePropagation(); e.stopPropagation(); return x; };
+  const block=e=>{ const x=e.target.closest&&e.target.closest('.evx'); if(!x) return false; if(e.target.closest('.rkx')){ e.stopPropagation(); return false; } e.stopImmediatePropagation(); e.stopPropagation(); return x; };
   $l.addEventListener('click',e=>{ const x=block(e); if(!x) return; e.preventDefault(); go(x.dataset.vk,x.dataset.id,!!e.target.closest('[data-go]')); },true);
   $l.addEventListener('dblclick',e=>{ block(e); },true);
+  $l.addEventListener('change',e=>{
+    const c=e.target.closest&&e.target.closest('.rkx,.rkg'); if(!c) return;
+    if(c.classList.contains('rkx')){ const li=c.closest('.evx'), k=li.dataset.vk, ev=evsOf(k).find(x=>x.id===li.dataset.id); if(!ev) return; if(c.checked) CKX.set(k+'#'+ev.id,{k,e:ev}); else CKX.delete(k+'#'+ev.id); }
+    else { const k=c.dataset.vk; evsOf(k).filter(filtPred()).forEach(ev=>{ if(c.checked) CKX.set(k+'#'+ev.id,{k,e:ev}); else CKX.delete(k+'#'+ev.id); }); renderList(); }
+    bulkRender();
+  },true);
+  video.addEventListener('loadedmetadata',()=>{ CKX.clear(); });
+  window.__xMarkAll=on=>{ const g=act(); if(!g||g.keys.length<2||!videoKey||!g.keys.includes(videoKey)||!mode()) return; g.keys.forEach(k=>{ if(k===videoKey) return; evsOf(k).filter(filtPred()).forEach(ev=>{ if(on) CKX.set(k+'#'+ev.id,{k,e:ev}); else CKX.delete(k+'#'+ev.id); }); }); };
+  /* producir un vídeo (o añadir a la playlist) con los cortes marcados de TODOS los partidos */
+  window.__xProduce=async function(produce){
+    const g=act(), order=g?g.keys:[];
+    const rows=[]; ckList().forEach(e=>rows.push({k:videoKey,e,loc:true})); CKX.forEach(v=>rows.push({k:v.k,e:v.e,loc:false}));
+    if(!rows.length) return;
+    const need=[...new Set(rows.filter(r=>!r.loc).map(r=>r.k))], files={}, falta=[];
+    for(const k of need){ let v=null; try{ v=await vdbTx('readonly',st=>st.get(k)); }catch(e){} if(v&&v.blob) files[k]=new File([v.blob],v.name,{type:v.type||'video/mp4'}); else falta.push(titleOf(k)); }
+    if(falta.length&&!confirm('No encuentro el vídeo de: '+falta.join(', ')+'.\n(Si lo abriste con un enlace o lo borraste de «Mis vídeos»).\n\n¿Seguir sin esos cortes?')) return;
+    const use=rows.filter(r=>r.loc||files[r.k]); if(!use.length){ toast('Ningún corte tiene su vídeo disponible.'); return; }
+    use.sort((a,b)=>{ const ia=order.indexOf(a.k), ib=order.indexOf(b.k); return (ia-ib)||(a.e.t-b.e.t); });
+    const items=[];
+    use.forEach(r=>{
+      if(r.loc){ items.push(r.e.id); return; }
+      const o=JSON.parse(lsGet('bbtag.project.'+r.k)||'null')||{}, v=files[r.k], sd=t=>(o.meta&&o.meta[t]&&o.meta[t].name)||(t==='R'?'Rival':'Local');
+      const x=extFromEv(r.e,titleOf(r.k),v.name,v.size,sd(r.e.team==='R'?'R':'L'),r.e.player?'#'+r.e.player:''); externals.push(x); extFiles[x.id]=v; items.push('x:'+x.id);
+    });
+    if(produce){
+      const p={id:uid(),name:('Selección · '+items.length+' cortes').slice(0,60),folder:'',items}; playlists.push(p); plCur=p.id; commit();
+      DLGDOC=null; openExport(plExpand(p),p.name);
+    } else {
+      let p=curPl(); if(!p){ p={id:uid(),name:'Montaje',folder:'',items:[]}; playlists.push(p); plCur=p.id; }
+      items.forEach(i=>{ if(!p.items.includes(i)) p.items.push(i); }); commit(); toastPl(items.length+' clips añadidos a «'+p.name+'».'); CK.clear(); CKX.clear(); renderList();
+    }
+  };
   $l.addEventListener('keydown',e=>{ const x=block(e); if(x&&e.key==='Enter'){ e.preventDefault(); go(x.dataset.vk,x.dataset.id,true); } },true);
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     const g=window.__pjGo; if(!g||videoKey!==g.k) return; window.__pjGo=null;
@@ -10629,6 +10663,68 @@ function trkFinish(ed,tl,s,idx){
   s.cx=s.pts[0][1]; s.cy=s.pts[0][2];
   tl.mode='overlay'; ensureTele(tl); ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
 }
+/* ===== IA: detecta personas (YOLOv8 en el propio navegador) y sigue a la elegida ===== */
+const AI={ses:null,loading:null};
+async function aiLoad(){
+  if(AI.ses) return AI.ses;
+  if(!AI.loading) AI.loading=(async()=>{
+    if(!window.ort) await new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src='ai/ort.wasm.min.js'; sc.onload=res; sc.onerror=()=>rej(new Error('No se pudo cargar la IA')); document.head.appendChild(sc); });
+    ort.env.wasm.numThreads=1; ort.env.wasm.wasmPaths=new URL('ai/',location.href).href;
+    AI.ses=await ort.InferenceSession.create('ai/yolov8n.onnx',{executionProviders:['wasm']});
+    return AI.ses;
+  })();
+  try{ return await AI.loading; }catch(e){ AI.loading=null; throw e; }
+}
+/* detecta personas en un recorte del vídeo (rx,ry,rw,rh en píxeles del vídeo); devuelve cajas en coordenadas del lienzo de 640 y del vídeo */
+async function aiDetect(ses,cv,cx,roi,thr){
+  const S=640, sc=Math.min(S/roi.w,S/roi.h), dw=roi.w*sc, dh=roi.h*sc, px=(S-dw)/2, py=(S-dh)/2;
+  cx.fillStyle='#727272'; cx.fillRect(0,0,S,S);
+  cx.drawImage(video,roi.x,roi.y,roi.w,roi.h,px,py,dw,dh);
+  const img=cx.getImageData(0,0,S,S).data, n=S*S, f=new Float32Array(3*n);
+  for(let i=0;i<n;i++){ f[i]=img[i*4]/255; f[n+i]=img[i*4+1]/255; f[2*n+i]=img[i*4+2]/255; }
+  const out=await ses.run({[ses.inputNames[0]]:new ort.Tensor('float32',f,[1,3,S,S])});
+  const o=out[ses.outputNames[0]], d=o.data, N=o.dims[2], c=[];
+  for(let i=0;i<N;i++){ const sco=d[4*N+i]; if(sco<(thr||0.25)) continue; const w=d[2*N+i], h=d[3*N+i]; if(h<S*0.03) continue; c.push({x:d[i],y:d[N+i],w,h,s:sco}); }
+  c.sort((a,b)=>b.s-a.s);
+  const keep=[]; c.forEach(a=>{ for(const b of keep){ const ix=Math.max(0,Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2)), iy=Math.max(0,Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2)), it=ix*iy; if(it/(a.w*a.h+b.w*b.h-it)>0.5) return; } keep.push(a); });
+  keep.forEach(b=>{ b.vx=(roi.x+(b.x-px)/sc); b.fy=(roi.y+(b.y+b.h/2-py)/sc); b.vh=b.h/sc; });   /* pies (centro de la base) en píxeles del vídeo y alto en píxeles del vídeo */
+  return {boxes:keep,img};
+}
+/* aspecto de la camiseta: histograma de color del torso */
+function aiSig(img,b){
+  const S=640, h=new Float32Array(64); let tot=0;
+  const x0=Math.round(b.x-b.w*0.3), x1=Math.round(b.x+b.w*0.3), y0=Math.round(b.y-b.h*0.35), y1=Math.round(b.y+b.h*0.05);
+  for(let y=Math.max(0,y0);y<Math.min(S,y1);y++) for(let x=Math.max(0,x0);x<Math.min(S,x1);x++){ const q=(y*S+x)*4; h[(img[q]>>6)*16+(img[q+1]>>6)*4+(img[q+2]>>6)]++; tot++; }
+  if(tot) for(let i=0;i<64;i++) h[i]/=tot; return h;
+}
+const aiDist=(a,b)=>{ let s=0; for(let i=0;i<64;i++) s+=Math.min(a[i],b[i]); return 1-s; };
+async function aiTrackRun(p,secs,t0,ui){
+  const vw=video.videoWidth, vh=video.videoHeight; if(!vw||!vh) return null;
+  ui.msg('Cargando la IA…'); const ses=await aiLoad();
+  const cv=document.createElement('canvas'); cv.width=cv.height=640; const cx=cv.getContext('2d',{willReadFrequently:true});
+  const seek=async t=>{ await new Promise(res=>{ let d=false; const f=()=>{ if(d) return; d=true; video.removeEventListener('seeked',f); res(); }; video.addEventListener('seeked',f); try{ video.currentTime=Math.min(t,(video.duration||t)-0.01); }catch(e){} setTimeout(f,1500); }); };
+  const rw0=Math.min(vw,vw*0.34), roiAt=(x,y,w)=>{ const rw=Math.min(vw,w), rh=Math.min(vh,rw); return {x:Math.max(0,Math.min(vw-rw,x-rw/2)),y:Math.max(0,Math.min(vh-rh,y-rh*0.72)),w:rw,h:rh}; };
+  let fx=p.x*vw, fy=p.y*vh;
+  await seek(t0);
+  let det=await aiDetect(ses,cv,cx,roiAt(fx,fy,rw0));
+  let best=null, bd=1e9; det.boxes.forEach(b=>{ const d=Math.hypot(b.vx-fx,b.fy-fy)/b.vh; if(d<bd){ bd=d; best=b; } });
+  if(!best||bd>0.9) return null;                                  /* no hay nadie donde pulsó */
+  let sig=aiSig(det.img,best), hRef=best.vh, vx=0, vy=0, lost=0; fx=best.vx; fy=best.fy;
+  const pts=[[0,fx/vw,fy/vh]], step=0.12, N=Math.floor(secs/step);
+  for(let n=1;n<=N&&!ui.stop();n++){
+    const lt=n*step; await seek(t0+lt);
+    const px=fx+vx, py=fy+vy, wide=lost>6;
+    const roi=wide?{x:0,y:0,w:vw,h:vh}:roiAt(px,py,Math.max(rw0,hRef*5.5+Math.abs(vx)*3));
+    det=await aiDetect(ses,cv,cx,roi,0.2);
+    let m=null, mc=1e9;
+    det.boxes.forEach(b=>{ const dist=Math.hypot(b.vx-px,b.fy-py)/hRef, col=aiDist(sig,aiSig(det.img,b)), cost=dist*(lost?0.5:1)+col*2.2; if(cost<mc){ mc=cost; m=b; } });
+    if(m&&mc<(lost?2.6:2.0)){ lost=0; vx=(m.vx-fx)*0.55+vx*0.3; vy=(m.fy-fy)*0.55+vy*0.3; fx=m.vx; fy=m.fy; hRef=hRef*0.8+m.vh*0.2; if(mc<0.9){ const s2=aiSig(det.img,m); for(let i=0;i<64;i++) sig[i]=sig[i]*0.9+s2[i]*0.1; } }
+    else { lost++; if(lost>24) break; fx+=vx*0.8; fy+=vy*0.8; vx*=0.85; vy*=0.85; fx=Math.max(0,Math.min(vw,fx)); fy=Math.max(0,Math.min(vh,fy)); }
+    pts.push([+lt.toFixed(3),fx/vw,fy/vh]);
+    ui.msg('IA siguiendo a la jugadora… '+Math.round(n/N*100)+'%'+(lost?' (buscándola)':''));
+  }
+  return pts;
+}
 /* seguimiento automático: busca a la jugadora fotograma a fotograma comparando su aspecto */
 async function autoTrack(p,secs,opts){
   const ed=teleEd, tl=ed.tele, t0=tl.t, vw=video.videoWidth, vh=video.videoHeight;
@@ -10648,6 +10744,8 @@ async function autoTrack(p,secs,opts){
   bar.querySelector('#atS').onclick=()=>{ stop=true; };
   try{
     video.pause();
+    let aiPts=null; try{ aiPts=await aiTrackRun(p,secs,t0,{msg:tx=>{ const el=bar.querySelector('#atT'); if(el) el.textContent=tx; },stop:()=>stop}); }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); }
+    if(aiPts&&aiPts.length>=4){ aiPts.forEach((q,i)=>{ if(i) s.pts.push(q); }); tl.rev++; } else {
     let fx=p.x*cw, fy=p.y*ch;                               /* pies */
     let data=await grab(t0);
     const patch=(d,x,y)=>{ const o=new Float32Array(bw*bh*3); let k=0; for(let j=0;j<bh;j++) for(let i=0;i<bw;i++){ const xx=Math.min(cw-1,Math.max(0,Math.round(x-bw/2+i))), yy=Math.min(ch-1,Math.max(0,Math.round(y-bh+j+bh*0.1))); const q=(yy*cw+xx)*4; o[k++]=d[q]; o[k++]=d[q+1]; o[k++]=d[q+2]; } return o; };
@@ -10679,6 +10777,7 @@ async function autoTrack(p,secs,opts){
       }
       s.pts.push([+lt.toFixed(3),fx/cw,fy/ch]); tl.rev++;
       const pc=Math.round(n/N*100); const el=bar.querySelector('#atT'); if(el) el.textContent='Siguiendo a la jugadora… '+pc+'%'+(lost?' (buscándola)':'');
+    }
     }
   }catch(e){ toast('No se pudo seguir automáticamente: '+((e&&e.message)||e)); }
   bar.remove(); TRK.on=false;
