@@ -293,7 +293,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 
 /* ---- telestración ---- */
 .tele{position:absolute;pointer-events:none;z-index:2}
-#dwBar{position:absolute;left:8px;top:8px;width:168px;max-height:calc(100% - 16px);overflow:auto;display:flex;flex-direction:column;gap:6px;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:7px;z-index:6;cursor:default}
+#dwBar{position:absolute;left:8px;top:8px;width:184px;max-height:calc(100% - 16px);overflow:auto;display:flex;flex-direction:column;gap:6px;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:7px;z-index:6;cursor:default}
 #dwBar[hidden]{display:none}
 #dwBar button{background:#1d3248;color:#fff;border:0;border-radius:8px;padding:5px 6px;font:700 12px Inter,Barlow,sans-serif;cursor:pointer}
 #dwBar button.on{background:#f2803f}
@@ -304,6 +304,9 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 #dwBar .c i.on{border-color:#fff}
 #dwBar .r{display:flex;gap:3px;align-items:center}
 #dwBar .r button{flex:1}
+#dwBar .sl{display:flex;align-items:center;justify-content:space-between;gap:4px;color:#9fb2c6;font:700 11px Inter,Barlow,sans-serif}
+#dwBar .sl select{flex:1;min-width:0;background:#1d3248;color:#fff;border:0;border-radius:8px;padding:4px;font:700 12px Inter,Barlow,sans-serif}
+body.ipad #dwBar{width:210px}body.ipad #dwBar .g button{height:40px}body.ipad #dwBar button{padding:9px 6px;font-size:14px}body.ipad #dwBar .c i{height:22px}
 #dwBar .hint{color:#9fb2c6;font:600 11px Inter,Barlow,sans-serif;line-height:1.3}
 .tele.edit{pointer-events:auto;cursor:crosshair;outline:2px solid var(--accent);outline-offset:-2px}
 .tele svg,.tele canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -7195,7 +7198,7 @@ function applyLayout(){
   ws.style.setProperty('--wb',layout.sizes.bottom+'px');
   renderTray();
   { const pb=$('#bProd'); if(pb){const st=layout.panels.prod; pb.setAttribute('aria-pressed',String(!!(st.vis&&!st.min)||!!st.win));} }
-  if(teleEd&&!layout.panels.draw.vis) closeTele(true);
+  /* panel de dibujo oculto: la barra sobre el vídeo lo sustituye */
   if(ce&&!layout.panels.clip.vis&&!layout.panels.clip.win) ceStop();
 }
 function renderTray(){
@@ -9090,9 +9093,8 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 /* ===== iPad: barra de freeze frame ===== */
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
-  const on=!!teleEd;
-  bar.hidden=!on; document.body.classList.toggle('fz',on); if(!on) document.body.classList.remove('fzMin');
-  if(!on) return;
+  bar.hidden=true; document.body.classList.remove('fz','fzMin'); return; /* sustituida por la barra #dwBar sobre el vídeo */
+  const on=!!teleEd; if(!on) return;
   const ed=teleEd, tl=ed.tele, s=ed.sel!=null?tl.items[ed.sel]:null;
   const tb=document.getElementById('fzTools');
   if(!tb.firstChild) tb.innerHTML=TOOLS.map(t=>'<button data-tool="'+t[0]+'" aria-label="'+esc(t[1])+'" title="'+esc(t[1])+'" aria-pressed="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg></button>').join('');
@@ -10859,7 +10861,7 @@ function openTele(existing){
     st.rect={x:Math.max(8,vr.right-wr.left-308),y:Math.max(8,vr.top-wr.top+8),w:298,h:Math.min(560,Math.max(360,wr.height-24))};
     st.dock='float'; st.placed=true;
   }
-  st.vis=true; st.min=false; applyLayout(); saveLayout();
+  st.vis=false; st.min=false; applyLayout();
   layoutTele(); teleKey=''; renderDrawPanel();
 }
 function closeTele(noApply){
@@ -11025,12 +11027,27 @@ function zoneFinish(){
   ed.zone=null; ed.tele.items.push(s); ensureTele(ed.tele); ed.sel=ed.tele.items.length-1; ed.tool='select'; commitTele();
 }
 function addTextAt(p){
-  const ed=teleEd;
-  askText('Texto','Escribe el texto','',v=>{
-    if(!teleEd||!v.trim()) return;
-    const s={type:'text',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,x:p.x,y:p.y,text:v.trim()}; if(ed.t3d) s.t3d=true;
+  const ed=teleEd; if(!ed) return;
+  const old=document.getElementById('dwTxIn'); if(old) old.remove();
+  const par=tele.parentElement||$('#vwrap'), k=tele.clientWidth/SW;
+  const fs=Math.max(14,(ed.t3d?26+ed.sw*3.4:22+ed.sw*3)*k);
+  const inp=document.createElement('input'); inp.id='dwTxIn'; inp.type='text'; inp.placeholder='Escribe y pulsa Enter';
+  const w=Math.min(tele.clientWidth*0.7,Math.max(240,tele.clientWidth*(1-p.x)-16));
+  const left=Math.max(4,Math.min(tele.offsetLeft+p.x*tele.clientWidth,par.clientWidth-w-4));
+  inp.style.cssText='position:absolute;z-index:8;left:'+left+'px;top:'+Math.max(4,tele.offsetTop+p.y*tele.clientHeight-fs*1.1)+'px;width:'+w+'px;font:800 '+fs+'px Inter,Barlow,sans-serif;color:'+safeColor(ed.color)+';background:rgba(5,12,20,.88);border:2px solid #f2803f;border-radius:10px;padding:4px 10px;outline:none';
+  par.appendChild(inp);
+  let done=false;
+  const fin=ok=>{
+    if(done) return; done=true;
+    const v=inp.value.trim(); inp.remove();
+    if(!ok||!v||!teleEd||teleEd!==ed) return;
+    const s={type:'text',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,x:p.x,y:p.y,text:v}; if(ed.t3d) s.t3d=true;
     ed.tele.items.push(s); ensureTele(ed.tele); ed.sel=ed.tele.items.length-1; ed.tool='select'; commitTele();
-  });
+  };
+  inp.addEventListener('keydown',e=>{e.stopPropagation(); if(e.key==='Enter'){e.preventDefault();fin(true);} else if(e.key==='Escape'){e.preventDefault();fin(false);}});
+  inp.addEventListener('pointerdown',e=>e.stopPropagation());
+  inp.addEventListener('blur',()=>fin(true));
+  setTimeout(()=>inp.focus(),50);
 }
 function addImgAt(p){
   const ed=teleEd; if(!ed) return;
@@ -11074,6 +11091,12 @@ function barBuild(){
    +'<div class="c">'+COLORS.map(c=>'<i data-color="'+c+'" style="background:'+c+'"></i>').join('')+'</div>'
    +'<div class="r">'+sws.map(a=>'<button data-sw="'+a[1]+'">'+a[0]+'</button>').join('')+'</div>'
    +'<div class="r"><button data-act="t3d" title="Texto en 3D">Texto 3D</button><button data-act="dup" title="Duplicar">⧉</button></div>'
+   +'<label class="sl">Estilo<select id="bEst">'+ESTILOS.map(e=>'<option value="'+e[0]+'">'+e[1].split(' (')[0]+'</option>').join('')+'</select></label>'
+   +'<label class="sl">Animación<select id="bAnim">'+ANIMS.map(e=>'<option value="'+e[0]+'">'+e[1]+'</option>').join('')+'</select></label>'
+   +'<label class="sl">Pausa<select id="bHold">'+HOLDS.map(h=>'<option value="'+h+'">'+h+' s</option>').join('')+'</select></label>'
+   +'<div class="r"><button data-act="mode" id="bTMode" title="Congelar la imagen o dibujar sobre el vídeo en marcha">Congelar</button></div>'
+   +'<div class="r"><button data-act="prev">▶ Probar</button><button data-act="clip">✂ Clip</button></div>'
+   +'<div class="r"><button data-act="delall">Borrar todo</button></div>'
    +'<div class="hint">Pulsa D para abrir/cerrar. Esc: salir de la herramienta.</div>';
 }
 function barSync(){
@@ -11086,6 +11109,10 @@ function barSync(){
   dwBar.querySelectorAll('[data-sw]').forEach(b=>{const v=+b.dataset.sw; b.classList.toggle('on',sw<=3?v===3:sw<=6?v===5:v===8);});
   const t3=s&&s.type==='text'?!!s.t3d:!!ed.t3d;
   dwBar.querySelector('[data-act=t3d]').classList.toggle('on',t3);
+  const bE=dwBar.querySelector('#bEst'), bA=dwBar.querySelector('#bAnim'), bH=dwBar.querySelector('#bHold');
+  bE.value=(s?(s.est||'clasico'):ed.est)||'clasico'; bA.value=(s?(s.anim||'none'):ed.anim)||'none';
+  const hv=String(ed.tele.hold); if(![...bH.options].some(o=>o.value===hv)){const o=document.createElement('option');o.value=hv;o.textContent=hv.replace('.',',')+' s';bH.appendChild(o);} bH.value=hv;
+  const fr=ed.tele.mode==='freeze', bM=dwBar.querySelector('#bTMode'); bM.textContent=fr?'Congelar imagen':'Sobre el vídeo'; bM.classList.toggle('on',fr);
 }
 barBuild();
 dwBar.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -11102,7 +11129,16 @@ dwBar.addEventListener('click',e=>{
     else if(k==='del') teleDeleteSel();
     else if(k==='undo') undo();
     else if(k==='end') closeTele();
+    else if(k==='mode'){ ed.tele.mode=ed.tele.mode==='freeze'?'overlay':'freeze'; if(ed.tele.items.length) ensureTele(ed.tele); commitTele(); }
+    else if(k==='prev') $('#dwPreview').click();
+    else if(k==='clip') $('#dwClip').click();
+    else if(k==='delall') $('#dwDelAll').click();
   }
+});
+dwBar.addEventListener('change',e=>{
+  const ed=teleEd; if(!ed) return; const t=e.target; t.blur();
+  if(t.id==='bEst') applyProp('est',t.value); else if(t.id==='bAnim') applyProp('anim',t.value);
+  else if(t.id==='bHold'){ ed.tele.hold=+t.value; if(ed.tele.items.length) ensureTele(ed.tele); commitTele(); }
 });
 $('#vwrap').appendChild(dwBar);
 function buildDrawPanel(){
