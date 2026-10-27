@@ -6951,7 +6951,8 @@ function febParse(texto,ctx){
       const BT=[];[1,2,3,4].forEach(q=>{ BT.push([q,600,'Empieza cuarto '+q]); BT.push([q,0,'Termina cuarto '+q]); });
       $o('#fbBt').innerHTML=BT.map((x,i)=>{ const a=A.find(y=>y.q===x[0]&&y.rest===x[1]); return '<button class="btn'+(a?'':' primary')+'" data-b="'+i+'" style="text-align:left">'+(a?'✅ ':'⚓ ')+x[2]+(a?' · '+fmt(a.t):'')+'</button>'; }).join('');
       ov.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{ const x=BT[+b.dataset.b]; const k=A.findIndex(y=>y.q===x[0]&&y.rest===x[1]); if(k>=0) A.splice(k,1); A.push({q:x[0],rest:x[1],s:absSeg(x[0],x[1]),t:video.currentTime}); pinta(); });
-      $o('#fbAL').textContent=A.length?'Marcados: '+A.length+' (pulsa de nuevo un botón para corregirlo)':'';
+      { const an=A.slice().sort((x,y)=>x.s-y.s); let bad=''; for(let i=1;i<an.length;i++){ if(an[i].t<=an[i-1].t+1){ bad='⚠ «'+(an[i].rest===600?'Empieza':'Termina')+' cuarto '+an[i].q+'» está en el mismo momento del vídeo (o antes) que el marcador anterior. Mueve el vídeo al momento correcto y pulsa ese botón otra vez.'; break; } }
+        $o('#fbAL').innerHTML=(A.length?'Marcados: '+A.length+' (pulsa de nuevo un botón para corregirlo)':'')+(bad?'<br><span style="color:#e8a33a">'+bad+'</span>':''); }
     }
     $o('#fbEq').onchange=pinta; $o('#fbJ').onchange=pinta; $o('#fbQ').onchange=pinta; ov.addEventListener('change',e=>{ if(e.target.dataset&&e.target.dataset.a!==undefined){ exact=null; pinta(); } });
     const entender=()=>{
@@ -6974,6 +6975,7 @@ function febParse(texto,ctx){
     $o('#fbGo').onclick=()=>{
       if(A.length<2){ toast('Marca al menos «Empieza cuarto 1» y «Termina cuarto 4».'); return; }
       const an=A.slice().sort((x,y)=>x.s-y.s);
+      if(an.some((x,i)=>i&&x.t<=an[i-1].t+1)){ toast('Los marcadores están en el mismo momento del vídeo. Lleva el vídeo a «Termina cuarto 4» (el final del partido) y pulsa ese botón.'); return; }
       const map=s=>{ let i=0; while(i<an.length-2&&s>an[i+1].s) i++; const a=an[i], b=an[i+1]; const k=(b.t-a.t)/Math.max(1,(b.s-a.s)); return a.t+(s-a.s)*k; };
       const dur=video.duration||1e9, bef=+$o('#fbB').value||0, aft=+$o('#fbAf').value||0; const lista=filtra(); if(!lista.length){ toast('No hay acciones con ese filtro.'); return; }
       const rows=partidos.find(x=>x.PartidoID===$o('#fbP').value)||{}; const tL=norm((cfg.teamNames&&cfg.teamNames.L)||'');
@@ -6982,7 +6984,7 @@ function febParse(texto,ctx){
       lista.forEach(a=>{ const t=map(a.Seg); if(!(t>=0)||t>dur) return; const info=ACC.find(x=>x[2].includes(a.Accion)); const lab=a.Accion; if(have.has(Math.round(t)+'|'+lab+'|'+a.Jugadora)) return;
         const start=Math.max(0,t-bef); let end=Math.min(dur,t+aft); if(end-start<0.5) end=Math.min(dur,start+0.5);
         events.push(normEvent({id:uid(),btnId:'',label:lab,color:info?info[1]:'#9AA7FF',pts:a.Puntos,t,start,end,team:a.Equipo===eqL?'L':'R',player:a.Jugadora,period:PERIODS[Math.min(4,Math.max(0,a.Cuarto-1))],video:videoName,note:'',cat:'FEB',phase:''})); n++; });
-      sortEvents(); commit(); shiftTot=0; $o('#fbSh').textContent=n+' cortes creados. Míralos y, si hace falta, muévelos con los botones de arriba.'; toast(n+' cortes creados con el jugada a jugada de la FEB. Revísalos en la lista: si ves que van algo desplazados, marca también el inicio y el final de los demás cuartos y vuelve a crearlos.'); };
+      sortEvents(); commit(); shiftTot=0; const FT=events.filter(e=>e.cat==='FEB').map(e=>e.t), rango=FT.length?' (del '+fmt(Math.min(...FT))+' al '+fmt(Math.max(...FT))+' del vídeo)':''; $o('#fbSh').textContent=n+' cortes creados'+rango+'. Míralos y, si hace falta, muévelos con los botones de arriba.'; toast(n+' cortes creados con el jugada a jugada de la FEB. Revísalos en la lista: si ves que van algo desplazados, marca también el inicio y el final de los demás cuartos y vuelve a crearlos.'); };
   };
 })();
 (function(){ const bc=document.getElementById('bCfg'), src=document.getElementById('bFebCuts'); if(!bc||!src) return;
