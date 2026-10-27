@@ -5161,7 +5161,8 @@ async function vidSave(file){
     toast('Guardando el vídeo en este dispositivo…');
     await vdbTx('readwrite',st=>st.put({key,name:file.name,size:file.size,type:file.type||'video/mp4',added:Date.now(),blob:file}));
     try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
-    toast('Vídeo guardado.');
+    const ok=await vdbTx('readonly',st=>st.getKey(key));
+    toast(ok?'Vídeo guardado.':'No se pudo guardar el vídeo en este navegador: al reabrir el proyecto tendrás que elegir el archivo de nuevo.');
   }catch(e){ toast('El vídeo está abierto, pero no se pudo guardar ('+((e&&e.message)||'sin espacio')+').'); }
 }
 async function vidList(){
@@ -5172,10 +5173,60 @@ async function vidList(){
     rq.onerror=()=>rej(rq.error);
   });
 }
+/* el vídeo del proyecto no está guardado en este navegador: se vuelve a elegir el archivo y se recuperan sus etiquetas, clips y dibujos */
+/* Chrome/Edge de escritorio: se recuerda dónde está el archivo (no se copia, vale para cualquier tamaño); al abrir el proyecto entra directo */
+const HDB={db:null};
+function hOpen(){ return new Promise((res,rej)=>{ if(HDB.db) return res(HDB.db); if(!window.indexedDB) return rej(new Error('sin almacén')); const r=indexedDB.open('bbtag-handles',1); r.onupgradeneeded=()=>r.result.createObjectStore('h'); r.onsuccess=()=>{HDB.db=r.result;res(r.result);}; r.onerror=()=>rej(r.error); }); }
+async function hPut(key,h){ try{ const db=await hOpen(); return await new Promise(res=>{ const t=db.transaction('h','readwrite'); t.objectStore('h').put(h,key); t.oncomplete=()=>res(true); t.onerror=()=>res(false); }); }catch(e){ return false; } }
+async function hGet(key){ try{ const db=await hOpen(); return await new Promise(res=>{ const q=db.transaction('h','readonly').objectStore('h').get(key); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null); }); }catch(e){ return null; } }
+const FSA=()=>!!window.showOpenFilePicker&&!window.scoutDesktop&&!document.body.classList.contains('ipad');
+async function pickWithHandle(){
+  try{
+    const [h]=await window.showOpenFilePicker({types:[{description:'Vídeo',accept:{'video/*':['.mp4','.m4v','.mov','.webm','.mkv','.mts','.m2ts','.avi','.3gp']}}],multiple:false});
+    const f=await h.getFile(); await hPut(f.name+'|'+f.size,h); return f;
+  }catch(e){ if(e&&e.name==='AbortError') return null; return undefined; }
+}
+async function vidFromHandle(key){
+  const h=await hGet(key); if(!h) return null;
+  try{
+    let p=await h.queryPermission({mode:'read'}); if(p!=='granted') p=await h.requestPermission({mode:'read'});
+    if(p!=='granted') return null;
+    const f=await h.getFile(); return (f.name+'|'+f.size===key)?f:null;
+  }catch(e){ return null; }
+}
+{ let skip=false; const fv=document.getElementById('fileVideo');
+  fv.addEventListener('click',async e=>{
+    if(skip||!FSA()) return; e.preventDefault();
+    const f=await pickWithHandle();
+    if(f) loadFile(f); else if(f===undefined){ skip=true; fv.click(); skip=false; }
+  },true);
+}
+function vidRelink(key){
+  const i=String(key).lastIndexOf('|'), name=i>=0?key.slice(0,i):String(key), size=i>=0?+key.slice(i+1):0;
+  const mb=size?(size>=1073741824?(size/1073741824).toFixed(2)+' GB':size>=1048576?Math.round(size/1048576)+' MB':Math.round(size/1024)+' KB'):'';
+  const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">El vídeo no está guardado aquí</h3>'+
+    '<p style="margin:0 0 8px;color:var(--muted)">Las etiquetas, clips y dibujos del proyecto siguen guardados. Solo falta el archivo de vídeo en este navegador.</p>'+
+    '<p style="margin:0 0 12px"><b>Elige el archivo:</b><br>'+esc(name)+(mb?' · '+mb:'')+'</p>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="rlNo">Ahora no</button><button class="btn primary" id="rlGo">Elegir el vídeo…</button></div>');
+  d.querySelector('#rlNo').onclick=expClose;
+  d.querySelector('#rlGo').onclick=async()=>{
+    if(FSA()){ const f=await pickWithHandle(); if(f===null) return; if(f){ if(f.name+'|'+f.size===key){ expClose(); loadFile(f,true); } else { const p=d.querySelector('p:nth-of-type(3)'); if(p) p.innerHTML='<span style="color:var(--danger,#e55)">Ese archivo no coincide («'+esc(f.name)+'»). Tiene que ser el mismo con el que se creó el proyecto.</span><br><b>Elige el archivo:</b><br>'+esc(name)+(mb?' · '+mb:''); } return; } }
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='video/*,.mp4,.m4v,.mov,.webm,.mkv,.mts'; inp.style.display='none'; document.body.appendChild(inp);
+    inp.onchange=()=>{
+      const f=inp.files&&inp.files[0]; inp.remove(); if(!f) return;
+      if(f.name+'|'+f.size!==key){
+        const p=d.querySelector('p:nth-of-type(3)'); if(p) p.innerHTML='<span style="color:var(--danger,#e55)">Ese archivo no coincide («'+esc(f.name)+'»'+(f.size?' · '+Math.round(f.size/1048576)+' MB':'')+'). Tiene que ser el mismo archivo con el que se creó el proyecto.</span><br><b>Elige el archivo:</b><br>'+esc(name)+(mb?' · '+mb:'');
+        return;
+      }
+      expClose(); loadFile(f,true);
+    };
+    inp.click();
+  };
+}
 async function vidOpenLib(key){
   try{
     const v=await vdbTx('readonly',st=>st.get(key));
-    if(!v){toast('No se encuentra ese vídeo.');return;}
+    if(!v){ const f=await vidFromHandle(key); if(f){ expClose(); loadFile(f,true); return; } vidRelink(key); return; }
     expClose(); loadFile(new File([v.blob],v.name,{type:v.type}),true);
   }catch(e){toast('No se pudo abrir: '+((e&&e.message)||e));}
 }
@@ -8997,7 +9048,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     }catch(e){ save(''); }
     function save(th){ const key=file.name+'|'+file.size; let a=getRec().filter(r=>r.key!==key); a.unshift({key,name:file.name,at:Date.now(),th,n:events.length}); a=a.slice(0,30); try{ lsSet(RK,JSON.stringify(a)); }catch(e){ a.forEach(r=>r.th=''); try{lsSet(RK,JSON.stringify(a));}catch(e2){} } renderRec(); }
   }
-  video.addEventListener('loadedmetadata',()=>{ force=false; B.classList.remove('hmForce'); B.classList.remove('ipHome'); if(lastFile){ thumb(lastFile); setTimeout(()=>{ try{ if(lastFile&&lastFile.size<4e9) vidSave(lastFile); }catch(e){} },2500); } });
+  video.addEventListener('loadedmetadata',()=>{ force=false; B.classList.remove('hmForce'); B.classList.remove('ipHome'); if(lastFile){ thumb(lastFile); setTimeout(()=>{ try{ if(lastFile&&lastFile.size<4e9) vidSave(lastFile); else if(lastFile) toast('Vídeo de más de 4 GB: no se guarda en el navegador. Al reabrir el proyecto tendrás que elegir el archivo (se recuperan sus etiquetas).'); }catch(e){} },2500); } });
   const tick=()=>{ const tp=document.querySelector('.top'); if(tp) document.documentElement.style.setProperty('--hmT',Math.round(tp.getBoundingClientRect().bottom)+'px'); B.classList.toggle('ipHome',(!hasVideo||force)); if(!hasVideo) B.classList.remove('hmForce'); };
   setInterval(tick,250); tick(); renderRec();
 })();
