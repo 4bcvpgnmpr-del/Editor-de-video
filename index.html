@@ -293,6 +293,18 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 
 /* ---- telestración ---- */
 .tele{position:absolute;pointer-events:none;z-index:2}
+#dwBar{position:absolute;left:8px;top:8px;width:168px;max-height:calc(100% - 16px);overflow:auto;display:flex;flex-direction:column;gap:6px;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:7px;z-index:6;cursor:default}
+#dwBar[hidden]{display:none}
+#dwBar button{background:#1d3248;color:#fff;border:0;border-radius:8px;padding:5px 6px;font:700 12px Inter,Barlow,sans-serif;cursor:pointer}
+#dwBar button.on{background:#f2803f}
+#dwBar .g{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+#dwBar .g button{height:28px;padding:0;display:flex;align-items:center;justify-content:center}
+#dwBar .c{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+#dwBar .c i{height:16px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:block}
+#dwBar .c i.on{border-color:#fff}
+#dwBar .r{display:flex;gap:3px;align-items:center}
+#dwBar .r button{flex:1}
+#dwBar .hint{color:#9fb2c6;font:600 11px Inter,Barlow,sans-serif;line-height:1.3}
 .tele.edit{pointer-events:auto;cursor:crosshair;outline:2px solid var(--accent);outline-offset:-2px}
 .tele svg,.tele canvas{position:absolute;inset:0;width:100%;height:100%}
 .tele svg{touch-action:none;overflow:hidden}
@@ -10111,9 +10123,26 @@ function shapePro(s,i,est){
   }
   return null;
 }
+function text3d(s,i){
+  const c=safeColor(s.color), fs=26+(s.sw||4)*3.4, x=X(s.x), y=Y(s.y), t=esc(String(s.text||''));
+  const m=/^#?([0-9a-f]{6})/i.exec(c), n=m?parseInt(m[1],16):0xffd23f;
+  const dk=k=>'rgb('+Math.round((n>>16&255)*k)+','+Math.round((n>>8&255)*k)+','+Math.round((n&255)*k)+')';
+  const depth=Math.max(5,Math.round(fs*0.2)), dx=depth*0.55, dy=depth*0.8, FF='Inter,Barlow,Arial,sans-serif';
+  const an=s.anim&&s.anim!=='none'?' an-'+(s.anim==='draw'?'fade':s.anim):'';
+  let o='<text x="'+f1(x+dx)+'" y="'+f1(y+dy)+'" font-size="'+fs+'" font-weight="900" font-family="'+FF+'" fill="#000" stroke="#000" stroke-width="'+f1(fs*0.2)+'" stroke-linejoin="round" opacity=".9">'+t+'</text>';
+  for(let k=depth;k>=1;k--){
+    const f=k/depth;
+    o+='<text x="'+f1(x+dx*f)+'" y="'+f1(y+dy*f)+'" font-size="'+fs+'" font-weight="900" font-family="'+FF+'" fill="'+dk(0.38+0.22*(1-f))+'" stroke="'+dk(0.3)+'" stroke-width="'+f1(fs*0.07)+'" stroke-linejoin="round">'+t+'</text>';
+  }
+  o+='<text x="'+f1(x)+'" y="'+f1(y)+'" font-size="'+fs+'" font-weight="900" font-family="'+FF+'" fill="'+c+'" stroke="#000" stroke-width="'+f1(fs*0.12)+'" paint-order="stroke" stroke-linejoin="round" pointer-events="all">'+t+'</text>';
+  o+='<text x="'+f1(x)+'" y="'+f1(y-fs*0.04)+'" font-size="'+fs+'" font-weight="900" font-family="'+FF+'" fill="#fff" fill-opacity=".22" pointer-events="none" clip-path="inset(0 0 55% 0)">'+t+'</text>';
+  return '<g class="sh'+an+'" data-i="'+i+'">'+o+'</g>';
+}
 function shapeSVG(s,i){
-  if(s.est&&s.est!=='clasico'){ const r=shapePro(s,i,s.est); if(r) return r; }
+  if(s.type==='text'&&s.t3d) return text3d(s,i);
+  if(s.est&&s.est!=='clasico'&&!(s.type==='text'&&s.est!=='neon')){ const r=shapePro(s,i,s.est); if(r) return r; }
   const c=safeColor(s.color), sw=(s.sw||4)*1.4;
+  const g0=(cl,inner)=>'<g class="sh'+cl+'" data-i="'+i+'">'+inner+'</g>';
   const g=inner=>'<g class="sh" data-i="'+i+'">'+inner+'</g>';
   const hit=d=>'<path d="'+d+'" fill="none" stroke="transparent" stroke-width="'+Math.max(20,sw+14)+'" stroke-linecap="round" stroke-linejoin="round" pointer-events="stroke"/>';
   switch(s.type){
@@ -10146,8 +10175,8 @@ function shapeSVG(s,i){
     case 'rect':
       return g('<rect x="'+f1(X(s.x))+'" y="'+f1(Y(s.y))+'" width="'+f1(X(s.rw))+'" height="'+f1(Y(s.rh))+'" fill="'+c+'" fill-opacity="0.14" stroke="'+c+'" stroke-width="'+sw+'" stroke-linejoin="round" pointer-events="all"/>');
     case 'text':{
-      const fs=20+(s.sw||4)*3;
-      return g('<text x="'+f1(X(s.x))+'" y="'+f1(Y(s.y))+'" font-size="'+fs+'" font-weight="700" font-family="Barlow,Arial,sans-serif" fill="'+c+'" stroke="#000" stroke-opacity=".85" stroke-width="'+f1(fs*0.14)+'" paint-order="stroke" stroke-linejoin="round" pointer-events="all">'+esc(s.text)+'</text>');
+      const fs=22+(s.sw||4)*3;
+      return g0(s.anim&&s.anim!=='none'?' an-'+(s.anim==='draw'?'fade':s.anim):'','<text x="'+f1(X(s.x))+'" y="'+f1(Y(s.y))+'" font-size="'+fs+'" font-weight="800" font-family="Inter,Barlow,Arial,sans-serif" fill="'+c+'" stroke="#000" stroke-width="'+f1(Math.max(4,fs*0.17))+'" paint-order="stroke" stroke-linejoin="round" pointer-events="all">'+esc(s.text)+'</text>');
     }
     case 'pen':{
       if(!s.pts||s.pts.length<2) return '';
@@ -10238,7 +10267,7 @@ function bboxOf(s){
     case 'wall':{const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2),h=Math.max(36,Math.hypot(x2-x1,y2-y1)*0.5);pts.push([x1,y1],[x2,y2],[x1,y1-h],[x2,y2-h]);break;}
     case 'ghost':{const w=34+(s.sw||4)*3,hh=w*2.3;pts.push([X(s.x1)-w/2,Y(s.y1)-hh/2],[X(s.x1)+w/2,Y(s.y1)+hh/2],[X(s.x2)-w/2,Y(s.y2)-hh/2],[X(s.x2)+w/2,Y(s.y2)+hh/2]);break;}
     case 'rect':case 'img':case 'play':pts.push([X(s.x),Y(s.y)],[X(s.x+s.rw),Y(s.y+s.rh)]);break;
-    case 'text':{const fs=20+(s.sw||4)*3;pts.push([X(s.x),Y(s.y)-fs],[X(s.x)+String(s.text).length*fs*0.58,Y(s.y)+fs*0.3]);break;}
+    case 'text':{const fs=s.t3d?26+(s.sw||4)*3.4:22+(s.sw||4)*3;pts.push([X(s.x),Y(s.y)-fs],[X(s.x)+String(s.text).length*fs*0.58,Y(s.y)+fs*0.3]);break;}
     case 'num':{const R=16+(s.sw||4)*1.6;pts.push([X(s.x)-R,Y(s.y)-R],[X(s.x)+R,Y(s.y)+R]);break;}
     case 'hl':case 'pen':case 'traj':case 'zone':(s.pts||[]).forEach(p=>pts.push([X(p[0]),Y(p[1])]));break;
     case 'track':{ (s.pts||[]).forEach(p=>pts.push([X(p[1]),Y(p[2])])); const r=Math.max(8,X(s.r||0.024)); pts.push([X(s.cx)-r,Y(s.cy)-r*4.4],[X(s.cx)+r,Y(s.cy)+r]); break; }
@@ -10811,6 +10840,7 @@ function commitTele(co){
   if(teleEd) teleEd.tele.rev++;
   record(co); renderTimeline(); renderLib(); renderDrawPanel(); renderList(); renderDetail();
 }
+let teleT3d=false; try{teleT3d=!!lsGet('bbtag.teleT3d');}catch(_){}
 function openTele(existing){
   if(window.__liveOn){toast('Termina la grabación para hacer esto.');return;}
   if(!hasVideo){toast('Abre primero un vídeo.');return;}
@@ -10822,7 +10852,7 @@ function openTele(existing){
   let tl=existing||teles.find(x=>Math.abs(x.t-t)<0.06);
   if(!tl) tl={id:uid(),t,mode:'freeze',hold:3,fade:0.3,items:[],rev:0,clipId:''};
   else if(existing&&Math.abs(video.currentTime-tl.t)>0.001) video.currentTime=tl.t;
-  teleEd={id:tl.id,tele:tl,tool:(!existing&&!tl.items.length)?'pen':'select',sel:null,color:teleColor,sw:teleSw,est:teleEst,anim:teleAnim,zone:null};
+  teleEd={id:tl.id,tele:tl,tool:(!existing&&!tl.items.length)?'pen':'select',sel:null,color:teleColor,sw:teleSw,est:teleEst,anim:teleAnim,t3d:teleT3d,zone:null};
   const st=layout.panels.draw;
   if(!st.placed&&!isNarrow()){
     const vr=$('#vwrap').getBoundingClientRect(), wr=ws.getBoundingClientRect();
@@ -10998,7 +11028,7 @@ function addTextAt(p){
   const ed=teleEd;
   askText('Texto','Escribe el texto','',v=>{
     if(!teleEd||!v.trim()) return;
-    const s={type:'text',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,x:p.x,y:p.y,text:v.trim()};
+    const s={type:'text',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,x:p.x,y:p.y,text:v.trim()}; if(ed.t3d) s.t3d=true;
     ed.tele.items.push(s); ensureTele(ed.tele); ed.sel=ed.tele.items.length-1; ed.tool='select'; commitTele();
   });
 }
@@ -11037,6 +11067,44 @@ function editShapeText(s){
 }
 
 /* ---------- panel de herramientas ---------- */
+const dwBar=document.createElement('div'); dwBar.id='dwBar'; dwBar.hidden=true;
+function barBuild(){
+  const sws=[['Fino',3],['Medio',5],['Grueso',8]];
+  dwBar.innerHTML='<div class="r"><button data-act="undo" title="Deshacer">↶</button><button data-act="del" title="Quitar la figura elegida">🗑</button><button data-act="end" title="Terminar (D)">✕ Fin</button></div><div class="g">'+TOOLS.map(t=>'<button data-tool="'+t[0]+'" title="'+esc(t[1])+'" aria-label="'+esc(t[1])+'"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg></button>').join('')+'</div>'
+   +'<div class="c">'+COLORS.map(c=>'<i data-color="'+c+'" style="background:'+c+'"></i>').join('')+'</div>'
+   +'<div class="r">'+sws.map(a=>'<button data-sw="'+a[1]+'">'+a[0]+'</button>').join('')+'</div>'
+   +'<div class="r"><button data-act="t3d" title="Texto en 3D">Texto 3D</button><button data-act="dup" title="Duplicar">⧉</button></div>'
+   +'<div class="hint">Pulsa D para abrir/cerrar. Esc: salir de la herramienta.</div>';
+}
+function barSync(){
+  const on=!!teleEd; dwBar.hidden=!on; if(!on) return;
+  const ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null;
+  dwBar.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===ed.tool));
+  const col=(s?s.color:ed.color).toLowerCase();
+  dwBar.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('on',b.dataset.color.toLowerCase()===col));
+  const sw=s?s.sw:ed.sw;
+  dwBar.querySelectorAll('[data-sw]').forEach(b=>{const v=+b.dataset.sw; b.classList.toggle('on',sw<=3?v===3:sw<=6?v===5:v===8);});
+  const t3=s&&s.type==='text'?!!s.t3d:!!ed.t3d;
+  dwBar.querySelector('[data-act=t3d]').classList.toggle('on',t3);
+}
+barBuild();
+dwBar.addEventListener('pointerdown',e=>e.stopPropagation());
+dwBar.addEventListener('click',e=>{
+  e.stopPropagation(); if(!teleEd) return;
+  const t=e.target.closest('[data-tool]'),c=e.target.closest('[data-color]'),w=e.target.closest('[data-sw]'),a=e.target.closest('[data-act]');
+  if(t) setTool(t.dataset.tool);
+  else if(c) applyProp('color',c.dataset.color);
+  else if(w) applyProp('sw',+w.dataset.sw);
+  else if(a){
+    const k=a.dataset.act, ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null;
+    if(k==='t3d') applyProp('t3d',!(s&&s.type==='text'?s.t3d:ed.t3d));
+    else if(k==='dup') teleDupSel();
+    else if(k==='del') teleDeleteSel();
+    else if(k==='undo') undo();
+    else if(k==='end') closeTele();
+  }
+});
+$('#vwrap').appendChild(dwBar);
 function buildDrawPanel(){
   $('#dwTools').innerHTML=TOOLS.map(t=>'<button data-tool="'+t[0]+'" title="'+esc(t[1])+'" aria-label="'+esc(t[1])+'" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg></button>').join('');
   $('#dwColors').innerHTML=COLORS.map(c=>'<button data-color="'+c+'" style="background:'+c+'" aria-label="Color '+c+'" aria-pressed="false"></button>').join('')+'<input type="color" id="dwColorPick" aria-label="Otro color" title="Otro color">';
@@ -11046,6 +11114,7 @@ function buildDrawPanel(){
 function renderDrawPanel(){
   const on=!!teleEd; if(typeof ipFzSync==='function') ipFzSync();
   $('#dwOff').hidden=on; $('#dwOn').hidden=!on;
+  barSync();
   if(!on) return;
   const ed=teleEd, tl=ed.tele, s=ed.sel!=null?tl.items[ed.sel]:null;
   $('#dwTime').textContent='Momento del vídeo: '+fmt(tl.t,true)+' · '+tl.items.length+' figura'+(tl.items.length===1?'':'s');
@@ -11077,8 +11146,8 @@ $('#dwTools').addEventListener('click',e=>{const b=e.target.closest('[data-tool]
 function applyProp(k,v){
   const ed=teleEd; if(!ed) return;
   ed[k]=v;
-  if(k==='color') teleColor=v; else if(k==='est'){ teleEst=v; lsSet('bbtag.teleEst',v); } else if(k==='anim'){ teleAnim=v; lsSet('bbtag.teleAnim',v); } else teleSw=v;
-  if(ed.sel!=null&&ed.tele.items[ed.sel]){ed.tele.items[ed.sel][k]=v; commitTele(true);} else renderDrawPanel();
+  if(k==='t3d'){ teleT3d=!!v; lsSet('bbtag.teleT3d',v?'1':''); } else if(k==='color') teleColor=v; else if(k==='est'){ teleEst=v; lsSet('bbtag.teleEst',v); } else if(k==='anim'){ teleAnim=v; lsSet('bbtag.teleAnim',v); } else teleSw=v;
+  if(ed.sel!=null&&ed.tele.items[ed.sel]){ if(k==='t3d'&&ed.tele.items[ed.sel].type!=='text'){renderDrawPanel();return;} ed.tele.items[ed.sel][k]=v; commitTele(true);} else renderDrawPanel();
 }
 $('#dwColors').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b) applyProp('color',b.dataset.color);});
 $('#dwColorPick').oninput=e=>applyProp('color',e.target.value);
@@ -11435,6 +11504,7 @@ function onKey(e){
   if(mod&&k==='y'){e.preventDefault();redo();return;}
   if(teleEd&&!mod){
     if(k==='escape'){teleEsc();return;}
+    if(k==='d'&&!e.repeat){closeTele();return;}
     if(k==='delete'||k==='backspace'){e.preventDefault();teleDeleteSel();return;}
     if(k==='enter'){e.preventDefault();teleEnter();return;}
     if(k===' '){e.preventDefault();if(!e.repeat) togglePlay();return;}
@@ -11465,6 +11535,7 @@ function onKey(e){
   if(k==='delete'){if(selectedId) deleteEvent(selectedId);return;}
   if(e.repeat) return;
   if(k==='0'){setTeam(team==='L'?'R':'L');return;}
+  if(k==='d'&&!e.shiftKey&&hasVideo&&(video.paused||!cfg.buttons.some(x=>!x.hidden&&x.key==='d'))){e.preventDefault();openTele();return;}
   const b=cfg.buttons.find(x=>!x.hidden&&x.key&&x.key===k);
   if(b){e.preventDefault();tagBtn(b);return;}
   const dsc=descByKey(k);
