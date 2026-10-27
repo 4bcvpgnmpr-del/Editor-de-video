@@ -10185,7 +10185,8 @@ const TOOLS=[
   ['arrow','Flecha','<path d="M4 20L19 5"/><path d="M10 5h9v9"/>'],
   ['line','Línea','<path d="M4 20L20 4"/>'],
   ['wave','Línea ondulada: el bote (arrastra desde el balón hasta donde llega)','<path d="M3 15c2-5 3-5 5 0s3 5 5 0 3-5 5 0"/><path d="M17 9l4 2-3 3"/>'],
-  ['ptri','Triángulo que sigue a 3 jugadoras: pulsa en los pies de la primera y síguela; repites con la 2.ª y la 3.ª','<path d="M12 4L4 19h16z" stroke-dasharray="3 2"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/>'],
+  ['plink','Línea entre 2 jugadoras que se mueve con ellas: pulsa en los pies de cada una',  '<circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 16.5L17 7.5" stroke-dasharray="3 2"/>'],
+  ['ptri','Polígono que sigue a 3 o más jugadoras (hasta 6): pulsa en los pies de cada una; el triángulo es el clásico del 3 contra 2','<path d="M12 4L4 19h16z" stroke-dasharray="3 2"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/>'],
   ['curve','Línea curva','<path d="M4 19C7 6 15 4 20 11"/><path d="M15 11h5v-5"/>'],
   ['circle','Círculo','<circle cx="12" cy="12" r="8"/>'],
   ['rect','Rectángulo','<rect x="4" y="6" width="16" height="12" rx="1"/>'],
@@ -10576,19 +10577,29 @@ function ptriDraw(ctx,s,W,H,lt){
     ctx.fillStyle=col; ctx.beginPath(); ctx.arc(q[0],q[1],Math.max(3,lw*0.9),0,Math.PI*2); ctx.fill(); });
   ctx.restore();
 }
-function ptriNext(ed,tl,s,path){
-  const idx=tl.items.indexOf(s);
-  if(!path||path.length<2){ s.paths.pop(); if(!s.paths.length){ if(idx>=0) tl.items.splice(idx,1); ed.ptri=null; toast('Para que siga a la jugadora, pulsa justo sobre su cuerpo o ve «A mano».'); tl.rev++; teleKey=''; return; } toast('No pude seguirla. Repite con esa jugadora.'); tl.rev++; teleKey=''; return; }
-  if(s.paths.length>=3){
-    const mx=Math.max(...s.paths.map(pp=>pp[pp.length-1][0]));
-    tl.hold=clamp(Math.ceil(mx+1),Math.max(1,tl.hold||0),60); tl.mode='overlay'; ensureTele(tl); ed.ptri=null; ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
-    toast('Triángulo listo. Pulsa ▶ para verlo.');
-  } else { tl.rev++; teleKey=''; toast('Vértice '+s.paths.length+' listo. Ahora pulsa en los pies de la jugadora '+(s.paths.length+1)+'.'); }
+function ptriFinish(ed,tl,s){
+  const idx=tl.items.indexOf(s), bar=document.getElementById('ptriBar'); if(bar) bar.remove();
+  const mx=Math.max(...s.paths.map(pp=>pp[pp.length-1][0]));
+  tl.hold=clamp(Math.ceil(mx+1),Math.max(1,tl.hold||0),60); tl.mode='overlay'; ensureTele(tl); ed.ptri=null; ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
+  toast(s.paths.length===2?'Línea lista. Pulsa ▶ para verla.':'Figura lista. Pulsa ▶ para verla.');
 }
-function startPtri(p){
-  const ed=teleEd, tl=ed.tele, t0=tl.t;
+function ptriNext(ed,tl,s,path){
+  const idx=tl.items.indexOf(s), n=s.n||0, old=document.getElementById('ptriBar'); if(old) old.remove();
+  if(!path||path.length<2){ s.paths.pop(); if(!s.paths.length){ if(idx>=0) tl.items.splice(idx,1); ed.ptri=null; toast('Para que siga a la jugadora, pulsa justo sobre su cuerpo o ve «A mano».'); tl.rev++; teleKey=''; return; } toast('No pude seguirla. Repite con esa jugadora.'); tl.rev++; teleKey=''; return; }
+  const k=s.paths.length;
+  if((n&&k>=n)||k>=6){ ptriFinish(ed,tl,s); return; }
+  tl.rev++; teleKey='';
+  if(!n&&k>=3){
+    const bar=document.createElement('div'); bar.id='ptriBar'; bar.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9800;background:var(--panel,#222);color:var(--text,#fff);border:1px solid var(--line,#444);border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:center';
+    bar.innerHTML='<span>'+k+' jugadoras. Pulsa en otra para añadirla</span><button class="btn" id="ptriOk" type="button">✓ Listo</button>'; document.body.appendChild(bar);
+    bar.querySelector('#ptriOk').onclick=()=>ptriFinish(ed,tl,s);
+    toast('Pulsa en otra jugadora para añadirla, o «Listo».');
+  } else toast('Jugadora '+k+' lista. Ahora pulsa en los pies de la jugadora '+(k+1)+'.');
+}
+function startPtri(p,nv){
+  const ed=teleEd, tl=ed.tele, t0=tl.t; const bb=document.getElementById('ptriBar'); if(bb) bb.remove();
   let s=ed.ptri&&ed.ptri.tl===tl&&tl.items.includes(ed.ptri.s)?ed.ptri.s:null;
-  if(!s){ s={type:'ptri',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,paths:[]}; tl.items.push(s); ed.ptri={tl,s}; }
+  if(!s){ s={type:'ptri',n:nv||0,color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,paths:[]}; tl.items.push(s); ed.ptri={tl,s}; }
   const modeSel=document.getElementById('dwTrkMode'), file=!(window.__srcMode&&window.__srcMode()!=='file');
   if(modeSel&&modeSel.value==='auto'&&file){
     s.paths.push([[0,p.x,p.y]]); const mine=s.paths[s.paths.length-1]; teleKey=''; tl.rev++;
@@ -10600,7 +10611,7 @@ function startPtri(p){
   s.paths.push(path); TRK.on=true; teleKey=''; let last=0;
   try{ if(Math.abs(video.currentTime-t0)>0.05) video.currentTime=t0; }catch(e){}
   video.play().catch(()=>{});
-  toast('Sigue a la jugadora '+s.paths.length+' de 3 con el dedo o el ratón. Suelta para terminar.');
+  toast('Sigue a la jugadora '+s.paths.length+((s.n)?' de '+s.n:'')+' con el dedo o el ratón. Suelta para terminar.');
   const mv=m=>{ const q=svgPt(m), lt=video.currentTime-t0; if(lt<last+0.04) return; last=lt; path.push([+lt.toFixed(3),q.x,q.y]); tl.rev++; };
   listen(mv,()=>{
     try{ video.pause(); video.currentTime=t0; video.playbackRate=oldRate; }catch(e){}
@@ -11154,7 +11165,7 @@ function teleAfterRestore(){
   }
   renderDrawPanel();
 }
-function setTool(t){if(!teleEd) return; teleEd.tool=t; teleEd.zone=null; teleEd.sel=(t==='select')?teleEd.sel:null; teleKey=''; renderDrawPanel();}
+function setTool(t){if(!teleEd) return; if(teleEd.ptri){ const b=document.getElementById('ptriBar'); if(b) b.remove(); const q=teleEd.ptri; teleEd.ptri=null; if(q.s.paths.length>=2){ q.tl.hold=Math.max(q.tl.hold||1,Math.ceil(Math.max(...q.s.paths.map(pp=>pp[pp.length-1][0]))+1)); q.tl.mode='overlay'; } else { const i=q.tl.items.indexOf(q.s); if(i>=0) q.tl.items.splice(i,1); } } teleEd.tool=t; teleEd.zone=null; teleEd.sel=(t==='select')?teleEd.sel:null; teleKey=''; renderDrawPanel();}
 function selShape(i){if(!teleEd) return; teleEd.sel=i; teleKey=''; syncPropsFromSel(); renderDrawPanel();}
 function syncPropsFromSel(){
   const ed=teleEd; if(!ed||ed.sel==null) return; const s=ed.tele.items[ed.sel]; if(!s) return;
@@ -11207,7 +11218,8 @@ teleSvg.addEventListener('pointerdown',e=>{
   if(ed.tool==='num') return addNumAt(p);
   if(ed.tool==='img') return addImgAt(p);
   if(ed.tool==='track') return startTrack(p);
-  if(ed.tool==='ptri') return startPtri(p);
+  if(ed.tool==='ptri') return startPtri(p,0);
+  if(ed.tool==='plink') return startPtri(p,2);
   startDraw(ed.tool,p);
 });
 teleSvg.addEventListener('dblclick',e=>{
@@ -11435,7 +11447,7 @@ function renderDrawPanel(){
   $('#dwEst').value=(s?(s.est||'clasico'):ed.est)||'clasico'; $('#dwAnim').value=(s?(s.anim||'none'):ed.anim)||'none';
   $('#dwDup').disabled=!s; $('#dwDel').disabled=!s;
   $('#dwText').hidden=!(s&&(s.type==='text'||s.type==='num'||s.type==='tline'));
-  $('#dwTrkTool').hidden=!(teleEd&&(teleEd.tool==='track'||teleEd.tool==='ptri'));
+  $('#dwTrkTool').hidden=!(teleEd&&(teleEd.tool==='track'||teleEd.tool==='ptri'||teleEd.tool==='plink'));
   $('#dwTrk').hidden=!(s&&s.type==='track'); if(s&&s.type==='track'){ document.querySelectorAll('#dwTrk [data-trk]').forEach(c=>{ c.checked=!!(s.st&&s.st[c.dataset.trk]); }); }
   $('#dwPlay').hidden=!(s&&s.type==='play'); if(s&&s.type==='play') $('#dwPlayV').value=s.vista||'ambas';
   $('#dwClip').disabled=!tl.items.length;
