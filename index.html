@@ -10576,12 +10576,26 @@ function ptriDraw(ctx,s,W,H,lt){
     ctx.fillStyle=col; ctx.beginPath(); ctx.arc(q[0],q[1],Math.max(3,lw*0.9),0,Math.PI*2); ctx.fill(); });
   ctx.restore();
 }
+function ptriNext(ed,tl,s,path){
+  const idx=tl.items.indexOf(s);
+  if(!path||path.length<2){ s.paths.pop(); if(!s.paths.length){ if(idx>=0) tl.items.splice(idx,1); ed.ptri=null; toast('Para que siga a la jugadora, pulsa justo sobre su cuerpo o ve «A mano».'); tl.rev++; teleKey=''; return; } toast('No pude seguirla. Repite con esa jugadora.'); tl.rev++; teleKey=''; return; }
+  if(s.paths.length>=3){
+    const mx=Math.max(...s.paths.map(pp=>pp[pp.length-1][0]));
+    tl.hold=clamp(Math.ceil(mx+1),Math.max(1,tl.hold||0),60); tl.mode='overlay'; ensureTele(tl); ed.ptri=null; ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
+    toast('Triángulo listo. Pulsa ▶ para verlo.');
+  } else { tl.rev++; teleKey=''; toast('Vértice '+s.paths.length+' listo. Ahora pulsa en los pies de la jugadora '+(s.paths.length+1)+'.'); }
+}
 function startPtri(p){
   const ed=teleEd, tl=ed.tele, t0=tl.t;
   let s=ed.ptri&&ed.ptri.tl===tl&&tl.items.includes(ed.ptri.s)?ed.ptri.s:null;
   if(!s){ s={type:'ptri',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,paths:[]}; tl.items.push(s); ed.ptri={tl,s}; }
-  const idx=tl.items.indexOf(s), path=[[0,p.x,p.y]];
-  const oldRate=video.playbackRate, slow=!(window.__srcMode&&window.__srcMode()!=='file');
+  const modeSel=document.getElementById('dwTrkMode'), file=!(window.__srcMode&&window.__srcMode()!=='file');
+  if(modeSel&&modeSel.value==='auto'&&file){
+    s.paths.push([[0,p.x,p.y]]); const mine=s.paths[s.paths.length-1]; teleKey=''; tl.rev++;
+    return void autoTrack(p,+((document.getElementById('dwTrkDur')||{}).value)||5,{onDone:pts=>{ if(pts){ mine.length=0; pts.forEach(q=>mine.push(q)); ptriNext(ed,tl,s,mine); } else ptriNext(ed,tl,s,null); }});
+  }
+  const path=[[0,p.x,p.y]];
+  const oldRate=video.playbackRate, slow=file;
   try{ video.playbackRate=slow?0.35:1; }catch(e){}
   s.paths.push(path); TRK.on=true; teleKey=''; let last=0;
   try{ if(Math.abs(video.currentTime-t0)>0.05) video.currentTime=t0; }catch(e){}
@@ -10592,12 +10606,7 @@ function startPtri(p){
     try{ video.pause(); video.currentTime=t0; video.playbackRate=oldRate; }catch(e){}
     TRK.on=false;
     if(path.length>=4){ const S=path.map((q,i)=>{ if(i===0||i===path.length-1) return q.slice(); let a=0,b=0,c=0; for(let k=Math.max(0,i-2);k<=Math.min(path.length-1,i+2);k++){ a+=path[k][1]; b+=path[k][2]; c++; } return [q[0],a/c,b/c]; }); path.length=0; S.forEach(q=>path.push(q)); }
-    if(s.paths.length>=3||path.length<2){
-      if(path.length<2){ s.paths.pop(); if(!s.paths.length){ tl.items.splice(idx,1); ed.ptri=null; toast('Para que siga a la jugadora, arrastra con ella mientras el vídeo avanza.'); tl.rev++; teleKey=''; return; } }
-      const mx=Math.max(...s.paths.map(pp=>pp[pp.length-1][0]));
-      tl.hold=clamp(Math.ceil(mx+1),Math.max(1,tl.hold||0),60); tl.mode='overlay'; ensureTele(tl); ed.ptri=null; ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
-      toast('Triángulo listo. Pulsa ▶ para verlo.');
-    } else { tl.rev++; teleKey=''; toast('Vértice '+s.paths.length+' listo. Ahora pulsa en los pies de la jugadora '+(s.paths.length+1)+'.'); }
+    ptriNext(ed,tl,s,path);
   });
 }
 /* grabar el seguimiento: pulsa en los pies y sigue a la jugadora mientras el vídeo va a cámara lenta */
@@ -10610,7 +10619,7 @@ function trkFinish(ed,tl,s,idx){
   tl.mode='overlay'; ensureTele(tl); ed.sel=idx; ed.tool='select'; tl.rev++; teleKey=''; commitTele(); renderDrawPanel();
 }
 /* seguimiento automático: busca a la jugadora fotograma a fotograma comparando su aspecto */
-async function autoTrack(p,secs){
+async function autoTrack(p,secs,opts){
   const ed=teleEd, tl=ed.tele, t0=tl.t, vw=video.videoWidth, vh=video.videoHeight;
   if(!vw||!vh){ toast('Espera a que cargue el vídeo.'); return; }
   const cw=400, ch=Math.round(cw*vh/vw), cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
@@ -10621,7 +10630,7 @@ async function autoTrack(p,secs){
   };
   const bw=Math.max(12,Math.round(cw*0.05)), bh=Math.max(22,Math.round(cw*0.11)), rad=Math.round(cw*0.07);
   const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.024,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:1,ring:1,trail:1,panel:0}};
-  tl.items.push(s); const idx=tl.items.length-1; ed.sel=null; TRK.on=true;
+  let idx=-1; if(!opts){ tl.items.push(s); idx=tl.items.length-1; } ed.sel=null; TRK.on=true;
   let stop=false;
   const bar=document.createElement('div'); bar.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9800;background:var(--panel,#222);color:var(--text,#fff);border:1px solid var(--line,#444);border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5)';
   bar.innerHTML='<b id="atT">Siguiendo a la jugadora… 0%</b><button class="btn" id="atS">Parar</button>'; document.body.appendChild(bar);
@@ -10663,6 +10672,7 @@ async function autoTrack(p,secs){
   }catch(e){ toast('No se pudo seguir automáticamente: '+((e&&e.message)||e)); }
   bar.remove(); TRK.on=false;
   try{ video.currentTime=t0; }catch(e){}
+  if(opts){ opts.onDone(s.pts.length<4?null:s.pts); return; }
   if(s.pts.length<4){ tl.items.splice(idx,1); tl.rev++; teleKey=''; toast('No pude seguirla. Prueba pulsando justo sobre su cuerpo, o usa «A mano».'); return; }
   trkFinish(ed,tl,s,idx);
   toast('Seguimiento listo. Si se desvía, pulsa «Repetir seguimiento» o usa «A mano».');
@@ -11425,7 +11435,7 @@ function renderDrawPanel(){
   $('#dwEst').value=(s?(s.est||'clasico'):ed.est)||'clasico'; $('#dwAnim').value=(s?(s.anim||'none'):ed.anim)||'none';
   $('#dwDup').disabled=!s; $('#dwDel').disabled=!s;
   $('#dwText').hidden=!(s&&(s.type==='text'||s.type==='num'||s.type==='tline'));
-  $('#dwTrkTool').hidden=!(teleEd&&teleEd.tool==='track');
+  $('#dwTrkTool').hidden=!(teleEd&&(teleEd.tool==='track'||teleEd.tool==='ptri'));
   $('#dwTrk').hidden=!(s&&s.type==='track'); if(s&&s.type==='track'){ document.querySelectorAll('#dwTrk [data-trk]').forEach(c=>{ c.checked=!!(s.st&&s.st[c.dataset.trk]); }); }
   $('#dwPlay').hidden=!(s&&s.type==='play'); if(s&&s.type==='play') $('#dwPlayV').value=s.vista||'ambas';
   $('#dwClip').disabled=!tl.items.length;
