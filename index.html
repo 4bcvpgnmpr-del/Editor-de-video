@@ -6849,6 +6849,63 @@ $('#bJson').onclick=()=>{
   const parseClock=t=>{ const m=String(t||'').trim().match(/^(\d+)(?::(\d{1,2}))?$/); return m?(+m[1]*60+(+m[2]||0)):null; };
   const fmt=t=>{ t=Math.max(0,Math.round(t)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
   const ACC=[['Triple anotado','#2EA36B',['Triple anotado']],['Triple fallado','#E5484D',['Triple fallado']],['Canasta de 2','#2EA36B',['Canasta de 2']],['Tiro de 2 fallado','#E5484D',['Tiro de 2 fallado']],['Tiros libres','#9AA7FF',['Tiro libre anotado','Tiro libre fallado']],['Asistencia','#F5A623',['Asistencia']],['Rebotes','#9AA7FF',['Rebote','Rebote ofensivo','Rebote defensivo']],['Pérdida','#E5484D',['Pérdida']],['Robo','#2EA36B',['Robo']],['Tapón','#2EA36B',['Tapón']],['Falta','#F5A623',['Falta']]];
+/*FEBPARSE-START*/
+/* Entiende frases como «triples fallados de Pozuelo en el último cuarto» sin IA: reglas sencillas.
+   Devuelve filtros que la persona ve y puede corregir antes de crear los cortes. */
+function febParse(texto,ctx){
+  const N=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t=' '+N(texto).replace(/[^a-z0-9ñ\s]/g,' ').replace(/\s+/g,' ')+' ';
+  const has=re=>re.test(t), out={eq:'',jug:'',acc:null,q:null,notas:[],texto:[]};
+  const equipos=ctx.equipos||[], mi=ctx.mi||'';
+  /* equipo */
+  let best=null,bs=0;
+  equipos.forEach(e=>{ const ws=N(e).split(/[^a-z0-9]+/).filter(w=>w.length>=4&&!/^(club|baloncesto|basket|basketball|femenino|femenina)$/.test(w)); let sc=0; ws.forEach(w=>{ if(t.includes(' '+w)) sc+=w.length; }); if(sc>bs){bs=sc;best=e;} });
+  const miEq=equipos.find(e=>mi&&(N(e).includes(N(mi))||N(mi).includes(N(e))));
+  if(best){ out.eq=best; }
+  else if(has(/ (mi equipo|nuestro|nuestros|nuestras|nosotros|nosotras|el mio) /)&&miEq){ out.eq=miEq; }
+  else if(has(/ (rival|contrario|contrarias|contrarios|los otros|el otro equipo|ellas|ellos) /)&&miEq){ out.eq=equipos.find(e=>e!==miEq)||''; }
+  if(out.eq) out.texto.push(out.eq);
+  /* acciones */
+  const A=new Set(), add=(...x)=>x.forEach(y=>A.add(y));
+  const fall=has(/ (fallad|errad|fallos?|fallo|no entr|fall[oa]s? )/), ano=has(/ (anotad|metid|encestad|convertid|dentro|acertad|canastas? |puntos )/)&&!fall;
+  const nT=has(/ triples? | tiros? de 3 | tiros? de tres | de 3 puntos | 3 puntos | triple/);
+  const n2=has(/ tiros? de 2 | tiros? de dos | canastas? de 2 | canastas? de dos | dos puntos | 2 puntos | dobles? /);
+  if(nT){ if(fall) add('Triple fallado'); else if(ano) add('Triple anotado'); else add('Triple anotado','Triple fallado'); }
+  if(n2){ if(fall) add('Tiro de 2 fallado'); else if(ano) add('Canasta de 2'); else add('Canasta de 2','Tiro de 2 fallado'); }
+  if(has(/ (tiros? libres?|libres) /)){ if(fall) add('Tiro libre fallado'); else if(ano) add('Tiro libre anotado'); else add('Tiro libre anotado','Tiro libre fallado'); }
+  if(has(/ (asistencias?|pases? de gol|pases? decisivos?) /)) add('Asistencia');
+  if(has(/ rebotes? | rebote /)){ if(has(/ ofensiv/)) add('Rebote ofensivo'); else if(has(/ defensiv/)) add('Rebote defensivo'); else add('Rebote','Rebote ofensivo','Rebote defensivo'); }
+  if(has(/ (perdidas?|balones? perdidos?|turnovers?|pierde|pierden) /)) add('Pérdida');
+  if(has(/ (robos?|recuperaciones|recuperaciones de balon|roba|roban) /)) add('Robo');
+  if(has(/ (tapones?|tapon|bloqueos?) /)) add('Tapón');
+  if(has(/ faltas? /)) add('Falta');
+  if(!A.size){
+    if(has(/ (tiros?|lanzamientos?|tiros de campo|intentos) /)){ if(fall) add('Triple fallado','Tiro de 2 fallado'); else if(ano) add('Triple anotado','Canasta de 2'); else add('Triple anotado','Triple fallado','Canasta de 2','Tiro de 2 fallado'); }
+    else if(has(/ (canastas?|puntos|anotaciones?) /)) add('Triple anotado','Canasta de 2');
+    else if(has(/ (fallos?|fallados?) /)) add('Triple fallado','Tiro de 2 fallado','Tiro libre fallado');
+  }
+  if(!A.size){
+    if(has(/ (ataque|ataques|ofensiv[oa]s?|acciones de ataque|jugadas de ataque|posesiones) /)) add('Triple anotado','Triple fallado','Canasta de 2','Tiro de 2 fallado','Tiro libre anotado','Tiro libre fallado','Asistencia','Rebote ofensivo','Pérdida');
+    else if(has(/ (defensa|defensas|defensiv[oa]s?|acciones de defensa) /)) add('Robo','Tapón','Rebote defensivo','Falta');
+    else if(has(/ (todo|todas|todos|todas las acciones|acciones) /)) add('Triple anotado','Triple fallado','Canasta de 2','Tiro de 2 fallado','Tiro libre anotado','Tiro libre fallado','Asistencia','Rebote','Rebote ofensivo','Rebote defensivo','Pérdida','Robo','Tapón','Falta');
+  }
+  if(A.size){ out.acc=[...A]; out.texto.push(out.acc.join(' + ')); }
+  /* jugadora */
+  const js=ctx.jugadoras||[]; let bj=[],bjs=0;
+  js.forEach(j=>{ const ws=N(j).split(/[^a-z0-9]+/).filter(w=>w.length>=3); let sc=0; ws.forEach(w=>{ if(t.includes(' '+w+' ')||t.includes(' '+w)) sc+=w.length; }); if(sc>bjs){bjs=sc;bj=[j];} else if(sc===bjs&&sc>0) bj.push(j); });
+  if(bj.length===1){ out.jug=bj[0]; out.texto.push(bj[0]); if(!out.eq&&ctx.eqDeJug&&ctx.eqDeJug[bj[0]]) out.eq=ctx.eqDeJug[bj[0]]; }
+  else if(bj.length>1) out.notas.push('Varias jugadoras encajan ('+bj.slice(0,4).join(', ')+'). Elige una en la lista.');
+  /* cuartos */
+  const Q=new Set();
+  if(has(/ (primer|primero|1er|1o|1 cuarto|1c|q1|cuarto 1|primera parte|primer tiempo|primera mitad) /)||has(/ 1 cuarto /)) Q.add(1);
+  if(has(/ (segundo|2o|2 cuarto|2c|q2|cuarto 2|primera parte|primer tiempo|primera mitad) /)) Q.add(2);
+  if(has(/ (tercer|tercero|3er|3o|3 cuarto|3c|q3|cuarto 3|segunda parte|segunda mitad|segundo tiempo) /)) Q.add(3);
+  if(has(/ (ultimo cuarto|cuarto cuarto|4o|4 cuarto|4c|q4|cuarto 4|segunda parte|segunda mitad|segundo tiempo|final del partido) /)) Q.add(4);
+  if(has(/ (prorroga|prorrogas|tiempo extra) /)) Q.add(5);
+  if(Q.size){ out.q=[...Q].sort(); out.texto.push(out.q.length===1?('cuarto '+out.q[0]):('cuartos '+out.q.join('-'))); }
+  return out;
+}
+/*FEBPARSE-END*/
   const norm=t=>String(t||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   document.getElementById('bFebCuts').onclick=()=>{
     if(!hasVideo){ toast('Abre primero el vídeo del partido.'); return; }
@@ -6859,7 +6916,9 @@ $('#bJson').onclick=()=>{
     '<div id="fbMsg" style="font-size:13px;color:var(--muted);margin:6px 0"></div>'+
     '<div id="fbSync" hidden><b>2) Dile a la app dónde está cada cuarto en el vídeo</b><p style="margin:2px 0 6px;color:var(--muted);font-size:13.5px">Con esta ventana abierta puedes mover el vídeo de al lado: llévalo al momento que dice cada botón, párala y pulsa el botón. <b>No hace falta escribir nada.</b> Mínimo: «Empieza cuarto 1» y «Termina cuarto 4». Cuantos más marques, mejor salen los cortes.</p>'+
     '<div id="fbBt" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-size:12.5px"></div><div id="fbAL" style="margin-top:6px;font-size:12.5px;color:var(--muted)"></div></div>'+
-    '<div id="fbF" hidden style="margin-top:10px"><b>3) Qué cortar</b><div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><select id="fbEq"></select><select id="fbJ"><option value="">Todas las jugadoras</option></select><label>Antes <input id="fbB" type="number" value="8" min="0" max="60" style="width:56px"> s</label><label>Después <input id="fbAf" type="number" value="3" min="0" max="60" style="width:56px"> s</label></div><div id="fbAc" style="display:flex;gap:4px 14px;flex-wrap:wrap"></div><div id="fbN" style="margin:8px 0;font-size:13.5px"></div></div>'+
+    '<div id="fbF" hidden style="margin-top:10px"><b>3) Qué cortar</b>'+
+    '<div style="margin:6px 0 8px;padding:8px;border:1px solid var(--line);border-radius:10px"><label style="font-size:13px;color:var(--muted)">Escríbelo con tus palabras (sin IA, la app lo traduce a filtros)</label><div style="display:flex;gap:6px;margin-top:4px"><input id="fbFrase" type="text" placeholder="Ej.: triples fallados de Pozuelo en el último cuarto" style="flex:1;min-width:0"><button class="btn primary" id="fbEnt">Entender</button></div><div id="fbEntMsg" style="font-size:12.5px;margin-top:4px;color:var(--muted)">Prueba: «todos los ataques de Pozuelo», «pérdidas del rival», «rebotes ofensivos en la segunda parte», «asistencias de mi equipo».</div></div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><select id="fbEq"></select><select id="fbQ"><option value="">Todos los cuartos</option><option value="1">Cuarto 1</option><option value="2">Cuarto 2</option><option value="3">Cuarto 3</option><option value="4">Cuarto 4</option><option value="12">1.ª parte (1 y 2)</option><option value="34">2.ª parte (3 y 4)</option><option value="5">Prórroga</option></select><select id="fbJ"><option value="">Todas las jugadoras</option></select><label>Antes <input id="fbB" type="number" value="8" min="0" max="60" style="width:56px"> s</label><label>Después <input id="fbAf" type="number" value="3" min="0" max="60" style="width:56px"> s</label></div><div id="fbAc" style="display:flex;gap:4px 14px;flex-wrap:wrap"></div><div id="fbN" style="margin:8px 0;font-size:13.5px"></div></div>'+
     '<div style="margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px"><b>4) Calibrar los cortes FEB ya creados</b><p style="margin:2px 0 6px;color:var(--muted);font-size:13px">Si todos salen un poco antes o después, muévelos juntos. <b>Si llegan tarde</b> (la jugada ya pasó), pulsa «◀ antes». <b>Si llegan pronto</b>, pulsa «después ▶».</p><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-sh="-5">◀ 5 s</button><button class="btn" data-sh="-1">◀ 1 s</button><button class="btn" data-sh="1">1 s ▶</button><button class="btn" data-sh="5">5 s ▶</button><button class="btn" id="fbDel" style="margin-left:auto">🗑 Borrar los cortes FEB</button></div><div id="fbSh" style="margin-top:6px;font-size:12.5px;color:var(--muted)"></div></div>'+
     '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn" id="fbNo">Cerrar</button><button class="btn primary" id="fbGo" hidden>Crear cortes</button></div></div>';
     document.body.appendChild(ov); const $o=q=>ov.querySelector(q); const close=()=>ov.remove(); $o('#fbNo').onclick=close; ov.addEventListener('keydown',e=>e.stopPropagation());
@@ -6881,8 +6940,10 @@ $('#bJson').onclick=()=>{
       $o('#fbEq').innerHTML='<option value="">Los dos equipos</option>'+equipos.map(e=>'<option value="'+e.replace(/"/g,'&quot;')+'">'+e+'</option>').join('');
       $o('#fbAc').innerHTML=ACC.map((a,i)=>'<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-a="'+i+'"'+(i===0?' checked':'')+'> '+a[0]+'</label>').join('');
       msg(acciones.length+' acciones cargadas.'); $o('#fbSync').hidden=$o('#fbF').hidden=$o('#fbGo').hidden=false; pinta(); };
-    const filtra=()=>{ const eq=$o('#fbEq').value, j=$o('#fbJ').value; const sel=new Set(); ov.querySelectorAll('[data-a]:checked').forEach(c=>ACC[+c.dataset.a][2].forEach(x=>sel.add(x)));
-      return acciones.filter(a=>sel.has(a.Accion)&&(!eq||a.Equipo===eq)&&(!j||a.Jugadora===j)); };
+    let exact=null;
+    const filtra=()=>{ const eq=$o('#fbEq').value, j=$o('#fbJ').value, qv=($o('#fbQ')||{}).value||''; const sel=new Set(); ov.querySelectorAll('[data-a]:checked').forEach(c=>ACC[+c.dataset.a][2].forEach(x=>sel.add(x)));
+      const qs=qv?new Set(qv.split('').map(Number)):null;
+      return acciones.filter(a=>(exact?exact.has(a.Accion):sel.has(a.Accion))&&(!eq||a.Equipo===eq)&&(!j||a.Jugadora===j)&&(!qs||qs.has(a.Cuarto))); };
     function pinta(){
       const eq=$o('#fbEq').value; const js=[...new Set(acciones.filter(a=>!eq||a.Equipo===eq).map(a=>a.Jugadora).filter(Boolean))].sort(); const cur=$o('#fbJ').value;
       $o('#fbJ').innerHTML='<option value="">Todas las jugadoras</option>'+js.map(x=>'<option'+(x===cur?' selected':'')+'>'+x.replace(/</g,'&lt;')+'</option>').join('');
@@ -6892,7 +6953,20 @@ $('#bJson').onclick=()=>{
       ov.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{ const x=BT[+b.dataset.b]; const k=A.findIndex(y=>y.q===x[0]&&y.rest===x[1]); if(k>=0) A.splice(k,1); A.push({q:x[0],rest:x[1],s:absSeg(x[0],x[1]),t:video.currentTime}); pinta(); });
       $o('#fbAL').textContent=A.length?'Marcados: '+A.length+' (pulsa de nuevo un botón para corregirlo)':'';
     }
-    $o('#fbEq').onchange=pinta; $o('#fbJ').onchange=pinta; ov.addEventListener('change',e=>{ if(e.target.dataset&&e.target.dataset.a!==undefined) pinta(); });
+    $o('#fbEq').onchange=pinta; $o('#fbJ').onchange=pinta; $o('#fbQ').onchange=pinta; ov.addEventListener('change',e=>{ if(e.target.dataset&&e.target.dataset.a!==undefined){ exact=null; pinta(); } });
+    const entender=()=>{
+      const txt=$o('#fbFrase').value.trim(); if(!txt||!acciones.length){ $o('#fbEntMsg').textContent=acciones.length?'Escribe qué quieres cortar.':'Primero elige un partido.'; return; }
+      const mi=(cfg.teamNames&&cfg.teamNames.L)||'';
+      const jugs=[...new Set(acciones.map(a=>a.Jugadora).filter(Boolean))], eqDeJug={}; acciones.forEach(a=>{ if(a.Jugadora&&a.Equipo) eqDeJug[a.Jugadora]=a.Equipo; });
+      const r=febParse(txt,{equipos,mi,jugadoras:jugs,eqDeJug});
+      $o('#fbEq').value=r.eq||''; $o('#fbQ').value=r.q?(r.q.length===1?String(r.q[0]):(r.q.join('')==='12'?'12':r.q.join('')==='34'?'34':'')):'';
+      exact=r.acc?new Set(r.acc):null;
+      ov.querySelectorAll('[data-a]').forEach(c=>{ const g=ACC[+c.dataset.a][2]; c.checked=!!(r.acc&&g.some(x=>r.acc.includes(x))); });
+      pinta(); if(r.jug){ $o('#fbJ').value=r.jug; pinta(); }
+      const n=filtra().length;
+      $o('#fbEntMsg').innerHTML=(r.acc?'<b>Entendido:</b> '+r.texto.join(' · ')+' → '+n+' cortes. ':'<span style="color:#e8a33a">No he entendido qué acciones quieres (tiros, triples, pérdidas, rebotes, asistencias, ataque, defensa…). Márcalas abajo.</span> ')+(r.notas.length?r.notas.join(' '):'')+(r.acc?' Si algo no es lo que querías, cámbialo abajo.':'');
+    };
+    $o('#fbEnt').onclick=entender; $o('#fbFrase').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); entender(); } });
     ov.querySelectorAll('[data-sh]').forEach(b=>b.onclick=()=>{ const d=+b.dataset.sh, dur=video.duration||1e9; const L=events.filter(e=>e.cat==='FEB'); if(!L.length){ toast('Todavía no hay cortes FEB en este vídeo.'); return; }
       L.forEach(e=>{ const len=e.end-e.start; e.t=Math.max(0,Math.min(dur,e.t+d)); e.start=Math.max(0,Math.min(dur-0.5,e.start+d)); e.end=Math.max(e.start+0.5,Math.min(dur,e.end+d)); });
       shiftTot+=d; sortEvents(); commit(); $o('#fbSh').textContent='Movidos '+L.length+' cortes. Desplazamiento total: '+(shiftTot>0?'+':'')+shiftTot+' s'; });
