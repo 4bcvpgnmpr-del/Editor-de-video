@@ -5261,7 +5261,28 @@ function expAudio(){
   }catch(e){return null;}
 }
 let EXP_LT=0;
-function expSvgImg(tl,ow,oh){
+/*ANIMEXP-START*/
+const AN_CSS='@keyframes anDraw{to{stroke-dashoffset:0}}@keyframes anFade{from{opacity:0}to{opacity:1}}@keyframes anPop{0%{opacity:0;transform:scale(.2)}100%{opacity:1;transform:scale(1)}}@keyframes anPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.22);opacity:.55}}@keyframes anBlink{0%,100%{opacity:1}50%{opacity:.55}}@keyframes anRise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}';
+/* congela las animaciones en el instante t (segundos): retraso negativo + pausa */
+function expAnimCss(t){
+  const P='animation-play-state:paused;', d=v=>v.toFixed(3)+'s';
+  return '<style>'+AN_CSS+
+   '.an-draw .ln{stroke-dasharray:1;stroke-dashoffset:1;animation:anDraw 1s ease-out forwards;'+P+'animation-delay:'+d(-t)+'}'+
+   '.an-draw .fl{animation:anFade 1s both;'+P+'animation-delay:'+d(0.4-t)+'}'+
+   '.an-fade{animation:anFade .7s both;'+P+'animation-delay:'+d(-t)+'}'+
+   '.an-pop{transform-box:fill-box;transform-origin:50% 90%;animation:anPop .55s cubic-bezier(.2,1.5,.4,1) both;'+P+'animation-delay:'+d(-t)+'}'+
+   '.an-pulse{animation:anBlink 1.4s ease-in-out infinite;'+P+'animation-delay:'+d(-t)+'}'+
+   '.an-pulse .ring{transform-box:fill-box;transform-origin:center;animation:anPulse 1.4s ease-in-out infinite;'+P+'animation-delay:'+d(-t)+'}'+
+   '.an-rise{animation:anRise .7s ease-out both;'+P+'animation-delay:'+d(-t)+'}</style>';
+}
+const AN_LEN={draw:1.4,fade:.7,pop:.55,rise:.7};
+/* ¿tiene este dibujo animaciones? -> {dur} (segundos de animación; el latido se corta a 2,8 s) o null */
+function expAnimPlan(tl,maxDur){
+  const m=expSvgStr(tl,10,10).match(/class="sh an-(draw|fade|pop|rise|pulse)/g); if(!m) return null;
+  let d=0; m.forEach(x=>{ const k=x.slice(x.lastIndexOf('-')+1); d=Math.max(d,k==='pulse'?2.8:AN_LEN[k]); });
+  d=Math.min(d,Math.max(0.3,maxDur||d)); return {dur:d};
+}
+function expSvgStr(tl,ow,oh,t){
   const spots=tl.items.filter(s=>s.type==='spot');
   let out='';
   if(spots.length){
@@ -5270,9 +5291,24 @@ function expSvgImg(tl,ow,oh){
       '<rect x="0" y="0" width="'+SW+'" height="'+f1(SH)+'" fill="#000" fill-opacity=".58" mask="url(#spm)"/>';
   }
   out+=tl.items.map((s,i)=>shapeSVG(s,i)).join('');
-  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+SW+' '+f1(SH)+'" width="'+ow+'" height="'+oh+'">'+out+'</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+SW+' '+f1(SH)+'" width="'+ow+'" height="'+oh+'">'+(t==null?'':expAnimCss(t))+out+'</svg>';
+}
+function expSvgImg(tl,ow,oh,t){
+  const svg=expSvgStr(tl,ow,oh,t);
   return new Promise(res=>{const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});
 }
+/* fotogramas animados para las rutas de exportación rápidas: imágenes SVG (pesan poco); se elige por la edad del dibujo */
+async function expAnimLoad(tl,ow,oh){
+  const pl=expAnimPlan(tl,tl.hold); if(!pl) return null;
+  const fps=25, NF=Math.round(pl.dur*fps), fr=await Promise.all(Array.from({length:NF+1},(_,k)=>expSvgImg(tl,ow,oh,k/fps)));
+  return {fr,fps,dur:NF/fps,final:await expSvgImg(tl,ow,oh,NF/fps)};
+}
+function expPick(imgs,anims,tl,age){
+  const a=anims&&anims.get(tl.id); if(!a) return imgs.get(tl.id);
+  if(age!=null&&age<a.dur){ const k=Math.max(0,Math.min(a.fr.length-1,Math.round(age*a.fps))); return a.fr[k]||a.final; }
+  return a.final||imgs.get(tl.id);
+}
+/*ANIMEXP-END*/
 function expLens(ctx,tl,ow,oh,src,sw0,sh0){
   src=src||video; const vw_=sw0||video.videoWidth, vh_=sh0||video.videoHeight;
   tl.items.forEach(s=>{
@@ -5917,8 +5953,8 @@ async function fxRun(list,o,prog){
   const enc=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{encErr=e;}});
   enc.configure(ecfg);
   const cv=document.createElement('canvas'); cv.width=ow; cv.height=oh; const ctx=cv.getContext('2d');
-  const imgs=new Map();
-  if(o.draw) for(const tl of teles){ imgs.set(tl.id,await expSvgImg(tl,ow,oh)); }
+  const imgs=new Map(), anims=new Map();
+  if(o.draw) for(const tl of teles){ imgs.set(tl.id,await expSvgImg(tl,ow,oh)); if(o.anim!==false){ const a=await expAnimLoad(tl,ow,oh); if(a) anims.set(tl.id,a); } }
   const total=Math.max(1,expDur(list,o.draw));
   let lastTs=-1e9; let kfNext=true, base=0, nFrames=0, firstA=true, lastA=-1, doneSecs=0;
   try{
@@ -5948,7 +5984,7 @@ async function fxRun(list,o,prog){
       const cts0=V.map(x=>x.cts), spanS=(Math.max(...cts0)-Math.min(...cts0))/V[0].timescale, srcRate=V.length>1&&spanS>0?(V.length-1)/spanS:fps, vfr=(()=>{ if(V.length<6) return false; const c=cts0.slice().sort((a,b)=>a-b), d=[]; for(let i=1;i<c.length;i++) d.push(c[i]-c[i-1]); const m=d.slice().sort((a,b)=>a-b)[d.length>>1]||1; return d.some(x=>x>m*1.6||x<m*0.55); })(), useGrid=Math.abs(srcRate/fps-1)>0.04||vfr;
       const emit=(frame,tl,out,al)=>{
         fitDraw(ctx,frame,ow,oh);
-        if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
+        if(tl){ ctx.globalAlpha=al==null?1:al; const im=expPick(imgs,anims,tl,EXP_LT); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
         if(o.title&&ev.name!==undefined){
           const nm=evName(ev);
           const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(nm).width, pad=fs*0.5;
@@ -6113,8 +6149,8 @@ async function expRecord(list,o,prog){
   const ow=Math.max(2,Math.round(Math.min(vw_,o.w)/2)*2), oh=Math.max(2,Math.round(ow*vh_/vw_/2)*2);
   const cv=document.createElement('canvas'); cv.width=ow; cv.height=oh; const ctx=cv.getContext('2d');
   /* imágenes de los dibujos (se preparan antes para no ir a trompicones) */
-  const imgs=new Map();
-  if(o.draw) for(const tl of teles){ imgs.set(tl.id,await expSvgImg(tl,ow,oh)); }
+  const imgs=new Map(), anims=new Map();
+  if(o.draw) for(const tl of teles){ imgs.set(tl.id,await expSvgImg(tl,ow,oh)); if(o.anim!==false){ const a=await expAnimLoad(tl,ow,oh); if(a) anims.set(tl.id,a); } }
   const saved={paused:video.paused,t:video.currentTime,rate:video.playbackRate,muted:video.muted,vol:video.volume};
   stopClip(false); endFreeze(false); video.pause(); video.muted=false; video.volume=1; video.playbackRate=1;
   const au=window.__expMute()?null:expAudio(), stream=cv.captureStream(30);
@@ -6125,7 +6161,7 @@ async function expRecord(list,o,prog){
   const stopped=new Promise(r=>{rec.onstop=r;});
   const draw=(ev,tl,al)=>{
     ctx.drawImage(video,0,0,ow,oh);
-    if(tl){ ctx.globalAlpha=al==null?1:al; const im=imgs.get(tl.id); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh); ctx.globalAlpha=1; }
+    if(tl){ ctx.globalAlpha=al==null?1:al; const im=expPick(imgs,anims,tl,EXP_LT); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh); ctx.globalAlpha=1; }
     if(o.title&&ev&&ev.name){
       const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(ev.name).width, pad=fs*0.5;
       ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(fs*0.6,fs*0.6,tw+pad*2,fs*1.5);
@@ -6160,7 +6196,7 @@ async function expRecord(list,o,prog){
           if(EXP.cancel){res();return;}
           const now=performance.now(), t=video.currentTime;
           if(fz){
-            draw(ev,fz.tl,teleAlpha(fz.tl,fz.tl.hold-(fz.until-now)/1000,(fz.until-now)/1000));
+            EXP_LT=fz.tl.hold-(fz.until-now)/1000; draw(ev,fz.tl,teleAlpha(fz.tl,fz.tl.hold-(fz.until-now)/1000,(fz.until-now)/1000));
             if(now>=fz.until){ prev=fz.tl.t; fz=null; lastMove=now; video.play().catch(()=>{}); }
             requestAnimationFrame(loop); return;
           }
@@ -6176,7 +6212,7 @@ async function expRecord(list,o,prog){
             }
           }
           if(Math.abs(t-lastT_)>0.001){lastT_=t;lastMove=now;} else if(now-lastMove>6000&&!video.paused){stalled=true;res();return;} else if(video.paused&&now-lastMove>3000){video.play().catch(()=>{});lastMove=now;}
-          draw(ev,fz?fz.tl:tl,(!fz&&tl)?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1); prev=t;
+          if(tl) EXP_LT=t-tl.t; draw(ev,fz?fz.tl:tl,(!fz&&tl)?teleAlpha(tl,t-tl.t,tl.t+tl.hold-t):1); prev=t;
           if(t>=ev.end-0.03||video.ended){res();return;}
           requestAnimationFrame(loop);
         };
@@ -6344,8 +6380,8 @@ async function ffLoadUno(fresh){
   }
 }
 async function ffExtra(){ try{ return await ffLoadUno(true); }catch(e){ return null; } }
-async function ffOverlayPng(tl,W,H){
-  const im=await expSvgImg(tl,W,H); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); if(im) x.drawImage(im,0,0,W,H);
+async function ffOverlayPng(tl,W,H,t){
+  const im=await expSvgImg(tl,W,H,t); const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'); if(im) x.drawImage(im,0,0,W,H);
   tl.items.forEach(sh=>{ if(sh.type!=='lens') return; x.beginPath(); x.arc(sh.cx*W,sh.cy*H,sh.r*W,0,Math.PI*2); x.strokeStyle=safeColor(sh.color); x.lineWidth=Math.max(2,(sh.sw||4)*W/1000*1.4); x.stroke(); });
   return new Promise(res=>c.toBlob(b=>b.arrayBuffer().then(a=>res(new Uint8Array(a))),'image/png'));
 }
@@ -6383,7 +6419,7 @@ async function ffRun(list,o,prog){
   try{
     const doClip=async(i,ctx)=>{
       const ff=ctx.ff, mountFor=f=>mountFor2(ctx,f), segs=[]; const e=list[i]; let seg='seg'+i+'.mp4'; ctx.p=0; prog(i,n,{name:e.name||e.label||''});
-      let dur, args;
+      let dur, args; const seqAll=[];
       const title=(o.title&&!e.cover)?(e.name||e.label||''):'';
       if(title){ await ff.writeFile('t'+i+'.png',await ffTitlePng(title,W,H)); }
       if(e.cover){
@@ -6397,7 +6433,9 @@ async function ffRun(list,o,prog){
         /* dibujos de este clip: "sobre el vídeo" (con su tiempo) y "pausa" (imagen congelada) */
         const TL=o.teles||teles; const ovT=(o.draw&&!e.ext)?TL.filter(x=>x.mode==='overlay'&&x.t<to&&x.t+x.hold>from):[];
         const fzT=(o.draw&&!e.ext)?TL.filter(x=>x.mode==='freeze'&&x.t>=from&&x.t<to).sort((a,b)=>a.t-b.t):[];
-        const png={}, lensOf={}; for(const tl of ovT.concat(fzT)){ png[tl.id]='o'+i+'_'+tl.id+'.png'; await ff.writeFile(png[tl.id],await ffOverlayPng(tl,W,H)); lensOf[tl.id]=[]; let li=0; for(const sh of tl.items){ if(sh.type!=='lens') continue; const nm='m'+i+'_'+tl.id+'_'+(li++)+'.png'; await ff.writeFile(nm,await ffMaskPng(2*Math.max(8,Math.round(sh.r*W)))); lensOf[tl.id].push({cx:sh.cx,cy:sh.cy,r:sh.r,zoom:sh.zoom,mask:nm}); } }
+        const png={}, lensOf={}, seqOf={}, seqFiles=seqAll; for(const tl of ovT.concat(fzT)){ png[tl.id]='o'+i+'_'+tl.id+'.png'; const pl=o.anim===false?null:expAnimPlan(tl,tl.hold); await ff.writeFile(png[tl.id],await ffOverlayPng(tl,W,H,pl?pl.dur:undefined));
+          if(pl){ const NF=Math.round(pl.dur*FPS); for(let k=0;k<=NF;k++){ const fn='a'+i+'_'+tl.id+'_'+String(k).padStart(3,'0')+'.png'; await ff.writeFile(fn,await ffOverlayPng(tl,W,H,k/FPS)); seqFiles.push(fn); } seqOf[tl.id]={pat:'a'+i+'_'+tl.id+'_%03d.png',dur:NF/FPS,fps:FPS}; }
+          lensOf[tl.id]=[]; let li=0; for(const sh of tl.items){ if(sh.type!=='lens') continue; const nm='m'+i+'_'+tl.id+'_'+(li++)+'.png'; await ff.writeFile(nm,await ffMaskPng(2*Math.max(8,Math.round(sh.r*W)))); lensOf[tl.id].push({cx:sh.cx,cy:sh.cy,r:sh.r,zoom:sh.zoom,mask:nm}); } }
         const build=(inArgs,ovs,audioMode,dur,outName,pre)=>{
           const a=inArgs.slice(); let idx=1, fc='[0:v]'+(pre?'trim=start='+pre.toFixed(3)+',setpts=PTS-STARTPTS,':'')+vf+'[v0]', last='v0';
           let nn=0; const en=ov=>ov.en?":enable='between(t,"+ov.en[0].toFixed(3)+","+ov.en[1].toFixed(3)+")'":'';
@@ -6409,7 +6447,12 @@ async function ffRun(list,o,prog){
               fc+=';['+last+']split[ls'+nn+'][lb'+nn+'];[lb'+nn+']crop='+cw+':'+cw+':'+cx0+':'+cy0+',scale='+d+':'+d+',format=yuva420p[lz'+nn+'];['+mi+':v]format=gray[lm'+nn+'];[lz'+nn+'][lm'+nn+']alphamerge[lc'+nn+'];[ls'+nn+'][lc'+nn+']overlay='+ox+':'+oy+':format=auto'+en(ov)+'[vl'+nn+']';
               last='vl'+nn; nn++;
             });
-            a.push('-i',ov.png); fc+=';['+last+']['+idx+':v]overlay=0:0:format=auto'+en(ov)+'[vo'+nn+']'; last='vo'+nn; nn++; idx++;
+            if(ov.seq){
+              const S=ov.st!=null?ov.st:(ov.en?ov.en[0]:0), E=ov.en?ov.en[1]:1e6, sq=idx++, D=ov.seq.dur;
+              a.push('-framerate',String(ov.seq.fps),'-i',ov.seq.pat);
+              fc+=';['+sq+':v]setpts=PTS+'+S.toFixed(3)+'/TB[sq'+nn+'];['+last+'][sq'+nn+']overlay=0:0:format=auto:enable=\'between(t,'+Math.max(0,S).toFixed(3)+','+Math.min(E,S+D).toFixed(3)+')\'[vs'+nn+']'; last='vs'+nn; nn++;
+              a.push('-i',ov.png); fc+=';['+last+']['+idx+':v]overlay=0:0:format=auto:enable=\'between(t,'+Math.max(0,S+D).toFixed(3)+','+E.toFixed(3)+')\'[vo'+nn+']'; last='vo'+nn; nn++; idx++;
+            } else { a.push('-i',ov.png); fc+=';['+last+']['+idx+':v]overlay=0:0:format=auto'+en(ov)+'[vo'+nn+']'; last='vo'+nn; nn++; idx++; }
           });
           fc+=';['+last+']format=yuv420p[v]';
           let amap, af=[];
@@ -6423,7 +6466,7 @@ async function ffRun(list,o,prog){
           const p0=pts[j], p1=pts[j+1], dur=p1-p0;
           if(dur>=0.04||(pts.length===2)){
             const d=Math.max(0.2,dur), nm='seg'+i+'_'+(part++)+'.mp4';
-            const ovs=titleOv.concat(ovT.filter(x=>x.t<p1&&x.t+x.hold>p0).map(x=>({png:png[x.id],lens:lensOf[x.id],en:[Math.max(0,x.t-p0),x.t+x.hold-p0]})));
+            const ovs=titleOv.concat(ovT.filter(x=>x.t<p1&&x.t+x.hold>p0).map(x=>({png:png[x.id],lens:lensOf[x.id],seq:seqOf[x.id],en:[Math.max(0,x.t-p0),x.t+x.hold-p0],st:x.t-p0})));
             /* se empieza a leer unos segundos antes y se recorta: así el vídeo de origen (emisión con GOP abierto) tiene tiempo de recomponerse y no sale pixelado al inicio del corte */
             const PRE=Math.min(3,p0), base=['-y','-ss',String(Math.max(0,p0-PRE)),'-t',String(d+PRE),'-i',src];
             let rc=mute?1:await ff.exec(build(base,ovs,true,d,nm,PRE)); if(rc!==0) rc=await ff.exec(build(base,ovs,false,d,nm,PRE));
@@ -6435,7 +6478,7 @@ async function ffRun(list,o,prog){
             const PRE2=Math.min(3,f.t); let rc=await ff.exec(['-y','-ss',String(Math.max(0,f.t-PRE2)),'-i',src,'-frames:v','1','-vf',(PRE2?'trim=start='+PRE2.toFixed(3)+',setpts=PTS-STARTPTS,':'')+'scale='+W+':'+H+':force_original_aspect_ratio=decrease:flags=lanczos,pad='+W+':'+H+':(ow-iw)/2:(oh-ih)/2:black',still]);
             if(rc!==0) throw new Error('No se pudo congelar la imagen.');
             const base=['-y','-loop','1','-framerate',String(FPS),'-t',String(hold),'-i',still];
-            rc=await ff.exec(build(base,titleOv.concat([{png:png[f.id],lens:lensOf[f.id]}]),false,hold,nm));
+            rc=await ff.exec(build(base,titleOv.concat([{png:png[f.id],lens:lensOf[f.id],seq:seqOf[f.id]}]),false,hold,nm));
             if(rc!==0) throw new Error('Falló una pausa con dibujo.');
             segs.push(nm); try{ await ff.deleteFile(still); }catch(_){}
           }
@@ -6444,6 +6487,7 @@ async function ffRun(list,o,prog){
       }
       if(seg) segs.push(seg);
       try{ await ff.deleteFile('t'+i+'.png'); }catch(_){} try{ await ff.deleteFile('c'+i+'.img'); }catch(_){}
+      for(const fn of seqAll){ try{ await ff.deleteFile(fn); }catch(_){} }
       results[i]=segs.map(nm=>({nm,ctx})); ctx.p=0; done++;
     };
     let nextI=0;
