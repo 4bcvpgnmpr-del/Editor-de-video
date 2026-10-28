@@ -5969,18 +5969,42 @@ function fxOpen(file){
     })().catch(reject);
   });
 }
-async function fxCollect(mp,file,vt,at,start,end){
+/* desfase entre el tiempo del archivo (cts) y el del reproductor (el que usan los cortes): vale por retrasos al inicio, listas de edición, etc. */
+function fxShiftEdit(info,vt){
+  try{ const ed=vt.edits; if(!ed||!ed.length) return 0; const mts=info.timescale||1000, tts=vt.timescale||mts; let pc=0;
+    for(const e of ed){ if(e.media_time<0){ pc+=e.segment_duration/mts; continue; } return pc-e.media_time/tts; } }catch(e){}
+  return 0;
+}
+async function fxCalcShift(mp,file,vt,info,el){
+  const fb=fxShiftEdit(info,vt);
+  let own=null;
+  try{
+    if(!el){ own=document.createElement('video'); own.muted=true; own.playsInline=true; own.preload='auto'; own.style.cssText='position:fixed;left:0;top:0;width:4px;height:4px;opacity:.02;pointer-events:none'; document.body.appendChild(own); own.src=URL.createObjectURL(file); await new Promise(r=>{ own.onloadeddata=r; own.onerror=r; setTimeout(r,4000); }); el=own; }
+    if(!el.requestVideoFrameCallback) return fb;
+    const {V}=await fxCollect(mp,file,vt,null,0,0.4,0);
+    if(!V.length) return fb;
+    const c0=Math.min(...V.map(s=>s.cts/s.timescale));
+    const was=!el.paused, t0=el.currentTime; el.pause();
+    const m0=await new Promise(res=>{ let d=false; const fin=v=>{ if(!d){ d=true; res(v); } }; el.requestVideoFrameCallback((n,md)=>fin(md.mediaTime)); setTimeout(()=>fin(null),1500); try{ el.currentTime=(Math.abs(el.currentTime-0.001)<1e-4)?0.002:0.001; }catch(e){ fin(null); } });
+    try{ if(el!==own){ el.currentTime=t0; if(was) el.play().catch(()=>{}); } }catch(e){}
+    if(m0==null||!isFinite(m0)) return fb;
+    const sh=m0-c0; return (Math.abs(sh)>7200)?fb:sh;
+  }catch(e){ return fb; }
+  finally{ if(own){ try{ URL.revokeObjectURL(own.src); }catch(e){} own.remove(); } }
+}
+async function fxCollect(mp,file,vt,at,start,end,shift){
+  shift=shift||0; const endC=end-shift;
   const V=[],A=[]; let vDone=false, aDone=!at;
   mp.onSamples=(id,u,ss)=>{
     for(const s of ss){
       const t=s.cts/s.timescale;
-      if(id===vt.id){V.push(s); if(t>=end+0.4) vDone=true;}
-      else {A.push(s); if(t>=end) aDone=true;}
+      if(id===vt.id){V.push(s); if(t>=endC+0.4) vDone=true;}
+      else {A.push(s); if(t>=endC) aDone=true;}
     }
   };
   mp.setExtractionOptions(vt.id,null,{nbSamples:1});
   if(at) mp.setExtractionOptions(at.id,null,{nbSamples:1});
-  const sk=mp.seek(Math.max(0,start),true);
+  const sk=mp.seek(Math.max(0,start-shift),true);
   mp.start();
   let pos=sk.offset;
   while(!(vDone&&aDone)&&pos<file.size&&!EXP.cancel){
@@ -5988,6 +6012,7 @@ async function fxCollect(mp,file,vt,at,start,end){
     const nx=mp.appendBuffer(buf); pos=(nx!=null&&nx>pos)?nx:pos+buf.byteLength;
   }
   mp.stop();
+  if(shift){ const f=s=>Object.assign({},s,{cts:s.cts+Math.round(shift*s.timescale),dts:s.dts+Math.round(shift*s.timescale)}); return {V:V.map(f),A:A.map(f)}; }
   return {V,A};
 }
 async function fxRun(list,o,prog){
@@ -6013,7 +6038,7 @@ async function fxRun(list,o,prog){
   if(!ecfg) throw new Error('Este navegador no codifica H.264 (el único formato que abren todos los reproductores).');
   const useAudio=!window.__expMute()&&!!(at&&/^mp4a/.test(at.codec));
   const asc=useAudio?fxAsc(mp,at.id):undefined;
-  const mainSrc={file,mp,info,vt,at,dcfg,useAudio};
+  const mainSrc={file,mp,info,vt,at,dcfg,useAudio,shift:await fxCalcShift(mp,file,vt,info,video)};
   const srcCache=new Map();
   async function srcFor(f){
     if(f===file) return mainSrc; if(srcCache.has(f)) return srcCache.get(f);
@@ -6023,7 +6048,7 @@ async function fxRun(list,o,prog){
     const dc2={codec:vt2.codec,codedWidth:vt2.video.width,codedHeight:vt2.video.height}; const ds2=/^avc1/.test(vt2.codec)?fxDesc(o2.mp,vt2.id):undefined; if(ds2) dc2.description=ds2; if(o.sw>=2) dc2.hardwareAcceleration='prefer-software';
     if(!(await VideoDecoder.isConfigSupported(dc2)).supported) throw new Error('No se puede decodificar el vídeo externo.');
     const ua=!!(useAudio&&at2&&/^mp4a/.test(at2.codec)&&at2.audio.sample_rate===at.audio.sample_rate&&at2.audio.channel_count===at.audio.channel_count);
-    const S={file:f,mp:o2.mp,info:o2.info,vt:vt2,at:at2,dcfg:dc2,useAudio:ua}; srcCache.set(f,S); return S;
+    const S={file:f,mp:o2.mp,info:o2.info,vt:vt2,at:at2,dcfg:dc2,useAudio:ua,shift:await fxCalcShift(o2.mp,f,vt2,o2.info,null)}; srcCache.set(f,S); return S;
   }
   const target=new Mp4Muxer.ArrayBufferTarget();
   const mux=new Mp4Muxer.Muxer({target,fastStart:'in-memory',firstTimestampBehavior:'cross-track-offset',video:{codec:mcodec,width:ow,height:oh,frameRate:fps},
@@ -6053,7 +6078,7 @@ async function fxRun(list,o,prog){
       }
       const S=ev.ext?await srcFor(ev.file):mainSrc;
       S.uses=(S.uses||0)+1; if(S.uses>5){ try{ const nw=await fxOpen(S.file); S.mp=nw.mp; S.uses=1; }catch(e){} }
-      const {V,A}=await fxCollect(S.mp,S.file,S.vt,S.at,ev.start,ev.end);
+      const {V,A}=await fxCollect(S.mp,S.file,S.vt,S.at,ev.start,ev.end,S.shift);
       if(EXP.cancel) break;
       while(V.length&&!V[0].is_sync) V.shift();
       if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
@@ -6155,11 +6180,12 @@ async function fxCopy(list,o,prog,srcFile){
   const target=new Mp4Muxer.ArrayBufferTarget();
   const mux=new Mp4Muxer.Muxer({target,fastStart:'in-memory',firstTimestampBehavior:'offset',video:{codec:cd,width:vt.video.width,height:vt.video.height,frameRate:fps},
     audio:useAudio?{codec:'aac',numberOfChannels:at.audio.channel_count,sampleRate:at.audio.sample_rate}:undefined});
+  const shiftC=await fxCalcShift(mp,file,vt,info,video);
   let base=0, firstV=true, firstA=true, lastAout=-1, lastVdts=-1;
   const total=Math.max(1,list.reduce((a,e)=>a+Math.max(0,e.end-e.start),0)); let doneS=0;
   for(let i=0;i<list.length&&!EXP.cancel;i++){
     const ev=list[i]; prog(i,list.length,ev);
-    const {V,A}=await fxCollect(mp,file,vt,at,ev.start,ev.end);
+    const {V,A}=await fxCollect(mp,file,vt,at,ev.start,ev.end,shiftC);
     if(EXP.cancel) break;
     while(V.length&&!V[0].is_sync) V.shift();
     if(!V.length) throw new Error('No se pudieron leer los fotogramas.');
@@ -6176,7 +6202,7 @@ async function fxCopy(list,o,prog,srcFile){
     }
     if(useAudio){
       const t0=minCts/ts; let AA=A;
-      if(!AA.length||AA[0].cts/AA[0].timescale>t0+0.05){ const r2=await fxCollect(mp,file,vt,at,Math.max(0,t0-0.02),ev.end); AA=r2.A; }
+      if(!AA.length||AA[0].cts/AA[0].timescale>t0+0.05){ const r2=await fxCollect(mp,file,vt,at,Math.max(0,t0-0.02),ev.end,shiftC); AA=r2.A; }
       for(const s of AA){
         const t=s.cts/s.timescale; if(t<t0-0.001||t>=t0+endT) continue;
         const out=base+(t-t0); const o2=Math.round(out*1e6); if(o2<=lastAout) continue; lastAout=o2;
