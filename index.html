@@ -5079,7 +5079,7 @@ requestAnimationFrame(loop);
 let lastFile=null;
 function loadFile(file,fromLib){
   if(!file) return;
-  try{ SFILES[file.name+'|'+file.size]=file; }catch(e){}
+  try{ SFILES[file.name+'|'+file.size]=file; if(window.scoutDesktop) pathRemember(file); }catch(e){}
   if(file.type&&!file.type.startsWith('video/')&&!/\.(mp4|m4v|mov|webm|mkv|avi|mts|m2ts|3gp)$/i.test(file.name)){toast('Ese archivo no es un vídeo ('+file.type+').');return;}
   if(window.__extOff) window.__extOff();
   if(objectURL) URL.revokeObjectURL(objectURL);
@@ -6397,15 +6397,31 @@ async function runExport(list,defName,mode,o){
 /* ===== Motor profesional propio (ffmpeg dentro de la app) ===== */
 const FF={inst:null,loading:null};
 /* App de escritorio: mismo contrato que ffmpeg.wasm, pero con el ffmpeg nativo del ordenador */
+const COPIED=new Map(), VT={off:false};
+function vtArgs(a){
+  const o=[]; for(let i=0;i<a.length;i++){ const x=a[i];
+    if(x==='libx264'){ o.push('h264_videotoolbox','-b:v','16M','-allow_sw','1'); continue; }
+    if(x==='-preset'||x==='-crf'||x==='-keyint_min'||x==='-sc_threshold'||x==='-x264-params'){ i++; continue; }
+    o.push(x); }
+  return o;
+}
+function pathRemember(f){ try{ const D=window.scoutDesktop; const p=D&&D.pathFor(f); if(!p) return; const o=JSON.parse(localStorage.getItem('bbtag.paths')||'{}'); o[f.name+'|'+f.size]=p; const ks=Object.keys(o); if(ks.length>60) delete o[ks[0]]; localStorage.setItem('bbtag.paths',JSON.stringify(o)); }catch(e){} }
+function pathKnown(f){ try{ return (JSON.parse(localStorage.getItem('bbtag.paths')||'{}'))[f.name+'|'+f.size]||''; }catch(e){ return ''; } }
 function ffNative(){
   const D=window.scoutDesktop, ls=[], dirs=new Map(); let job=null, ready=null;
+  const probe=async p=>{ try{ await need(); return (await D.exec(job,['-y','-v','error','-t','0.05','-i',p,'-f','null','-']))===0; }catch(e){ return false; } };
   const need=async()=>{ if(!ready) ready=D.start().then(j=>{job=j;}); await ready; };
   return {
     on(ev,fn){ if(ev==='progress') ls.push(fn); },
     async createDir(){ await need(); },
     async unmount(){},
-    async mount(_,o,dir){ await need(); const f=o.files[0]; let pth=D.pathFor(f);
-      if(!pth){ const CH=8*1024*1024; for(let off=0,first=true;off<f.size||first;off+=CH,first=false){ await D.append(job,f.name,new Uint8Array(await f.slice(off,off+CH).arrayBuffer()),first); } pth=await D.pathOf(job,f.name); }
+    async mount(_,o,dir){ await need(); const f=o.files[0], key=f.name+'|'+f.size; let pth=D.pathFor(f);
+      if(pth) pathRemember(f);
+      /* un archivo sin ruta (sale de «Mis vídeos») pero que ya se abrió desde el disco: se usa el original sin copiarlo */
+      if(!pth){ const kp=pathKnown(f); if(kp&&await probe(kp)) pth=kp; }
+      /* o ya se copió antes en esta sesión: se reutiliza la copia */
+      if(!pth&&COPIED.has(key)) pth=COPIED.get(key);
+      if(!pth){ try{ window.__ffPrep&&window.__ffPrep(f); }catch(e){} const CH=8*1024*1024, nm='src_'+key.replace(/[^\w.-]/g,'_')+'_'+f.name; for(let off=0,first=true;off<f.size||first;off+=CH,first=false){ await D.append(job,nm,new Uint8Array(await f.slice(off,off+CH).arrayBuffer()),first); } pth=await D.pathOf(job,nm); COPIED.set(key,pth); }
       dirs.set(dir,pth); },
     async writeFile(n,data){ await need(); if(typeof data==='string') data=new TextEncoder().encode(data); await D.write(job,n,data); },
     async readFile(n){ await need(); return await D.read(job,n); },
@@ -6413,6 +6429,8 @@ function ffNative(){
     async exec(args){ await need(); const ti=args.indexOf('-t'); const dur=ti>=0?parseFloat(args[ti+1]):0;
       const a=args.map(x=>{ if(typeof x==='string'&&x.charAt(0)==='/') for(const [d,pth] of dirs) if(x.indexOf(d+'/')===0) return pth; return x; });
       D.onProgress(sec=>{ if(dur>0) ls.forEach(fn=>fn({progress:Math.min(1,sec/dur)})); });
+      /* Mac: se prueba primero el codificador de la tarjeta de vídeo (mucho más rápido); si no está disponible, se sigue con x264 */
+      if(D.platform==='darwin'&&!VT.off&&a.includes('libx264')){ const rc=await D.exec(job,vtArgs(a)); if(rc===0) return 0; if(rc!==0){ VT.fails=(VT.fails||0)+1; if(VT.fails>=2) VT.off=true; } }
       return await D.exec(job,a); },
     async moveOut(n,dir,dest){ await need(); return await D.move(job,n,dir,dest); },
     terminate(){ try{ D.kill(job); }catch(_){} }
@@ -6481,6 +6499,7 @@ async function ffRun(list,o,prog){
   prog(0,list.length,{name:window.scoutDesktop?'Preparando…':'Cargando el motor (solo la primera vez, ≈ 31 MB)…'}); try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(true); }catch(_){}
   const ff=await ffLoad(); if(EXP.cancel) return null;
   let n=list.length, done=0; EXP.frac=0;
+  window.__ffPrep=f=>prog(done,n,{name:'Preparando «'+f.name+'» (solo la primera vez, puede tardar)…'});
   /* varios motores en paralelo (solo en la web): cada uno hace sus clips y al final se unen */
   const ctxs=[{ff,mounts:new Map(),mi:0,p:0}];
   const hook=c=>c.ff.on('progress',({progress})=>{ if(progress>=0&&progress<=1){ c.p=progress; EXP.frac=Math.min(0.99,(done+ctxs.reduce((a,x)=>a+x.p,0))/n); } });
