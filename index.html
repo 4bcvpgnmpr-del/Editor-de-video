@@ -10834,7 +10834,7 @@ async function aiTrackRun(p,secs,t0,ui){
   let best=null, bd=1e9; det.boxes.forEach(b=>{ const d=Math.hypot(b.vx-fx,b.fy-fy)/b.vh; if(d<bd){ bd=d; best=b; } });
   if(!best||bd>0.9) return null;                                  /* no hay nadie donde pulsó */
   let sig=aiSig(det.img,best), hRef=best.vh, vx=0, vy=0, lost=0; fx=best.vx; fy=best.fy;
-  const pts=[[0,fx/vw,fy/vh]], step=0.12, N=Math.floor(secs/step);
+  const pts=[[0,fx/vw,fy/vh]], step=0.2, N=Math.floor(secs/step);
   for(let n=1;n<=N&&!ui.stop();n++){
     const lt=n*step; await seek(t0+lt);
     const px=fx+vx, py=fy+vy, wide=lost>6;
