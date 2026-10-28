@@ -10860,7 +10860,7 @@ async function autoTrack(p,secs,opts){
     cx.drawImage(video,0,0,cw,ch); return cx.getImageData(0,0,cw,ch).data;
   };
   const bw=Math.max(12,Math.round(cw*0.05)), bh=Math.max(22,Math.round(cw*0.11)), rad=Math.round(cw*0.07);
-  const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.024,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:1,ring:1,trail:1,panel:0}};
+  const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.024,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:0,ring:1,trail:0,panel:0}};
   let idx=-1; if(!opts){ tl.items.push(s); idx=tl.items.length-1; } ed.sel=null; TRK.on=true;
   let stop=false;
   const bar=document.createElement('div'); bar.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9800;background:var(--panel,#222);color:var(--text,#fff);border:1px solid var(--line,#444);border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5)';
@@ -10868,7 +10868,7 @@ async function autoTrack(p,secs,opts){
   bar.querySelector('#atS').onclick=()=>{ stop=true; };
   try{
     video.pause();
-    let aiPts=null; try{ aiPts=await aiTrackRun(p,secs,t0,{msg:tx=>{ const el=bar.querySelector('#atT'); if(el) el.textContent=tx; },stop:()=>stop}); }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); }
+    let aiPts=null; try{ aiPts=await aiTrackRun(p,secs,t0,{msg:tx=>{ const el=bar.querySelector('#atT'); if(el) el.textContent=tx; },stop:()=>stop}); }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); toast('La IA no se pudo cargar ('+((e&&e.message)||e)+'). Uso el seguimiento básico, que falla más. Revisa que la carpeta «ai» esté subida a GitHub.'); }
     if(aiPts&&aiPts.length>=4){ aiPts.forEach((q,i)=>{ if(i) s.pts.push(q); }); tl.rev++; } else {
     let fx=p.x*cw, fy=p.y*ch;                               /* pies */
     let data=await grab(t0);
@@ -10918,7 +10918,7 @@ function startTrack(p){
     if(file) return void autoTrack(p,+((document.getElementById('dwTrkDur')||{}).value)||5);
     toast('El seguimiento automático solo funciona con vídeos del equipo o archivos. Va a mano.');
   }
-  const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.024,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:1,ring:1,trail:1,panel:0}};
+  const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.024,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:0,ring:1,trail:0,panel:0}};
   tl.items.push(s); const idx=tl.items.length-1; ed.sel=null;
   const oldRate=video.playbackRate, slow=!(window.__srcMode&&window.__srcMode()!=='file');
   try{ video.playbackRate=slow?0.35:1; }catch(e){}
