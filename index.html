@@ -335,6 +335,7 @@ body:not(.vfull):not(.bbOpts) #pTags .bb-cats>.bb-sh{display:none!important}
 .xpc{text-align:center;font:600 15px var(--f-body);margin-top:10px}
 .xbig{font:700 22px var(--f-head);text-align:center}
 @media(max-width:560px){.xg{grid-template-columns:1fr}}
+#ipHome .hm-x,body.ipHome.hmForce #ipHome .hm-x{display:none!important}
 html.ed-pub #bFebTop,html.ed-pub #bFebCuts,html.ed-pub #bYtMarks,html.ed-pub #bLive,html.ed-pub #bCloud,html.ed-pub #hmCloud,html.ed-pub #hmLive,html.ed-pub #hhLive,html.ed-pub #hmFeb,html.ed-pub [data-tool=track],html.ed-pub #moreMenu #bLive,html.ed-pub #moreMenu #bCloud{display:none!important}
 #dwCuts{position:absolute;right:8px;top:8px;width:200px;max-height:calc(100% - 16px);overflow:auto;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:7px;z-index:6;color:#fff;font:600 12px Inter,Barlow,sans-serif}
 #dwCuts[hidden]{display:none}
@@ -9391,6 +9392,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   $h('hmTeamF').onchange=e=>{ RF=e.target.value; renderRec(); };
   let force=false;
   $h('hmX').onclick=()=>{ force=false; B.classList.remove('hmForce'); };
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&B.classList.contains('hmForce')&&hasVideo&&!document.querySelector('dialog[open]')&&!document.getElementById('expDlg')) $h('hmX').click(); });
   const btn=document.createElement('button'); btn.id='ipHomeBtn'; btn.className='btn'; btn.title='Inicio'; btn.setAttribute('aria-label','Inicio');
   btn.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>';
   btn.onclick=()=>{ force=true; B.classList.add('hmForce'); renderRec(); };
@@ -12489,7 +12491,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zf · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zg · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
