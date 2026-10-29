@@ -8357,6 +8357,38 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   window.__hud={get:()=>Object.assign({},H),set:(k,v)=>{ H[k]=v; save(); last=''; render(); },render};
 })();
 
+/* ===== Tour rápido (primer uso) ===== */
+(function(){
+  const KEY='bbtag.tourSeen';
+  const steps=[
+    {sel:'#pTags .codes,#codes',t:'1 · Etiqueta',d:'Pulsa un botón (o su tecla) mientras ves el partido. Se guarda un corte con unos segundos antes y después.'},
+    {sel:'#pEvents',t:'2 · Revisa los cortes',d:'Cada etiqueta aparece aquí y en la línea de tiempo. Toca uno para verlo, editarlo o borrarlo.'},
+    {sel:'#bFreeze',t:'3 · Dibuja',d:'Pausa y pulsa «Congelar imagen» para dibujar encima: flechas, círculos, zonas, lupa…'},
+    {sel:'#bExpF',t:'4 · Exporta',d:'Cuando termines, «Vídeo» guarda los cortes con tus dibujos. Todo lo demás está en «⋯».'}
+  ];
+  const st=document.createElement('style');
+  st.textContent='#tourCard{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147482500;width:min(420px,calc(100% - 28px));background:#1c1d20;color:#f2f2f2;border:1px solid #34353a;border-radius:14px;padding:14px 16px;box-shadow:0 14px 44px rgba(0,0,0,.6);font-family:var(--f-body)}#tourCard b{display:block;font:700 16px var(--f-head);color:var(--accent);margin-bottom:4px}#tourCard p{margin:0 0 12px;font-size:14px;line-height:1.4;color:#d4d5d9}#tourCard .tf{display:flex;gap:8px;align-items:center}#tourCard .tf span{flex:1;font-size:12px;color:#8b8c93}#tourCard button{border:0;border-radius:8px;padding:8px 14px;font:600 13px var(--f-body);cursor:pointer;background:#34353a;color:#f2f2f2}#tourCard button.go{background:#00b95c;color:#fff}.tourHi{outline:3px solid var(--accent)!important;outline-offset:3px;border-radius:8px;position:relative;z-index:2147482000}';
+  document.head.appendChild(st);
+  let card=null,hi=null;
+  const end=()=>{ if(hi) hi.classList.remove('tourHi'); hi=null; if(card) card.remove(); card=null; try{ localStorage.setItem(KEY,'1'); }catch(_){} };
+  function show(i){
+    if(hi){ hi.classList.remove('tourHi'); hi=null; }
+    if(i>=steps.length){ end(); return; }
+    const sp=steps[i]; const el=document.querySelector(sp.sel);
+    if(el&&el.offsetParent!==null){ hi=el; el.classList.add('tourHi'); try{ el.scrollIntoView({block:'nearest'}); }catch(_){} }
+    if(!card){ card=document.createElement('div'); card.id='tourCard'; card.setAttribute('role','dialog'); document.body.appendChild(card); }
+    card.innerHTML='<b>'+sp.t+'</b><p>'+sp.d+'</p><div class="tf"><span>'+(i+1)+' de '+steps.length+'</span><button id="tourSkip">Saltar</button><button class="go" id="tourNext">'+(i===steps.length-1?'Terminar':'Siguiente')+'</button></div>';
+    card.querySelector('#tourSkip').onclick=end; card.querySelector('#tourNext').onclick=()=>show(i+1);
+  }
+  window.__tour=()=>{ const d=document.getElementById('dlgHelp'); if(d&&d.open) d.close(); show(0); };
+  /* botón en la ayuda */
+  const addBtn=()=>{ const B=document.getElementById('hpB'); if(!B||B.querySelector('#hpTour')) return !!B; const b=document.createElement('button'); b.className='btn primary'; b.id='hpTour'; b.textContent='▶ Tour rápido (30 s)'; b.style.cssText='flex:none;align-self:flex-start'; b.onclick=()=>window.__tour(); B.prepend(b); return true; };
+  let n=0; const iv=setInterval(()=>{ if(addBtn()||++n>40) clearInterval(iv); },500);
+  /* primer uso: al abrir el primer vídeo */
+  let seen=false; try{ seen=localStorage.getItem(KEY)==='1'; }catch(_){}
+  if(!seen){ let ok=0; const w=setInterval(()=>{ try{ const busy=document.getElementById('expDlg')||document.getElementById('pwOv')||document.querySelector('dialog[open]'); ok=(hasVideo&&!busy)?ok+1:0; if(ok>=4){ clearInterval(w); show(0); } }catch(_){ clearInterval(w); } },1000); }
+})();
+
 /* ===== Modo de trabajo: Etiquetar | Producción ===== */
 (function(){
   const brand=document.querySelector('.top .brand'), pb=document.getElementById('bProd'); if(!brand||!pb) return;
@@ -12424,7 +12456,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-za · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zb · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
