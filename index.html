@@ -5292,7 +5292,7 @@ async function openLib(){
   list.sort((a,b)=>String((b.m&&b.m.d)||'').localeCompare(String((a.m&&a.m.d)||''))||b.added-a.added);
   const rows=list.map(v=>'<div style="display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:6px">'+
     '<div style="flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(v.m?v.m.t:v.name)+'</div><div style="font-size:12px;color:var(--muted)">'+(v.m&&v.m.d?esc(matchDate(v.m.d))+' · ':'')+(v.m?esc(v.name)+' · ':'')+mb(v.size)+(v.m&&v.m.d?'':' · '+new Date(v.added).toLocaleDateString())+'</div></div>'+
-    '<button class="btn primary" data-o="'+esc(v.key)+'">Abrir</button>'+(v.copia?'<button class="btn danger" data-d="'+esc(v.key)+'" title="Borra solo la copia del vídeo guardada en este dispositivo; el partido y sus etiquetas se conservan">Quitar copia</button>':'')+'</div>').join('');
+    '<button class="btn primary" data-o="'+esc(v.key)+'">Abrir</button><button class="btn danger" data-x="'+esc(v.key)+'" title="Borra este partido: sus etiquetas, clips y dibujos">🗑</button>'+(v.copia?'<button class="btn danger" data-d="'+esc(v.key)+'" title="Borra solo la copia del vídeo guardada en este dispositivo; el partido y sus etiquetas se conservan">Quitar copia</button>':'')+'</div>').join('');
   const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Mis partidos</h3>'+
     '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">Aquí están tus partidos con sus etiquetas, clips y dibujos. El vídeo no se copia: se busca solo donde está en tu ordenador y, si lo has movido, te pide elegirlo una vez. '+esc(quota)+'</p>'+
     (err?'<p style="color:var(--danger,#e55)">'+esc(err)+'</p>':'')+
@@ -5303,6 +5303,17 @@ async function openLib(){
   d.querySelector('#lbNo').onclick=expClose;
   { const tf=d.querySelector('#lbTeam'); if(tf) tf.onchange=()=>{ libTeamF=tf.value; openLib(); }; }
   d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>vidOpenLib(b.dataset.o));
+  d.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{
+    const k=b.dataset.x, mt=window.__mt(k), nm=mt?mt.t:k.slice(0,k.lastIndexOf('|'));
+    if(!(await window.__askOk('¿Borrar «'+nm+'»?','Se borran sus etiquetas, clips y dibujos de este dispositivo. No se puede deshacer.','Borrar'))) return;
+    try{ localStorage.removeItem('bbtag.project.'+k); localStorage.removeItem('bbtag.pts.'+k); const tm=titlesGet(); delete tm[k]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(e){}
+    try{ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); gs.forEach(g=>{ if(g&&Array.isArray(g.keys)) g.keys=g.keys.filter(x=>x!==k); }); lsSet('bbtag.groups',JSON.stringify(gs)); }catch(e){}
+    try{ await vdbTx('readwrite',st=>st.delete(k)); }catch(e){}
+    try{ const r=JSON.parse(lsGet('bbtag.recent')||'[]'); lsSet('bbtag.recent',JSON.stringify(r.filter(x=>x&&x.key!==k))); }catch(e){}
+    if(videoKey===k){ videoKey=null; events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[]; selectedId=null; try{ renderAll(); }catch(e){} }
+    try{ if(window.__renderRec) window.__renderRec(); }catch(e){}
+    toast('Partido borrado.'); openLib();
+  });
   d.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{
     if(!confirm('¿Quitar la copia del vídeo de este dispositivo? El partido y sus etiquetas se conservan; solo tendrás que elegir el vídeo al abrirlo.')) return;
     try{await vdbTx('readwrite',st=>st.delete(b.dataset.d));}catch(e){}
@@ -12323,7 +12334,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-s · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-t · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
