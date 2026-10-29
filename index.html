@@ -5302,6 +5302,11 @@ async function vidFile(key){
   if(SFILES[key]) return SFILES[key];
   try{ const v=await vdbTx('readonly',st=>st.get(key)); if(v&&v.blob) return new File([v.blob],v.name,{type:v.type||'video/mp4'}); }catch(e){}
   try{ const f=await vidFromHandle(key); if(f) return f; }catch(e){}
+  /* app de Mac: si ese vídeo ya se abrió antes, se vuelve a leer de su sitio en el disco sin preguntar */
+  if(window.scoutDesktop){ try{
+    const o=JSON.parse(localStorage.getItem('bbtag.paths')||'{}'), fp=o[key]; const i=String(key).lastIndexOf('|'), name=i>=0?key.slice(0,i):String(key), size=i>=0?+key.slice(i+1):0;
+    if(fp){ const r=await fetch('scout://file/'+fp.split('/').map(encodeURIComponent).join('/')); if(r.ok){ const b=await r.blob(); if(!size||b.size===size){ const f=new File([b],name,{type:b.type||(/\.webm$/i.test(name)?'video/webm':'video/mp4')}); SFILES[key]=f; return f; } } }
+  }catch(e){} }
   return null;
 }
 function vidAsk(key,title,doc){
@@ -12631,7 +12636,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zr · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zs · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
