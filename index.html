@@ -976,6 +976,10 @@ select#ipSetSel{max-width:150px;min-height:40px;border-radius:10px;background:va
 #ipBe .be-h .sp{flex:1}
 #ipBe button{font:600 15px var(--f-body);color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;min-height:44px;min-width:44px;padding:0 14px;cursor:pointer}
 #ipBe button:disabled{opacity:.4}
+#ipBe .be-pls{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+#ipBe .be-pl{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;min-height:48px}
+#ipBe .be-pl img,#ipBe .be-pl i{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#2a2a2a;display:grid;place-content:center;font-style:normal;font-weight:700;flex:none}
+#ipBe .be-pla{padding:0 16px;color:var(--accent)}
 #ipBe select,#ipBe input{font:16px var(--f-body);color:var(--text);background:#181818;border:1px solid var(--line);border-radius:10px;min-height:44px;padding:0 12px;box-sizing:border-box}
 #ipBe .be-done,#ipBe .be-save{background:var(--accent);color:#111;border-color:var(--accent);font-weight:800}
 #ipBe .be-b{flex:1;min-height:0;display:grid;grid-template-columns:min(340px,38%) 1fr}
@@ -3837,7 +3841,7 @@ const rp=p=>{ const o={n:String(p.n),name:String(p.name||'')}; const f=phOk(p.ph
 function keepPh(nu,old){ (nu||[]).forEach(p=>{ if(!p.photo){ const q=(old||[]).find(x=>String(x.n)===String(p.n)); if(q&&q.photo) p.photo=q.photo; } }); return nu; }
 function defaultCfg(){
   const buttons=JSON.parse(JSON.stringify(DEFAULTS.concat(EXTRA)));
-  return {v:CFG_V,pages:['Principal','Sistemas'],pgType:{},teamNames:{L:'Local',R:'Rival'},rosters:{L:[],R:[]},buttons,
+  return {v:CFG_V,plSeen:true,pages:['Principal','Sistemas','Jugadoras'],pgType:{Jugadoras:'players'},teamNames:{L:'Local',R:'Rival'},rosters:{L:[],R:[]},buttons,
     cats:[...new Set(buttons.map(b=>b.group))],descs:JSON.parse(JSON.stringify(DESC_DEFAULTS))};
 }
 function migrateCfg(o){
@@ -3862,6 +3866,7 @@ function migrateCfg(o){
   o.buttons.forEach(b=>{if(!o.cats.includes(b.group)) o.cats.push(b.group);});
   { const pt={}; if(o.pgType&&typeof o.pgType==='object') Object.keys(o.pgType).forEach(k=>{ if(o.pages.includes(k)&&o.pgType[k]==='players') pt[k]='players'; }); o.pgType=pt;
     const a=o.pages.filter(x=>!pt[x]), b=o.pages.filter(x=>pt[x]); if(a.length) o.pages=a.concat(b); else { o.pgType={}; } }
+  if(!o.plSeen){ o.plSeen=true; if(!o.pages.some(x=>o.pgType[x]==='players')){ let n='Jugadoras'; while(o.pages.includes(n)) n+=' ';  o.pages.push(n); o.pgType[n]='players'; } }
   if(!Array.isArray(o.descs)) o.descs=v0<3?JSON.parse(JSON.stringify(DESC_DEFAULTS)):[];
   if(v0<5&&v0>=3&&!o.descs.some(g=>g&&g.id==='dtip')){ const d=DESC_DEFAULTS.find(g=>g.id==='dtip'); o.descs.splice(1,0,JSON.parse(JSON.stringify(d))); }
   o.descs=o.descs.filter(g=>g&&g.id).map(g=>({id:String(g.id),name:String(g.name||'Descriptores'),color:safeColor(g.color),multi:!!g.multi,
@@ -9590,17 +9595,22 @@ function openIpBe(newBtn){
     const b={id:uid(),label:'',group:'Otros',sub:'',page:(IPS.set==='*'||isPlSet(IPS.set))?cfg.pages[0]:IPS.set,key:'',pre:5,post:3,pts:0,color:PALETTE[cfg.buttons.length%PALETTE.length],icon:'',size:'m',hidden:false};
     cfg.buttons.push(b); if(!cfg.cats.includes('Otros')) cfg.cats.push('Otros'); IPS.sel=b.id; touch(); render(true);
   }
+  function plPane(){
+    const row=(k,p)=>'<button class="be-pl" data-pt="'+k+'" data-pn="'+esc(p.n)+'">'+(p.photo?'<img src="'+esc(p.photo)+'" alt="">':'<i>'+esc(p.n)+'</i>')+'<span>#'+esc(p.n)+' '+esc(p.name||'')+'</span></button>';
+    return '<p class="hint" style="margin:0 0 10px">Aquí están las jugadoras de cada equipo con su foto. Toca una para cambiar nombre, dorsal o foto; con «＋ Jugadora» añades más. En la botonera, al pulsar una jugadora eliges la categoría y los descriptores.</p>'+
+      ['L','R'].map(k=>'<div class="be-s">'+esc(cfg.teamNames[k]||k)+'</div><div class="be-pls">'+(cfg.rosters[k]||[]).map(p=>row(k,p)).join('')+'<button class="be-pl be-pla" data-pa="'+k+'">＋ Jugadora</button></div>').join('');
+  }
   function render(focusName){
-    const list=vis(); if(!list.some(b=>b.id===IPS.sel)) IPS.sel=list.length?list[0].id:null;
+    const list=isPlSet(IPS.set)?[]:vis(); if(!list.some(b=>b.id===IPS.sel)) IPS.sel=list.length?list[0].id:null;
     const b=cfg.buttons.find(x=>x.id===IPS.sel), i=list.findIndex(x=>x.id===IPS.sel);
     const sets=ipSetList();
     o.innerHTML='<div class="be-h"><button class="be-x" id="beX" aria-label="Cerrar">✕</button><b>Editar botonera</b>'+
       '<select id="beSet" aria-label="Conjunto"><option value="*"'+(IPS.set==='*'?' selected':'')+'>Todos los botones</option>'+sets.map(s=>'<option value="'+esc(s)+'"'+(IPS.set===s?' selected':'')+'>'+esc(s)+'</option>').join('')+'</select>'+
-      '<button class="be-m" id="beSetNew">＋ Conjunto</button><button class="be-m" id="beSetPl" title="Un conjunto con las caras y los nombres de las jugadoras">＋ Jugadoras</button><button class="be-m" id="beSetRen"'+(IPS.set==='*'?' disabled':'')+'>✎</button><button class="be-m" id="beSetDel"'+(IPS.set==='*'||(!isPlSet(IPS.set)&&sets.filter(x=>!isPlSet(x)).length<2)?' disabled':'')+'>🗑</button>'+
+      '<button class="be-m" id="beSetNew">＋ Conjunto</button><button class="be-m" id="beSetRen"'+(IPS.set==='*'?' disabled':'')+'>✎</button><button class="be-m" id="beSetDel"'+(IPS.set==='*'||isPlSet(IPS.set)||(!isPlSet(IPS.set)&&sets.filter(x=>!isPlSet(x)).length<2)?' disabled':'')+'>🗑</button>'+
       '<span class="sp"></span><button class="be-m" id="beDesc" title="Editar los descriptores (resultado, defensa…)">Descriptores</button><button class="be-done" id="beDone">Hecho</button></div>'+
-      '<div class="be-b"><div class="be-l" id="beList">'+list.map(x=>'<div class="be-row'+(x.id===IPS.sel?' sel':'')+'" data-id="'+esc(x.id)+'"><i style="background:'+safeColor(x.color)+'"></i><span class="be-t"><b>'+esc(x.label||'Sin nombre')+'</b><small>'+esc(sub(x))+'</small></span><span class="be-g" data-grip title="Arrastra para ordenar">≡</span></div>').join('')+
-        '<button class="be-new" id="beNew">＋ Nueva categoría</button></div>'+
-      '<div class="be-f">'+(b?
+      '<div class="be-b"'+(isPlSet(IPS.set)?' style="grid-template-columns:1fr"':'')+'><div class="be-l" id="beList"'+(isPlSet(IPS.set)?' hidden':'')+'>'+list.map(x=>'<div class="be-row'+(x.id===IPS.sel?' sel':'')+'" data-id="'+esc(x.id)+'"><i style="background:'+safeColor(x.color)+'"></i><span class="be-t"><b>'+esc(x.label||'Sin nombre')+'</b><small>'+esc(sub(x))+'</small></span><span class="be-g" data-grip title="Arrastra para ordenar">≡</span></div>').join('')+
+        (isPlSet(IPS.set)?'':'<button class="be-new" id="beNew">＋ Nueva categoría</button>')+'</div>'+
+      '<div class="be-f">'+(isPlSet(IPS.set)?plPane():b?
         '<label>Nombre<input id="beName" maxlength="30" value="'+esc(b.label)+'" placeholder="p. ej. Poste bajo"></label>'+
         '<div class="be-s">Color</div><div class="be-cols">'+PALETTE.concat(['#FFFFFF','#111111']).map(c=>'<button data-c="'+c+'" style="background:'+c+'" class="'+(safeColor(b.color).toLowerCase().slice(0,7)===c.toLowerCase()?'on':'')+'" aria-label="Color '+c+'"></button>').join('')+'<input type="color" id="beColor" value="'+safeColor(b.color).slice(0,7)+'" aria-label="Otro color"></div>'+
         '<div class="be-s">Segundos antes del momento</div><div class="be-sl"><input type="range" id="bePre" min="0" max="30" value="'+(b.pre||0)+'"><input type="number" id="bePreN" min="0" max="120" value="'+(b.pre||0)+'"><span>s</span></div>'+
@@ -9610,16 +9620,18 @@ function openIpBe(newBtn){
         '<label>Tecla (teclado)<input id="beKey" maxlength="1" value="'+esc(b.key||'')+'"></label></div>'+
         '<div class="be-act"><button class="be-save" id="beSave">Guardar</button><button class="be-del" id="beDel">Borrar categoría</button></div>'+
         '<div class="be-nav"><button id="bePrev"'+(i<=0?' disabled':'')+'>‹ Anterior</button><button id="beNext"'+(i>=list.length-1?' disabled':'')+'>Siguiente ›</button></div>'
-        :'<p class="hint" style="padding:24px">'+(isPlSet(IPS.set)?'Este conjunto muestra a las jugadoras con su foto. Al pulsar una, eliges la categoría y los descriptores. Para añadir jugadoras o ponerles foto, usa «✎ Editar» en la botonera.':'No hay categorías en este conjunto. Pulsa «＋ Nueva categoría».')+'</p>')+'</div></div>';
+        :'<p class="hint" style="padding:24px">No hay categorías en este conjunto. Pulsa «＋ Nueva categoría».</p>')+'</div></div>';
     const g=s=>o.querySelector(s);
     g('#beX').onclick=g('#beDone').onclick=closeIpBe;
     g('#beDesc').onclick=()=>{ closeIpBe(); openIpDe(); };
     g('#beSet').onchange=e=>{IPS.set=e.target.value;lsSet('bbtag.ipset',IPS.set);IPS.sel=null;render();};
     g('#beSetNew').onclick=()=>window.__askName('Nombre del conjunto (p. ej. Ataque, Defensa)','',v=>{ const n=v.trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); });
-    g('#beSetPl').onclick=()=>window.__askName('Nombre del conjunto de jugadoras','Jugadoras',v=>{ const n=v.trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); cfg.pgType=cfg.pgType||{}; cfg.pgType[n]='players'; normPages(); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); });
+    if(g('#beSetPl')) g('#beSetPl').onclick=()=>window.__askName('Nombre del conjunto de jugadoras','Jugadoras',v=>{ const n=v.trim().slice(0,24); if(!n||cfg.pages.includes(n)) return; cfg.pages.push(n); cfg.pgType=cfg.pgType||{}; cfg.pgType[n]='players'; normPages(); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); });
     g('#beSetRen').onclick=()=>{ const old=IPS.set; window.__askName('Nuevo nombre del conjunto',old,v=>{ const n=v.trim().slice(0,24); if(!n||n===old||cfg.pages.includes(n)) return; if(cfg.pgType&&cfg.pgType[old]){ cfg.pgType[n]=cfg.pgType[old]; delete cfg.pgType[old]; } cfg.pages=cfg.pages.map(x=>x===old?n:x); cfg.buttons.forEach(x=>{if(ipSetOf(x)===old) x.page=n;}); cfg.descs.forEach(d=>{ d.scope=d.scope.map(v=>v==='set:'+old?'set:'+n:v); }); IPS.set=n; lsSet('bbtag.ipset',n); touch(); render(); }); };
     g('#beSetDel').onclick=()=>{ const old=IPS.set; if(!confirm(isPlSet(old)?'¿Borrar el conjunto de jugadoras «'+old+'»? Las jugadoras no se borran.':'¿Borrar el conjunto «'+old+'»? Sus botones pasan al primer conjunto.')) return; cfg.pages=cfg.pages.filter(x=>x!==old); if(cfg.pgType) delete cfg.pgType[old]; normPages(); cfg.buttons.forEach(x=>{if(x.page===old) x.page=cfg.pages[0];}); IPS.set='*'; lsSet('bbtag.ipset','*'); touch(); render(); };
-    g('#beNew').onclick=add;
+    if(g('#beNew')) g('#beNew').onclick=add;
+    o.querySelectorAll('.be-pl').forEach(bt=>bt.onclick=()=>{ const dl=document.getElementById('dlgItem'); const back=()=>{ dl.removeEventListener('close',back); if(document.getElementById('ipBe')) render(); };
+      if(dl) dl.addEventListener('close',back); if(bt.dataset.pa) openItem('player',null,{team:bt.dataset.pa}); else openItem('player',{team:bt.dataset.pt,n:bt.dataset.pn}); });
     o.querySelectorAll('.be-row').forEach(r=>r.addEventListener('click',e=>{ if(e.target.closest('[data-grip]')) return; IPS.sel=r.dataset.id; render(); }));
     /* arrastrar para ordenar */
     o.querySelectorAll('[data-grip]').forEach(gr=>gr.addEventListener('pointerdown',e=>{
@@ -12371,7 +12383,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-w · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-x · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
