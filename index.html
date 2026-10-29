@@ -340,6 +340,9 @@ body.ipad #dwBar{width:210px}body.ipad #dwBar .g button{height:40px}body.ipad #d
 .dw input[type=range]{width:100%;padding:0;accent-color:var(--accent)}
 .tk{position:absolute;bottom:3px;width:10px;height:10px;background:var(--accent);transform:translateX(-5px) rotate(45deg);cursor:pointer;z-index:3;border-radius:1px}
 .tk:hover{outline:2px solid var(--text)}
+.tkd{position:absolute;bottom:0;height:6px;background:color-mix(in srgb,var(--accent) 55%,transparent);border:1px solid var(--accent);border-radius:4px;z-index:2;cursor:pointer}
+.tkd .tkh{position:absolute;right:-4px;top:-3px;width:8px;height:12px;background:var(--accent);border-radius:3px;cursor:ew-resize}
+.tkd .tkl{position:absolute;left:-4px;top:-3px;width:8px;height:12px;background:var(--accent);border-radius:3px;cursor:ew-resize}
 
 /* ---- descriptores, búsqueda de botones y filtros ---- */
 .dstrip{position:sticky;bottom:-10px;z-index:4;background:var(--panel);margin:14px -10px -10px;padding:8px 10px 6px;border-top:1px solid var(--line)}
@@ -4344,6 +4347,7 @@ function renderTimeline(){
   const mk=markers.map(m=>'<span class="mk" data-id="'+m.id+'" style="left:'+(m.t*pps).toFixed(1)+'px" title="'+esc(m.text+' · '+fmt(m.t))+'"></span>').join('');
 
   const tk=teles.map(t=>'<span class="tk" data-id="'+t.id+'" style="left:'+(t.t*pps).toFixed(1)+'px" title="'+esc((t.mode==='freeze'?'Freeze frame':'Dibujo sobre el vídeo')+' · '+fmt(t.t)+' · '+t.items.length+' figuras. Doble clic para editar')+'"></span>').join('');
+  const tkb=teles.filter(t=>t.mode!=='freeze'&&t.items.length).map(t=>'<span class="tkd" data-id="'+t.id+'" style="left:'+(t.t*pps).toFixed(1)+'px;width:'+Math.max(10,(t.hold||3)*pps).toFixed(1)+'px" title="Duración del dibujo: '+String(t.hold||3).replace('.',',')+' s. Arrastra los bordes para cambiar duración o inicio"><i class="tkl"></i><i class="tkh"></i></span>').join('');
   const ids=[];
   cfg.buttons.forEach(b=>{if(events.some(e=>e.btnId===b.id)) ids.push(b.id);});
   events.forEach(e=>{if(!ids.includes(e.btnId)) ids.push(e.btnId);});
@@ -4360,7 +4364,7 @@ function renderTimeline(){
     return '<div class="lane"><div class="lane-l" title="'+esc(inf.label)+'"><i style="background:'+safeColor(inf.color)+'"></i>'+esc(inf.label)+'</div><div class="lane-t">'+bars+'</div></div>';
   }).join('');
 
-  tlInner.innerHTML='<div class="ruler"><div class="lane-l"></div><div class="lane-t">'+ticks+mk+tk+'</div></div>'+
+  tlInner.innerHTML='<div class="ruler"><div class="lane-l"></div><div class="lane-t">'+ticks+mk+tkb+tk+'</div></div>'+
     (lanes||'<div class="tl-empty">Las etiquetas aparecerán aquí, una fila por tipo de acción.</div>')+
     '<div class="selband" id="selband" hidden></div><div class="playhead" id="playhead"></div>';
   $('#zLbl').textContent=(Math.round(zoom*10)/10)+'×';
@@ -4413,7 +4417,7 @@ function timeAtClient(cx){
 }
 tlInner.addEventListener('pointerdown',e=>{
   if(e.button!==0||!hasVideo||!TL.trackW) return;
-  if(e.target.closest('.lane-l')||e.target.closest('.mk')||e.target.closest('.tk')) return;
+  if(e.target.closest('.lane-l')||e.target.closest('.mk')||e.target.closest('.tk')||e.target.closest('.tkd')) return;
   const barEl=e.target.closest('.bar');
   if(barEl) return barDrag(e,barEl);
   e.preventDefault();
@@ -11839,7 +11843,20 @@ $('#dwClip').onclick=()=>{
 video.addEventListener('play',()=>{if(teleEd&&!TRK.on) closeTele();});
 
 
-tlInner.addEventListener('click',e=>{const k=e.target.closest('.tk');if(!k) return;const t=teles.find(x=>x.id===k.dataset.id);if(t) userSeek(t.t);});
+tlInner.addEventListener('pointerdown',e=>{
+  const h=e.target.closest('.tkh,.tkl'); if(!h) return;
+  const bar=h.closest('.tkd'), t=teles.find(x=>x.id===bar.dataset.id); if(!t||!video.duration) return;
+  e.preventDefault(); e.stopPropagation();
+  const left=h.classList.contains('tkl'), sx=e.clientX, pps=TL.trackW/video.duration, t0=t.t, h0=t.hold||3, end0=t0+h0;
+  const mv=ev=>{ const d=(ev.clientX-sx)/pps;
+    if(left){ const nt=clamp(Math.round((t0+d)*10)/10,0,end0-0.5); t.t=nt; t.hold=Math.round((end0-nt)*10)/10; }
+    else t.hold=clamp(Math.round((h0+d)*10)/10,0.5,60);
+    bar.style.left=(t.t*pps).toFixed(1)+'px'; bar.style.width=Math.max(10,t.hold*pps).toFixed(1)+'px'; bar.title='Duración del dibujo: '+String(t.hold).replace('.',',')+' s'; };
+  const up=()=>{ document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); teles.sort((a,b)=>a.t-b.t); t.rev=(t.rev||0)+1; record(true); renderTimeline(); renderDrawPanel&&renderDrawPanel(); };
+  document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);
+});
+tlInner.addEventListener('dblclick',e=>{const k=e.target.closest('.tkd');if(!k) return;const t=teles.find(x=>x.id===k.dataset.id);if(t){userSeek(t.t);openTele(t);}});
+tlInner.addEventListener('click',e=>{const k=e.target.closest('.tk,.tkd');if(!k) return;const t=teles.find(x=>x.id===k.dataset.id);if(t) userSeek(t.t);});
 tlInner.addEventListener('dblclick',e=>{const k=e.target.closest('.tk');if(!k) return;const t=teles.find(x=>x.id===k.dataset.id);if(t){userSeek(t.t);openTele(t);}});
 
 /* =====================================================================
@@ -12205,7 +12222,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-h · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-i · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
