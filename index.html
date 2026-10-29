@@ -8453,15 +8453,17 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const NAMES={bProj:'Mis proyectos',bMatch:'Datos del partido',bTeams:'Equipos y jugadoras',bPart:'Añadir otra parte',bLive:'Grabar en vivo',bLink:'Abrir enlace de vídeo',bCloud:'Nube (sincronizar)',bLayout:'Diseño de paneles',bMode:null,bHelp:'Ayuda y tour'};
   const st=document.createElement('style'); st.textContent='#moreMenu hr{border:0;border-top:1px solid var(--line);margin:4px 6px;width:calc(100% - 12px)}#moreMenu #bProd,#moreMenu #bCfg{display:none!important}';
   document.head.appendChild(st);
-  let busy=false;
-  function tidy(){ if(busy) return; busy=true;
-    try{
-      menu.querySelectorAll('hr').forEach(h=>h.remove());
-      let first=true;
-      G.forEach(g=>{ const bs=g.map(id=>document.getElementById(id)).filter(b=>b&&b.parentNode===menu); if(!bs.length) return;
-        if(!first){ const h=document.createElement('hr'); menu.appendChild(h); } first=false;
-        bs.forEach(b=>{ menu.appendChild(b); const t=NAMES[b.id]; const tx=b.querySelector('.tx'); if(t&&tx&&tx.textContent!==t) tx.textContent=t; }); });
-    }finally{ busy=false; }
+  const HR=[document.createElement('hr'),document.createElement('hr'),document.createElement('hr')];
+  function tidy(){
+    const want=[]; let first=true,k=0;
+    G.forEach(g=>{ const bs=g.map(id=>document.getElementById(id)).filter(b=>b&&b.parentNode===menu); if(!bs.length) return;
+      if(!first) want.push(HR[k++]); first=false; bs.forEach(b=>want.push(b)); });
+    const rest=[...menu.children].filter(c=>want.indexOf(c)<0&&c.tagName!=='HR');
+    const all=want.concat(rest), cur=[...menu.children].filter(c=>c.tagName!=='HR'||want.indexOf(c)>=0);
+    const same=all.length===menu.children.length&&all.every((n,i)=>menu.children[i]===n);
+    want.forEach(b=>{ if(b.tagName==='BUTTON'){ const t=NAMES[b.id]; const tx=b.querySelector('.tx'); if(t&&tx&&tx.textContent!==t) tx.textContent=t; } });
+    if(same) return;
+    all.forEach(n=>menu.appendChild(n));
   }
   tidy(); new MutationObserver(()=>setTimeout(tidy,0)).observe(menu,{childList:true});
 })();
@@ -12487,7 +12489,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-ze · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zf · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
