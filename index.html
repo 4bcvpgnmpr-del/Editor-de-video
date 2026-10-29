@@ -8442,7 +8442,17 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     const body=(r.rows.length?r.rows.map(g=>'<div class="xc"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><b>'+esc(g.title)+'</b><div class="xh" style="margin:2px 0 0">'+(g.date?esc(matchDate(g.date))+' · ':'')+g.evs.length+(g.evs.length===1?' corte':' cortes')+'</div></div><button class="btn" data-op="'+esc(g.k)+'">Abrir partido</button></div>'+
         '<div style="margin-top:8px;display:flex;flex-direction:column;gap:3px;font-size:13px">'+g.evs.map(x=>'<div data-at="'+esc(g.k)+'" data-t="'+x.e.start+'" style="display:flex;gap:8px;cursor:pointer;padding:2px 4px;border-radius:6px" title="Abrir el partido en este corte"><span style="color:#8b8c93;min-width:48px">▶ '+fmt(x.e.t)+'</span><span style="flex:1;min-width:0">'+esc(x.e.label||'Corte')+(x.e.player?' · #'+esc(x.e.player)+(x.pname?' '+esc(x.pname):''):'')+'</span><span style="color:#8b8c93">'+esc(x.team)+'</span></div>').join('')+'</div></div>').join(''):'<div class="xc"><div class="xh" style="margin:0">Todavía no hay cortes que cumplan esto. Cuando etiquetes alguno, aparecerá aquí solo.</div></div>');
     const d=expDlgShell('<div class="xc"><div class="xbig" style="text-align:left">'+esc(c.name)+'</div><div class="xh">'+r.n+(r.n===1?' corte':' cortes')+' en '+r.rows.length+' partido'+(r.rows.length===1?'':'s')+'</div></div>'+body,'Colección',
-      '<button class="btn" id="clDel">Borrar colección</button><button class="btn" id="clClose">Cerrar</button>');
+      '<button class="btn" id="clDel">Borrar</button><button class="btn" id="clClose">Cerrar</button>'+(r.n?'<button class="btn" id="clAdd">Añadir a lista</button><button class="btn primary" id="clExp">🎞 Exportar vídeo</button>':''));
+    const list=[]; r.rows.forEach(g=>g.evs.forEach(x=>list.push({k:g.k,title:g.title,e:x.e})));
+    /* la lista y la exportación viven dentro de un proyecto abierto: si no hay vídeo, se abre el primero */
+    const prep=()=>new Promise(res=>{ if(hasVideo) return res(true); let done=false; const ok=()=>{ if(done) return; done=true; res(hasVideo); };
+      video.addEventListener('loadedmetadata',()=>setTimeout(ok,200),{once:true}); setTimeout(ok,15000); vidOpenLib(list[0].k); });
+    const ad=d.querySelector('#clAdd'), ex=d.querySelector('#clExp');
+    if(ad) ad.onclick=async()=>{ expClose(); if(!await prep()) return; await addXClips(list,document); };
+    if(ex) ex.onclick=async()=>{ expClose(); if(!await prep()) return; const n0=externals.length; await addXClips(list,document);
+      const ids=externals.slice(n0).map(x=>'x:'+x.id); if(!ids.length) return;
+      const pl=playlists.find(q=>q.id===plCur); if(pl) pl.items=pl.items.filter(i=>!ids.includes(i));
+      const np={id:uid(),name:String(c.name).slice(0,60),folder:'',items:ids}; playlists.push(np); plCur=np.id; commit(); DLGDOC=null; openExport(plExpand(np),np.name); };
     d.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{ expClose(); vidOpenLib(b.dataset.op); });
     d.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>{ const k=b.dataset.at, t=+b.dataset.t||0; expClose();
       const seek=()=>{ try{ video.currentTime=t; video.play().catch(()=>{}); }catch(e){} };
@@ -12602,7 +12612,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zo · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zp · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
