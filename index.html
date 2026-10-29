@@ -10416,6 +10416,12 @@ function shapePro(s,i,est){
     }
     case 'arrow':case 'move':case 'curve':{
       const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2), curve=s.type==='curve', cx=curve?X(s.cx):0, cy=curve?Y(s.cy):0;
+      if(s.type==='move'&&!neon&&Math.hypot(x2-x1,y2-y1)>6){
+        const len=Math.hypot(x2-x1,y2-y1), W=sw*1.9+6, hl=Math.min(len*0.5,W*2.2), hw=W*2.1, ux=(x2-x1)/len, uy=(y2-y1)/len, bx=x2-ux*hl, by=y2-uy*hl, nx=-uy, ny=ux;
+        const hd='M'+f1(x2)+' '+f1(y2)+' L'+f1(bx+nx*hw/2)+' '+f1(by+ny*hw/2)+' L'+f1(bx-nx*hw/2)+' '+f1(by-ny*hw/2)+' Z', ln='M'+f1(x1)+' '+f1(y1)+' L'+f1(bx)+' '+f1(by), full='M'+f1(x1)+' '+f1(y1)+' L'+f1(x2)+' '+f1(y2);
+        const out='<g'+FX+'><path d="'+ln+'" fill="none" stroke="'+c+'" stroke-width="'+f1(W*0.42)+'" stroke-dasharray="'+f1(W*0.95)+' '+f1(W*0.7)+'" stroke-linecap="round"/><path d="'+hd+'" fill="'+c+'" stroke="'+c+'" stroke-width="'+f1(Math.max(2,W*0.2))+'" stroke-linejoin="round"/><path d="'+hd+'" fill="#fff" fill-opacity=".18" stroke="none"/></g>';
+        return g(filt+hit(full)+drawMask(full,out));
+      }
       if((s.type==='arrow'||curve)&&!neon&&Math.hypot(x2-x1,y2-y1)>6){
         /* flecha plana estilo Once (recta o curva): cuerpo que se ensancha hacia la punta, cabeza grande, brillo en la cola y sombra suave */
         const len=Math.hypot(x2-x1,y2-y1), W=sw*1.9+6, Wt=W*0.55, hl=Math.min(len*0.55,W*2.4), hw=W*2.3, ccx=curve?cx:(x1+x2)/2, ccy=curve?cy:(y1+y2)/2;
@@ -10463,6 +10469,7 @@ function shapePro(s,i,est){
     case 'zone':{
       if(!s.pts||s.pts.length<2) return '';
       const P=s.pts.map(p=>[X(p[0]),Y(p[1])]), id='zp'+i, st=Math.max(10,sw*3.2);
+      if(s.zst==='fill') return g(filt+'<g'+FX+'><polygon class="fl" points="'+fp(P)+'" fill="'+c+'" fill-opacity=".34" pointer-events="all"/><polygon points="'+fp(P)+'" fill="none" stroke="'+c+'" stroke-opacity=".35" stroke-width="'+f1(sw*2.6)+'" stroke-linejoin="round" style="filter:blur('+f1(sw*0.9)+'px)"/><polygon class="ln" pathLength="1" points="'+fp(P)+'" fill="none" stroke="'+c+'" stroke-width="'+f1(Math.max(2,sw*0.7))+'" stroke-linejoin="round"/>'+P.map(q=>'<circle cx="'+f1(q[0])+'" cy="'+f1(q[1])+'" r="'+f1(Math.max(3,sw*0.8))+'" fill="#fff" stroke="'+c+'" stroke-width="2"/>').join('')+'</g>');
       return g(filt+'<defs><pattern id="'+id+'" width="'+f1(st*2)+'" height="'+f1(st*2)+'" patternUnits="userSpaceOnUse" patternTransform="rotate(62)"><rect width="'+f1(st)+'" height="'+f1(st*2)+'" fill="'+c+'" fill-opacity=".42"/><rect x="'+f1(st)+'" width="'+f1(st)+'" height="'+f1(st*2)+'" fill="'+c+'" fill-opacity=".14"/></pattern></defs><g'+FX+'><polygon class="fl" points="'+fp(P)+'" fill="url(#'+id+')" pointer-events="all"/><polygon class="ln" pathLength="1" points="'+fp(P)+'" fill="none" stroke="'+c+'" stroke-width="'+f1(sw)+'" stroke-linejoin="round"/></g>');
     }
     case 'cone':{
@@ -10484,6 +10491,8 @@ function shapePro(s,i,est){
     }
     case 'text':{
       const fs=20+(s.sw||4)*3, x=X(s.x), y=Y(s.y), t=String(s.text||''), w=t.length*fs*0.58+26;
+      if(s.tst==='plain') return g(filt+'<text'+FX+' x="'+f1(x)+'" y="'+f1(y)+'" font-size="'+fs+'" font-weight="800" font-family="Barlow,Arial,sans-serif" fill="#fff" stroke="#000" stroke-opacity=".85" stroke-width="'+f1(Math.max(3,fs*0.2))+'" paint-order="stroke" stroke-linejoin="round" pointer-events="all">'+esc(t)+'</text>');
+      if(s.tst==='tag') return g(filt+'<g'+FX+'><rect x="'+f1(x-10)+'" y="'+f1(y-fs*0.98)+'" width="'+f1(w)+'" height="'+f1(fs*1.45)+'" rx="'+f1(fs*0.72)+'" fill="'+c+'" pointer-events="all"/><text x="'+f1(x+3)+'" y="'+f1(y)+'" font-size="'+fs+'" font-weight="800" font-family="Barlow,Arial,sans-serif" fill="'+(lum>150?'#0b1522':'#fff')+'" pointer-events="none">'+esc(t)+'</text></g>');
       if(neon) return g(filt+'<text'+FX+' x="'+f1(x)+'" y="'+f1(y)+'" font-size="'+fs+'" font-weight="800" font-family="Barlow,Arial,sans-serif" fill="'+c+'" pointer-events="all">'+esc(t)+'</text>');
       return g(filt+'<g'+FX+'><rect x="'+f1(x-10)+'" y="'+f1(y-fs*0.98)+'" width="'+f1(w)+'" height="'+f1(fs*1.45)+'" rx="'+f1(fs*0.28)+'" fill="#08111c" fill-opacity=".88" stroke="#fff" stroke-opacity=".28" stroke-width="1.2" pointer-events="all"/><rect x="'+f1(x-10)+'" y="'+f1(y-fs*0.98)+'" width="'+f1(Math.max(5,fs*0.2))+'" height="'+f1(fs*1.45)+'" rx="3" fill="'+c+'"/><text x="'+f1(x+fs*0.18)+'" y="'+f1(y)+'" font-size="'+fs+'" font-weight="700" font-family="Barlow,Arial,sans-serif" fill="#fff" pointer-events="none">'+esc(t)+'</text></g>');
     }
@@ -11615,7 +11624,7 @@ function zoneClick(p){
 function zoneFinish(){
   const ed=teleEd; if(!ed||!ed.zone) return;
   if(ed.zone.length<3){ed.zone=null;teleKey='';toast('Una zona necesita al menos 3 puntos.');return;}
-  const s={type:'zone',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,pts:ed.zone};
+  const s={type:'zone',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,pts:ed.zone}; if(ed.zst) s.zst=ed.zst;
   ed.zone=null; ed.tele.items.push(s); ensureTele(ed.tele); ed.sel=ed.tele.items.length-1; ed.tool='select'; commitTele();
 }
 function addTextAt(p){
@@ -11633,7 +11642,7 @@ function addTextAt(p){
     if(done) return; done=true;
     const v=inp.value.trim(); inp.remove();
     if(!ok||!v||!teleEd||teleEd!==ed) return;
-    const s={type:'text',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,x:p.x,y:p.y,text:v}; if(ed.t3d) s.t3d=true;
+    const s={type:'text',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,x:p.x,y:p.y,text:v}; if(ed.t3d) s.t3d=true; if(ed.tst) s.tst=ed.tst;
     ed.tele.items.push(s); ensureTele(ed.tele); ed.sel=ed.tele.items.length-1; ed.tool='select'; commitTele();
   };
   inp.addEventListener('keydown',e=>{e.stopPropagation(); if(e.key==='Enter'){e.preventDefault();fin(true);} else if(e.key==='Escape'){e.preventDefault();fin(false);}});
@@ -11683,7 +11692,7 @@ function barBuild(){
    +'<div class="c">'+COLORS.map(c=>'<i data-color="'+c+'" style="background:'+c+'"></i>').join('')+'<input type="color" id="bColPick" title="Otro color: elige el tono y el brillo" aria-label="Otro color" style="width:26px;height:26px;padding:0;border:2px solid #fff6;border-radius:50%;background:none;cursor:pointer;overflow:hidden;vertical-align:middle">'+'</div>'
    +'<div class="r" id="bLensZ" hidden><span style="font-size:12px;opacity:.8;align-self:center">Aumento</span><button data-lz="1.5">1,5×</button><button data-lz="2">2×</button><button data-lz="3">3×</button></div>'
    +'<div class="r">'+sws.map(a=>'<button data-sw="'+a[1]+'">'+a[0]+'</button>').join('')+'</div>'
-   +'<div class="r"><button data-act="t3d" title="Texto en 3D">Texto 3D</button><button data-act="dup" title="Duplicar">⧉</button></div>'
+   +'<div class="r"><button data-act="t3d" title="Texto en 3D">3D</button><button data-act="zst" title="Zona: rayada / rellena">▨</button><button data-act="tst" title="Estilo de texto: caja / contorno / etiqueta">Aa</button><button data-act="dup" title="Duplicar">⧉</button></div>'
    +'<label class="sl">Estilo<select id="bEst">'+ESTILOS.map(e=>'<option value="'+e[0]+'">'+e[1].split(' (')[0]+'</option>').join('')+'</select></label>'
    +'<label class="sl">Animación<select id="bAnim">'+ANIMS.map(e=>'<option value="'+e[0]+'">'+e[1]+'</option>').join('')+'</select></label>'
    +'<label class="sl">Pausa<select id="bHold">'+HOLDS.map(h=>'<option value="'+h+'">'+h+' s</option>').join('')+'</select></label>'
@@ -11721,6 +11730,8 @@ dwBar.addEventListener('click',e=>{
   else if(a){
     const k=a.dataset.act, ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null;
     if(k==='t3d') applyProp('t3d',!(s&&s.type==='text'?s.t3d:ed.t3d));
+    else if(k==='tst'){ const O=['','plain','tag'], cur=(s&&s.type==='text')?(s.tst||''):(ed.tst||''), nx=O[(O.indexOf(cur)+1)%3]; ed.tst=nx; if(s&&s.type==='text'){ s.tst=nx; commitTele(true); } else renderDrawPanel(); }
+    else if(k==='zst'){ const cur=(s&&s.type==='zone')?(s.zst||''):(ed.zst||''), nx=cur==='fill'?'':'fill'; ed.zst=nx; if(s&&s.type==='zone'){ s.zst=nx; commitTele(true); } else renderDrawPanel(); }
     else if(k==='dup') teleDupSel();
     else if(k==='del') teleDeleteSel();
     else if(k==='undo') undo();
@@ -12194,7 +12205,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-f · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-h · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
