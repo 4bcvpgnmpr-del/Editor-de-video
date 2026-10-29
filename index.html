@@ -10416,6 +10416,16 @@ function shapePro(s,i,est){
     }
     case 'arrow':case 'move':case 'curve':{
       const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2), curve=s.type==='curve', cx=curve?X(s.cx):0, cy=curve?Y(s.cy):0;
+      if(s.type==='arrow'&&!neon&&Math.hypot(x2-x1,y2-y1)>6){
+        /* flecha plana estilo Once: cuerpo que se ensancha hacia la punta, cabeza grande, brillo en la cola y sombra suave */
+        const len=Math.hypot(x2-x1,y2-y1), ux=(x2-x1)/len, uy=(y2-y1)/len, nx=-uy, ny=ux, W=sw*1.9+6, Wt=W*0.55, hl=Math.min(len*0.55,W*2.4), hw=W*2.3, bx=x2-ux*hl, by=y2-uy*hl;
+        const P=[[x1+nx*Wt/2,y1+ny*Wt/2],[bx+nx*W/2,by+ny*W/2],[bx+nx*hw/2,by+ny*hw/2],[x2,y2],[bx-nx*hw/2,by-ny*hw/2],[bx-nx*W/2,by-ny*W/2],[x1-nx*Wt/2,y1-ny*Wt/2]];
+        const dd='M'+P.map(p=>f1(p[0])+' '+f1(p[1])).join(' L')+' Z', ang=Math.atan2(uy,ux)*180/Math.PI, gx=x1+ux*Wt*0.9, gy=y1+uy*Wt*0.9, gid='ag'+i;
+        const body='<g'+FX+'><defs><linearGradient id="'+gid+'" gradientUnits="userSpaceOnUse" x1="'+f1(x1+nx*W)+'" y1="'+f1(y1+ny*W)+'" x2="'+f1(x1-nx*W)+'" y2="'+f1(y1-ny*W)+'"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="'+c+'" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs>'
+          +'<path d="'+dd+'" fill="'+c+'" stroke="'+c+'" stroke-width="'+f1(Math.max(2,W*0.28))+'" stroke-linejoin="round"/><path d="'+dd+'" fill="url(#'+gid+')" stroke="none"/>'
+          +'<ellipse cx="'+f1(gx)+'" cy="'+f1(gy)+'" rx="'+f1(Wt*0.8)+'" ry="'+f1(Wt*0.26)+'" transform="rotate('+f1(ang)+' '+f1(gx)+' '+f1(gy)+')" fill="#fff" fill-opacity=".9" style="filter:blur('+f1(Math.max(1,W*0.12))+'px)"/></g>';
+        return g(filt+hit('M'+f1(x1)+' '+f1(y1)+' L'+f1(x2)+' '+f1(y2))+drawMask('M'+f1(x1)+' '+f1(y1)+' L'+f1(x2)+' '+f1(y2),body));
+      }
       const h=curve?headPts(cx,cy,x2,y2,sw*1.15):headPts(x1,y1,x2,y2,sw*1.15), bx=x2-h.L*0.7*Math.cos(h.a), by=y2-h.L*0.7*Math.sin(h.a);
       const d=curve?'M'+f1(x1)+' '+f1(y1)+' Q'+f1(cx)+' '+f1(cy)+' '+f1(bx)+' '+f1(by):'M'+f1(x1)+' '+f1(y1)+' L'+f1(bx)+' '+f1(by);
       const full=curve?'M'+f1(x1)+' '+f1(y1)+' Q'+f1(cx)+' '+f1(cy)+' '+f1(x2)+' '+f1(y2):'M'+f1(x1)+' '+f1(y1)+' L'+f1(x2)+' '+f1(y2);
@@ -12105,7 +12115,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 24-10-h · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-a · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
