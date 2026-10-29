@@ -10489,6 +10489,12 @@ function shapePro(s,i,est){
         '<ellipse class="ring" cx="'+f1(cx)+'" cy="'+f1(cy)+'" rx="'+f1(rx)+'" ry="'+f1(ry)+'" fill="url(#'+id2+')" stroke="#fff" stroke-width="'+f1(Math.max(2,sw*0.8))+'" pointer-events="all"/>'+
         '<ellipse cx="'+f1(cx)+'" cy="'+f1(cy)+'" rx="'+f1(rx*0.55)+'" ry="'+f1(ry*0.55)+'" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="'+f1(sw*0.4)+'"/>');
     }
+    case 'spot':{
+      const cx=X(s.cx), cy=Y(s.cy), r=Math.max(4,X(s.r)), mid='sm'+i, dim=s.dim==null?0.55:s.dim;
+      return g('<defs><mask id="'+mid+'" maskUnits="userSpaceOnUse" x="-60" y="-60" width="'+(SW+120)+'" height="'+f1(SH+120)+'"><rect x="-60" y="-60" width="'+(SW+120)+'" height="'+f1(SH+120)+'" fill="#fff"/><circle cx="'+f1(cx)+'" cy="'+f1(cy)+'" r="'+f1(r)+'" fill="#000" style="filter:blur('+f1(Math.max(2,r*0.06))+'px)"/></mask></defs>'
+        +'<rect x="-60" y="-60" width="'+(SW+120)+'" height="'+f1(SH+120)+'" fill="#000" fill-opacity="'+dim+'" mask="url(#'+mid+')" pointer-events="none"/>'
+        +'<g'+FX+'>'+filt+'<circle class="ring" cx="'+f1(cx)+'" cy="'+f1(cy)+'" r="'+f1(r)+'" fill="transparent" stroke="'+c+'" stroke-width="'+f1(Math.max(2.5,sw*0.8))+'" pointer-events="all"/><circle cx="'+f1(cx)+'" cy="'+f1(cy)+'" r="'+f1(r+Math.max(3,sw*0.9))+'" fill="none" stroke="'+c+'" stroke-opacity=".3" stroke-width="'+f1(Math.max(2,sw*0.5))+'" pointer-events="none"/></g>');
+    }
     case 'num':{
       const R=17+(s.sw||4)*1.7, x=X(s.x), y=Y(s.y), id='ng'+i, tc=lum>150?'#0b1522':'#fff';
       return g(filt+'<defs><radialGradient id="'+id+'" cx=".35" cy=".3"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="'+c+'"/><stop offset="1" stop-color="'+c+'"/></radialGradient></defs><g'+FX+'><circle class="ring" cx="'+f1(x)+'" cy="'+f1(y)+'" r="'+f1(R)+'" fill="url(#'+id+')" stroke="#fff" stroke-width="3" pointer-events="all"/><text x="'+f1(x)+'" y="'+f1(y)+'" dy=".35em" text-anchor="middle" font-size="'+f1(R*1.05)+'" font-weight="800" font-family="Barlow,Arial,sans-serif" fill="'+tc+'" pointer-events="none">'+esc(s.label||'')+'</text></g>');
@@ -12222,7 +12228,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-i · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-j · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
