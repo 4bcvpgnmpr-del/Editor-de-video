@@ -321,6 +321,8 @@ body:not(.vfull):not(.bbOpts) #pTags .bb-cats>.bb-sh{display:none!important}
 .xrow{display:flex;align-items:center;gap:10px;font-size:13.5px}
 .xchk{display:flex;flex-wrap:wrap;gap:8px 18px}
 .xchk label,.xrow label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px}
+.xw .btn.primary,.xw a.btn.primary{background:#00b95c;color:#fff;border-color:#00b95c;font-weight:700}
+.xw .btn{background:#34353a;border:0;color:#f2f2f2;border-radius:8px}
 .xw input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:5px;background:#3a3b40;border:0;display:inline-grid;place-content:center;margin:0;flex:none;cursor:pointer}
 .xw input[type=checkbox]:checked{background:#00b95c}
 .xw input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
@@ -6817,20 +6819,20 @@ async function showExported(out){
   const base=baseName();
   const canShare=f=>{try{return navigator.canShare&&navigator.canShare({files:[f]});}catch(e){return false;}};
   const urls=out.map(o=>URL.createObjectURL(o.blob));
-  const items=out.map((o,i)=>{ const fn=(out.length===1?o.name:o.name)+'.'+expExt(o.mime); o.fn=fn; return '<div style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">'+
+  const items=out.map((o,i)=>{ const fn=(out.length===1?o.name:o.name)+'.'+expExt(o.mime); o.fn=fn; return '<div class="xc" data-it>'+
     '<video src="'+urls[i]+'" controls playsinline style="width:100%;max-height:240px;background:#000;border-radius:6px"></video>'+
     '<div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input data-rn="'+i+'" type="text" value="'+esc(o.name)+'" title="Cambia el nombre del archivo" style="flex:1;min-width:0;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13px"><small style="color:var(--muted);white-space:nowrap">.'+expExt(o.mime)+' · '+(o.blob.size/1048576).toFixed(1)+' MB</small></div>'+
     '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">'+
     '<a class="btn primary" href="'+urls[i]+'" download="'+esc(fn)+'" style="text-decoration:none">Descargar</a>'+
     (canShare(new File([o.blob],fn,{type:o.mime}))?'<button class="btn" data-sh="'+i+'">Compartir</button>':'')+'<button class="btn" data-ent="'+i+'" title="Guardarlo en la sección Vídeos de ScoutFlow Entrenador">📥 Guardar en Entrenador</button></div><div data-entf="'+i+'"></div></div>'; }).join('');
   let savedMsg=''; if(EXPF.use&&EXPF.ok){ try{ savedMsg='<p style="color:#4ade80;font-size:13px;margin:0 0 8px">✔ Guardado en la carpeta «'+esc(await efSave(out))+'».</p>'; }catch(e){ savedMsg='<p style="color:#ffb020;font-size:13px;margin:0 0 8px">No se pudo guardar en la carpeta ('+esc((e&&e.message)||e)+'). Usa «Descargar».</p>'; } }
-  const d=expDlgShell('<h3 style="margin:0 0 8px;font:700 20px var(--f-head)">¡Listo!</h3>'+savedMsg+(out.some(o=>/webm/.test(o.mime)||(o.codecs&&!/avc1|h264/i.test(o.codecs)))?'<p style="color:#ffb020;font-size:13px;margin:0 0 8px">⚠ Este navegador solo sabe grabar en formato WebM/VP9. QuickTime, Fotos del iPhone o el Explorador de Windows pueden no abrirlo (VLC sí). Para un MP4 universal exporta desde Safari o desde Chrome actualizado.</p>':'')+(EXP.mutedFb?'<p style="color:var(--muted);font-size:13px">Aviso: este navegador no permitió grabar con sonido; el vídeo sale sin audio.</p>':'')+items+'<div id="entAllMsg" style="font-size:12.5px;color:var(--muted);margin:4px 0"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">'+(out.length>1?'<button class="btn primary" id="entAll" title="Sube todos los cortes a Entrenador → Vídeos con jugadora, equipo y categoría de cada etiqueta">📥 Guardar todos en Entrenador ('+out.length+')</button>':'')+'<button class="btn" id="exOk">Cerrar</button></div>');
+  const d=expDlgShell(savedMsg+(out.some(o=>/webm/.test(o.mime)||(o.codecs&&!/avc1|h264/i.test(o.codecs)))?'<p style="color:#ffb020;font-size:13px;margin:0 0 8px">⚠ Este navegador solo sabe grabar en formato WebM/VP9. QuickTime, Fotos del iPhone o el Explorador de Windows pueden no abrirlo (VLC sí). Para un MP4 universal exporta desde Safari o desde Chrome actualizado.</p>':'')+(EXP.mutedFb?'<p style="color:var(--muted);font-size:13px">Aviso: este navegador no permitió grabar con sonido; el vídeo sale sin audio.</p>':'')+items+'<div id="entAllMsg" style="font-size:12.5px;color:#8b8c93"></div>','Exportación completada',(out.length>1?'<button class="btn primary" id="entAll" title="Sube todos los cortes a Entrenador → Vídeos con jugadora, equipo y categoría de cada etiqueta">📥 Guardar todos en Entrenador ('+out.length+')</button>':'')+'<button class="btn" id="exOk">Cerrar</button>');
   const ea=d.querySelector('#entAll'); if(ea) ea.onclick=async()=>{
     const msg=d.querySelector('#entAllMsg'); ea.disabled=true; let ok=0, fail=[];
     for(let i=0;i<out.length;i++){ const o=out[i]; msg.style.color='var(--muted)'; msg.textContent='Subiendo '+(i+1)+' de '+out.length+'…';
       try{ const p=sfPrefill(o); p.nota=''; await sfSubir(o,p); ok++; }catch(e){ fail.push((o.fn||('clip '+(i+1)))+': '+((e&&e.message)||e)); if(/conecta la nube|cuenta del entrenador/.test((e&&e.message)||'')) break; } }
     msg.style.color=fail.length?'#ffb020':'#4ade80'; msg.textContent=(ok?'✔ '+ok+' guardados en Entrenador → Vídeos. ':'')+(fail.length?'Fallaron '+fail.length+': '+fail[0]:''); ea.disabled=!!ok&&!fail.length; };
-  d.querySelectorAll('[data-rn]').forEach(inp=>inp.addEventListener('input',()=>{ const o=out[+inp.dataset.rn], n=expCleanU(inp.value)||'clip'; o.name=n; o.fn=n+'.'+expExt(o.mime); const a=inp.closest('div[style*="border:1px"]').querySelector('a[download]'); if(a) a.setAttribute('download',o.fn); }));
+  d.querySelectorAll('[data-rn]').forEach(inp=>inp.addEventListener('input',()=>{ const o=out[+inp.dataset.rn], n=expCleanU(inp.value)||'clip'; o.name=n; o.fn=n+'.'+expExt(o.mime); const a=inp.closest('[data-it]').querySelector('a[download]'); if(a) a.setAttribute('download',o.fn); }));
   d.querySelectorAll('[data-sh]').forEach(b=>b.onclick=async()=>{ const o=out[+b.dataset.sh]; try{await navigator.share({files:[new File([o.blob],o.fn,{type:o.mime})],title:o.fn});}catch(e){} });
   d.querySelectorAll('[data-ent]').forEach(b=>b.onclick=()=>sfFormEntrenador(d,out[+b.dataset.ent],+b.dataset.ent));
   d.querySelector('#exOk').onclick=()=>{expClose(); setTimeout(()=>urls.forEach(u=>URL.revokeObjectURL(u)),1000);};
@@ -12456,7 +12458,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zb · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zc · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
