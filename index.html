@@ -1432,7 +1432,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
         <button id="tgTags" aria-label="Mostrar u ocultar botonera"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
         <button id="fzPill" aria-label="Mostrar menú de dibujo">✏️ Menú</button>
         <div class="ipfz ip-only" id="ipFz" hidden>
-          <div class="fz-top"><b>Freeze frame</b><span id="fzT"></span><button class="ib" id="fzMin" aria-label="Ocultar menú">⌄ Ocultar menú</button><button class="ib" id="fzDel">Borrar todo</button><button class="ib" id="fzPlay" aria-label="Reanudar">▶ Reanudar</button><button class="ib big" id="fzOk">✓ Listo</button></div>
+          <div class="fz-top"><b>Congelar imagen</b><span id="fzT"></span><button class="ib" id="fzMin" aria-label="Ocultar menú">⌄ Ocultar menú</button><button class="ib" id="fzDel">Borrar todo</button><button class="ib" id="fzPlay" aria-label="Reanudar">▶ Reanudar</button><button class="ib big" id="fzOk">✓ Listo</button></div>
           <div class="fz-row"><div class="fz-tools" id="fzTools"></div><div class="fz-cols" id="fzCols"></div><button class="ib" id="fzUndo" aria-label="Quitar figura">⌫</button></div>
           <div class="fz-row"><label class="fz-hold">Pausa <input type="range" id="fzHold" min="0.5" max="10" step="0.5"> <b id="fzHv"></b></label><label class="fz-hold"><input type="checkbox" id="fzOver"> Sobre el vídeo (sin pausa)</label></div>
         </div>
@@ -1449,7 +1449,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
           <button class="ib dk-only" id="bFs" title="Pantalla completa del reproductor (F)" aria-label="Pantalla completa"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
           <span class="time" id="timeEl">0:00.0 / 0:00</span>
           <button class="ib ip-only ip-tag" id="ipTag" title="Crear un clip manual aquí">＋ Tag</button><button class="ib ip-only" id="ipTags" title="Lista de clips">☰ Clips</button><span id="ipUndo" hidden></span><span id="ipRedo" hidden></span>
-          <button class="ib" id="bFreeze" title="Congelar imagen y dibujar encima (Mayús+F)" style="min-width:auto">Freeze frame</button>
+          <button class="ib" id="bFreeze" title="Congelar imagen y dibujar encima (Mayús+F)" style="min-width:auto">Congelar imagen</button>
           <div class="tsel">
             <label title="Mostrar los dibujos y congelaciones durante la reproducción"><input type="checkbox" id="chkTele" checked> Dibujos
             </label>
@@ -1679,7 +1679,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
         <i class="rz rz-e" data-rz="e"></i><i class="rz rz-s" data-rz="s"></i><i class="rz rz-se" data-rz="se"></i>
       </section>
 
-      <section class="panel" id="pDraw" data-panel="draw" aria-label="Dibujo y freeze frame">
+      <section class="panel" id="pDraw" data-panel="draw" aria-label="Dibujo y imagen congelada">
         <div class="p-head">
           <span class="p-grip" aria-hidden="true"></span>
           <span class="p-title">Dibujo</span>
@@ -1692,7 +1692,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
         <div class="p-body">
           <div id="dwOff">
             <p class="hint" style="margin-bottom:10px">Pausa el vídeo en el fotograma que quieras y pulsa el botón. Podrás dibujar encima y elegir cuánto se congela la imagen al reproducir.</p>
-            <button class="btn primary" id="dwStart">Freeze frame en este instante</button>
+            <button class="btn primary" id="dwStart">Congelar imagen en este instante</button>
           </div>
           <div class="dw" id="dwOn" hidden>
             <p class="hint" id="dwTime" style="margin:0"></p>
@@ -3884,7 +3884,7 @@ const CK=new Set();   /* clips marcados con casilla */
 const CKX=new Map();  /* cortes de OTROS partidos del proyecto marcados: clave 'partido#id' */
 let stints=[];       /* quintetos en pista: {id,team,players[],from,to|null} */
 let markers=[];     /* marcadores puntuales */
-let teles=[];       /* dibujos y freeze frames, ligados a un instante del vídeo */
+let teles=[];       /* dibujos y imágenes congeladas, ligados a un instante del vídeo */
 let playlists=[];   /* listas de reproducción: ids de clips en orden */
 let externals=[]; /* vídeos externos del montaje (solo datos; los archivos viven en memoria) */
 let covers=[];      /* portadas (diapositivas de título) del montaje; en las playlists van como «c:<id>» */
@@ -4393,7 +4393,7 @@ function renderTimeline(){
   for(let s=0;s<=dur;s+=step) ticks+='<span class="tick" style="left:'+(s*pps).toFixed(1)+'px">'+fmt(s)+'</span>';
   const mk=markers.map(m=>'<span class="mk" data-id="'+m.id+'" style="left:'+(m.t*pps).toFixed(1)+'px" title="'+esc(m.text+' · '+fmt(m.t))+'"></span>').join('');
 
-  const tk=teles.map(t=>'<span class="tk" data-id="'+t.id+'" style="left:'+(t.t*pps).toFixed(1)+'px" title="'+esc((t.mode==='freeze'?'Freeze frame':'Dibujo sobre el vídeo')+' · '+fmt(t.t)+' · '+t.items.length+' figuras. Doble clic para editar')+'"></span>').join('');
+  const tk=teles.map(t=>'<span class="tk" data-id="'+t.id+'" style="left:'+(t.t*pps).toFixed(1)+'px" title="'+esc((t.mode==='freeze'?'Congelar imagen':'Dibujo sobre el vídeo')+' · '+fmt(t.t)+' · '+t.items.length+' figuras. Doble clic para editar')+'"></span>').join('');
   const tkb=teles.filter(t=>t.mode!=='freeze'&&t.items.length).map(t=>'<span class="tkd" data-id="'+t.id+'" style="left:'+(t.t*pps).toFixed(1)+'px;width:'+Math.max(10,(t.hold||3)*pps).toFixed(1)+'px" title="Duración del dibujo: '+String(t.hold||3).replace('.',',')+' s. Arrastra los bordes para cambiar duración o inicio"><i class="tkl"></i><i class="tkh"></i></span>').join('');
   const ids=[];
   cfg.buttons.forEach(b=>{if(events.some(e=>e.btnId===b.id)) ids.push(b.id);});
@@ -5386,7 +5386,7 @@ async function saveFile(filename,data,doc){
 }
 
 /* =====================================================================
-   EXPORTAR CLIPS COMO VÍDEO (se graba el clip con sus dibujos, freeze frames y sonido)
+   EXPORTAR CLIPS COMO VÍDEO (se graba el clip con sus dibujos, imágenes congeladas y sonido)
    ===================================================================== */
 const EXP={busy:false,cancel:false};
 function expMime(){
@@ -6033,7 +6033,7 @@ function fxOpen(file){
         const buf=await file.slice(pos,pos+FX_CH).arrayBuffer(); buf.fileStart=pos;
         const nx=mp.appendBuffer(buf); pos=(nx!=null&&nx>pos)?nx:pos+buf.byteLength;
       }
-      if(!ready&&!fail) reject(new Error('Archivo no compatible con el modo rápido'));
+      if(!ready&&!fail) reject(new Error('Archivo no compatible con la exportación rápida'));
     })().catch(reject);
   });
 }
@@ -6084,7 +6084,7 @@ async function fxCollect(mp,file,vt,at,start,end,shift){
   return {V,A};
 }
 async function fxRun(list,o,prog){
-  if(!fxOk()) throw new Error('Este navegador no tiene el modo rápido.');
+  if(!fxOk()) throw new Error('Este navegador no tiene la exportación rápida.');
   const file=lastFile;
   const {mp,info}=await fxOpen(file);
   const vt=info.videoTracks[0]; if(!vt) throw new Error('Sin pista de vídeo.');
@@ -6111,7 +6111,7 @@ async function fxRun(list,o,prog){
   async function srcFor(f){
     if(f===file) return mainSrc; if(srcCache.has(f)) return srcCache.get(f);
     const o2=await fxOpen(f), vt2=o2.info.videoTracks[0], at2=o2.info.audioTracks[0]||null;
-    if(!vt2||!/^(avc1|vp09|hvc1|hev1)/.test(vt2.codec)) throw new Error('El vídeo externo no es compatible con el modo rápido ('+(vt2?vt2.codec:'sin vídeo')+').');
+    if(!vt2||!/^(avc1|vp09|hvc1|hev1)/.test(vt2.codec)) throw new Error('El vídeo externo no es compatible con la exportación rápida ('+(vt2?vt2.codec:'sin vídeo')+').');
     const m2=vt2.matrix; if(m2&&(m2[0]===0&&m2[1]!==0)) throw new Error('El vídeo externo está girado.');
     const dc2={codec:vt2.codec,codedWidth:vt2.video.width,codedHeight:vt2.video.height}; const ds2=/^avc1/.test(vt2.codec)?fxDesc(o2.mp,vt2.id):undefined; if(ds2) dc2.description=ds2; if(o.sw>=2) dc2.hardwareAcceleration='prefer-software';
     if(!(await VideoDecoder.isConfigSupported(dc2)).supported) throw new Error('No se puede decodificar el vídeo externo.');
@@ -6307,12 +6307,12 @@ async function expRun(list,o,prog){
     for(let intento=0;;intento++){
       try{ EXP.modo=(intento===0?'⚡ Modo rápido (tarjeta de vídeo)':intento===1?'⚡ Modo rápido (codificador por software)':'⚡ Modo rápido (todo por software)')+(intento&&FX.err?' · antes: '+FX.err:''); const r=await fxRun(list,Object.assign({},o,{sw:intento}),prog); if(!r) return r; if(await fxVerify(r.blob)) return r; throw new Error('el archivo no se pudo comprobar'); }
       catch(e){
-        FX.err=(e&&e.message)||String(e); console.warn('modo rápido:',e); EXP.frac=null; if(EXP.cancel) return null;
-        if(/parado/.test(FX.err)&&intento<2){ toast('El modo rápido se atascó. Reintentando '+(intento===0?'con el codificador por software…':'con todo por software…')); continue; }
-        toast('Modo rápido no disponible ('+FX.err+'). Grabando en tiempo real.'); EXP.modo='🐢 Tiempo real — modo rápido no disponible: '+FX.err; break;
+        FX.err=(e&&e.message)||String(e); console.warn('exportación rápida:',e); EXP.frac=null; if(EXP.cancel) return null;
+        if(/parado/.test(FX.err)&&intento<2){ toast('La exportación rápida se atascó. Reintentando '+(intento===0?'con el codificador por software…':'con todo por software…')); continue; }
+        toast('Modo rápido no disponible ('+FX.err+'). Grabando en tiempo real.'); EXP.modo='🐢 Tiempo real — exportación rápida no disponible: '+FX.err; break;
       }
     }
-  } else EXP.modo='🐢 Tiempo real — '+(!lastFile?'el vídeo no es un archivo local (abre el archivo del partido)':'este navegador no tiene el modo rápido');
+  } else EXP.modo='🐢 Tiempo real — '+(!lastFile?'el vídeo no es un archivo local (abre el archivo del partido)':'este navegador no tiene la exportación rápida');
   return expRecord(list,o,prog);
 }
 /* graba una lista de clips; devuelve {blob, mime} (o null si se cancela) */
@@ -6434,16 +6434,16 @@ function openExport(list,defName){
   if(!expMime()){toast('Este navegador no puede grabar vídeo. Prueba con Safari o Chrome actualizados.');return;}
   if(document.body.classList.contains('ipad')&&!DLGDOC){ openIpExport(list,defName); return; }
   const dur=expDur(list,true), mm=expMime();
-  const qsel='<select id="exQ"><option value="720"'+(window.scoutDesktop?'':' selected')+'>MP4 rápido · 720p (recomendado)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'MP4 universal · 1080p (motor nativo, rápido)':'MP4 universal · motor propio 720p (lento)')+'</option><option value="1080">MP4 rápido · 1080p (calidad alta)</option>'+(window.scoutDesktop?'':'<option value="9001">MP4 universal · motor propio 1080p (máxima calidad, más lento)</option>')+'<option value="0">Original · sin dibujos ni recodificar</option></select>';
+  const qsel='<select id="exQ"><option value="720"'+(window.scoutDesktop?'':' selected')+'>Rápido · 720p (recomendado)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'Compatible con todo · 1080p (rápido)':'Compatible con todo · 720p (lento)')+'</option><option value="1080">Rápido · 1080p (calidad alta)</option>'+(window.scoutDesktop?'':'<option value="9001">Compatible con todo · 1080p (máxima calidad, lento)</option>')+'<option value="0">Original · sin dibujos ni recodificar</option></select>';
   const d=expDlgShell(
     '<div class="xg"><div class="xc"><label class="xl">Archivo</label><select id="exMode"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select><div class="xh">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'</div></div>'+
     '<div class="xc"><label class="xl">Tipo de vídeo</label>'+qsel+'<div class="xh" id="exQh"></div></div></div>'+
     '<div class="xc"><div id="exNmBox"></div></div>'+
-    '<div class="xc"><div class="xl">Incluir:</div><div class="xchk"><label><input type="checkbox" id="exDraw" checked> Dibujos, lupas y freeze frames</label><label><input type="checkbox" id="exTit" checked> Nombre del clip en pantalla</label></div></div>'+
+    '<div class="xc"><div class="xl">Incluir:</div><div class="xchk"><label><input type="checkbox" id="exDraw" checked> Dibujos, lupas y imágenes congeladas</label><label><input type="checkbox" id="exTit" checked> Nombre del clip en pantalla</label></div></div>'+
     efRowHtml()+
     '<div class="xh" style="color:#8b8c93;font-size:12px;padding:0 4px">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</div>',
     'Opciones de exportación de vídeo',
-    '<button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se hace con el MOTOR PRO mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button>');
+    '<button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se exporta en segundo plano mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
   { const box=d.querySelector('#exNmBox'), sel=d.querySelector('#exMode'); const fld='width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);box-sizing:border-box';
     const defs=list.map((e,i)=>String(i+1).padStart(2,'0')+'_'+expClean(evName(e)));
@@ -6451,7 +6451,7 @@ function openExport(list,defName){
       if(sel.value==='one'){ box.innerHTML='<label class="xl">Nombre del archivo</label><input id="exNm" type="text" placeholder="'+esc(expClean(defName||baseName()))+'" value="'+esc(one!=null?one:'')+'">'; }
       else { box.innerHTML='<label class="xl">Nombre de cada clip <small style="font-weight:400">(déjalo como está o cámbialo)</small></label><div style="max-height:170px;overflow:auto;display:flex;flex-direction:column;gap:5px">'+list.map((e,i)=>'<input data-nm="'+i+'" type="text" value="'+esc(keep[i]!=null?keep[i]:defs[i])+'">').join('')+'</div>'; } };
     sel.addEventListener('change',draw); draw(); d.__exNames=()=>{ const o={one:'',each:[]}; const a=box.querySelector('#exNm'); if(a) o.one=expCleanU(a.value); box.querySelectorAll('[data-nm]').forEach(x=>o.each.push(expCleanU(x.value))); return o; }; }
-  { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'1080':'Igual de rápido que el de 720p (usa la tarjeta de vídeo) pero en 1920×1080 y con más calidad. Si tu vídeo es 1080p, este es el que conserva el detalle.','9001':'Misma compatibilidad que el motor propio, pero en 1080p y con mejor calidad. En el navegador tarda bastante más (puede ser 3-6 veces lo que dura el vídeo) y usa más memoria: déjalo trabajar sin cambiar de pestaña.','9000':window.scoutDesktop?'Cortes exactos en 1080p, compatible con cualquier reproductor y editor. Rápido gracias al motor nativo.':'Compatibilidad máxima (iMovie, Premiere, DaVinci). En el navegador es LENTO: tarda varias veces lo que dura el vídeo. Úsalo solo si el rápido no abre en tu editor.','720':'Rápido y ligero, se abre en QuickTime, iMovie, WhatsApp y el móvil. Se hace casi a la velocidad del vídeo.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
+  { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'1080':'Igual de rápido que el de 720p (usa la tarjeta de vídeo) pero en 1920×1080 y con más calidad. Si tu vídeo es 1080p, este es el que conserva el detalle.','9001':'Misma compatibilidad que «Compatible con todo», pero en 1080p y con mejor calidad. En el navegador tarda bastante más (puede ser 3-6 veces lo que dura el vídeo) y usa más memoria: déjalo trabajar sin cambiar de pestaña.','9000':window.scoutDesktop?'Cortes exactos en 1080p, compatible con cualquier reproductor y editor. Rápido gracias a la app de Mac.':'Compatibilidad máxima (iMovie, Premiere, DaVinci). En el navegador es LENTO: tarda varias veces lo que dura el vídeo. Úsalo solo si el rápido no abre en tu editor.','720':'Rápido y ligero, se abre en QuickTime, iMovie, WhatsApp y el móvil. Se hace casi a la velocidad del vídeo.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
   d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,(d.__exNames().one||defName),d.querySelector('#exMode').value,{ff:true,hq:+d.querySelector('#exQ').value===9001,w:(window.scoutDesktop||+d.querySelector('#exQ').value===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
   d.querySelector('#exGo').onclick=()=>{
     if(EXP.busy){ toast('Hay una exportación de la cola en marcha. Usa «A la cola».'); return; }
@@ -6476,7 +6476,7 @@ async function runExport(list,defName,mode,o){
     el.querySelector('#exCan').onclick=()=>{EXP.cancel=true; el.querySelector('#exInfo').textContent='Cancelando…'; if(o.ff){ try{ if(FF.inst) FF.inst.terminate(); }catch(_){} FF.inst=null; FF.loading=null; clearInterval(window.__exTick); EXP.busy=false; EXP.frac=null; expClose(); toast('Exportación cancelada.'); }};
   };
   let info='';
-  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=(EXP.modo||'')+' · v6'; const mb=DD_.getElementById('exMin'); if(mb) mb.style.display=(o.ff||(EXP.modo&&EXP.modo.indexOf('🐢')!==0&&EXP.modo.indexOf('⚡')===0))?'':'none'; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const pc=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total))); const b=DD_.getElementById('exBar'); if(b) b.style.width=pc+'%'; const pe=DD_.getElementById('exPct'); if(pe) pe.textContent=Math.round(pc)+' %'; };
+  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=(EXP.modo||'')+''; const mb=DD_.getElementById('exMin'); if(mb) mb.style.display=(o.ff||(EXP.modo&&EXP.modo.indexOf('🐢')!==0&&EXP.modo.indexOf('⚡')===0))?'':'none'; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const pc=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total))); const b=DD_.getElementById('exBar'); if(b) b.style.width=pc+'%'; const pe=DD_.getElementById('exPct'); if(pe) pe.textContent=Math.round(pc)+' %'; };
   shell(); const tick=setInterval(upd,400); window.__exTick=tick;
   const out=[];
   try{
@@ -6485,7 +6485,7 @@ async function runExport(list,defName,mode,o){
       const r=await (o.ff?ffRun:expRun)(groups[g],o,(i,n,ev)=>{ info=(mode==='each'?'Clip '+(g+1)+' de '+groups.length:'Clip '+(i+1)+' de '+n)+(ev&&ev.name?' · '+ev.name:''); upd(); });
       if(r) out.push({evs:groups[g],blob:r.blob,mime:r.mime,codecs:r.codecs||'',name:mode==='each'?((window.__expNames&&window.__expNames.each[g])||(String(g+1).padStart(2,'0')+'_'+expClean(evName(groups[g][0])))):((window.__expNames&&window.__expNames.one)||expClean(defName||baseName()))});
     }
-  }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p>'+(o.ff?'<p style="color:var(--muted);font-size:13px">Prueba con «MP4 rápido · 720p», que no necesita el motor.</p>':'')+'<div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
+  }catch(e){ clearInterval(tick); EXP.busy=false; if(EXP.cancel){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; } expDlgShell('<h3 style="margin:0 0 6px">No se pudo exportar</h3><p style="color:var(--muted)">'+esc(e.message||String(e))+'</p>'+(o.ff?'<p style="color:var(--muted);font-size:13px">Prueba con «Rápido · 720p», que es más sencillo.</p>':'')+'<div style="text-align:right"><button class="btn" id="exOk">Cerrar</button></div>').querySelector('#exOk').onclick=expClose; return; }
   clearInterval(tick); EXP.busy=false; window.__expNames=null;
   if(EXP.cancel||!out.length){ if(!o.ff){ expClose(); toast('Exportación cancelada.'); } return; }
   showExported(out);
@@ -6593,7 +6593,7 @@ function ffTitlePng(text,W,H){
 }
 async function ffRun(list,o,prog){
   const HQ=!!(window.scoutDesktop||o.hq), W=HQ?1920:1280,H=HQ?1080:720,FPS=25;
-  prog(0,list.length,{name:window.scoutDesktop?'Preparando…':'Cargando el motor (solo la primera vez, ≈ 31 MB)…'}); try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(true); }catch(_){}
+  prog(0,list.length,{name:window.scoutDesktop?'Preparando…':'Preparando la exportación (solo la primera vez, ≈ 31 MB)…'}); try{ if(window.scoutDesktop) window.scoutDesktop.keepAwake(true); }catch(_){}
   const ff=await ffLoad(); if(EXP.cancel) return null;
   let n=list.length, done=0; EXP.frac=0;
   window.__ffPrep=f=>prog(done,n,{name:'Preparando «'+f.name+'» (solo la primera vez, puede tardar)…'});
@@ -7607,7 +7607,7 @@ function openIpExport(list,defName){
     const chosen=list.filter(e=>st.sel.has(e.id));
     el.innerHTML='<div class="ex-h"><button class="ib" id="exX">✕</button><b>Exportar vídeo</b><span>'+chosen.length+'/'+list.length+' clips</span></div>'+
     '<div class="ex-b"><h4>Modo</h4><div class="ex-modes"><button data-m="each" aria-pressed="'+(st.mode==='each')+'"><b>Clips sueltos</b><small>Un archivo por clip</small></button><button data-m="one" aria-pressed="'+(st.mode==='one')+'"><b>Secuencia</b><small>Todos en un solo vídeo</small></button></div>'+
-    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Tipo de vídeo</span><select id="exQ2"><option value="720">MP4 rápido · 720p</option><option value="1080">MP4 rápido · 1080p (calidad alta)</option><option value="9000">MP4 universal · 1080p</option><option value="0">Original · sin dibujos</option></select></label></div>'+efRowHtml()+
+    '<div class="ex-tg"><label><span>Incluir dibujos y freeze</span><input type="checkbox" id="exD" '+(st.draw?'checked':'')+'></label><label><span>Nombre del clip en pantalla</span><input type="checkbox" id="exT" '+(st.title?'checked':'')+'></label><label><span>Tipo de vídeo</span><select id="exQ2"><option value="720">MP4 rápido · 720p</option><option value="1080">Rápido · 1080p (calidad alta)</option><option value="9000">MP4 universal · 1080p</option><option value="0">Original · sin dibujos</option></select></label></div>'+efRowHtml()+
     '<h4>Filtrar por categoría</h4><div class="ex-chips"><button data-c="" aria-pressed="'+(st.cat==='')+'">Todas</button>'+cats.map(c=>'<button data-c="'+esc(c)+'" aria-pressed="'+(st.cat===c)+'">'+esc(c)+'</button>').join('')+'</div>'+
     '<h4>Elegir clips <span class="ex-all"><a id="exAll">Todos</a> · <a id="exNone">Ninguno</a></span></h4>'+
     vis.map(e=>'<div class="ex-row" data-id="'+e.id+'"><span class="ex-ck" aria-pressed="'+st.sel.has(e.id)+'"></span><i style="background:'+info(e).color+'"></i><div><b>'+esc(evName(e))+'</b><small>'+fmt(e.start)+' – '+fmt(e.end)+'</small></div><button class="ib" data-v="'+e.id+'" aria-label="Ver">▶</button></div>').join('')+'</div>'+
@@ -7959,37 +7959,64 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   }
   function editT(i){
     const B=dT.querySelector('[data-b]'), tl=teamsGet(), t=i==null?{id:uid(),name:'',players:[]}:tl[i];
-    B.innerHTML='<label style="'+lab+'">Nombre del equipo<input id="teN" style="'+fld+'" value="'+esc(t.name)+'" placeholder="Ej. Cadete A"></label>'+
-      '<label style="'+lab+'">Jugadoras (una por línea: dorsal y nombre)<textarea id="teP" rows="10" style="'+fld+';font-family:inherit" placeholder="4 Ana García&#10;7 Laia&#10;10 Marta">'+esc((t.players||[]).map(p=>p.n+' '+p.name).join('\n'))+'</textarea></label>'+
-      '<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" id="tePh" type="button">📷 Fotos en bloque</button><input type="file" id="tePhF" accept="image/*" multiple hidden><span style="font-size:12.5px;color:var(--muted)">Elige varias a la vez. Se asignan por el nombre del archivo: <b>7.jpg</b> o <b>Lisa.jpg</b></span></div><div id="tePhR" style="display:flex;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)"></div></div>'+
-      '<div style="display:flex;gap:8px"><button class="btn primary" id="teOk">Guardar</button><button class="btn" id="teNo">Cancelar</button></div>';
-    const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-    function showPh(extra){ const R=B.querySelector('#tePhR'); const ps=(t.players||[]).filter(q=>q.photo); R.innerHTML=ps.map(q=>'<span title="'+esc(q.name)+'" style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#2b3038 center/cover no-repeat url('+q.photo+')"></span>').join('')+(ps.length?'<span style="align-self:center">'+ps.length+' con foto</span>':'')+(extra?'<div style="flex-basis:100%;color:var(--text)">'+extra+'</div>':''); }
-    showPh('');
-    B.querySelector('#tePh').onclick=()=>B.querySelector('#tePhF').click();
-    B.querySelector('#tePhF').onchange=async e=>{
-      const files=[...e.target.files]; e.target.value=''; if(!files.length) return;
-      const r=parseRoster(B.querySelector('#teP').value); if(r.bad&&r.bad.length){ msg(dT,'Revisa la lista de jugadoras: '+r.bad.join(' · ')); return; }
-      t.players=keepPh(r.out,t.players); const pl=t.players; let ok=0; const miss=[];
-      if(!pl.length){ msg(dT,'Escribe primero las jugadoras (dorsal y nombre).'); return; }
-      for(const f of files){
-        const base=norm(f.name.replace(/\.[^.]+$/,'')); let q=null; const m=base.match(/(?:^|\s)(\d{1,3})(?:\s|$)/);
-        if(m) q=pl.find(x=>String(parseInt(x.n,10))===String(parseInt(m[1],10)));
-        if(!q&&base){ q=pl.find(x=>norm(x.name)===base)||pl.find(x=>{ const nn=norm(x.name); return nn&&(base.includes(nn)||nn.includes(base)); })||pl.find(x=>norm(x.name).split(' ').some(w=>w.length>2&&base.split(' ').includes(w))); }
-        if(!q){ miss.push(f.name); continue; }
-        try{ q.photo=await photoFromFile(f); ok++; }catch(er){ miss.push(f.name); }
-      }
-      msg(dT,''); showPh('✔ '+ok+' foto'+(ok===1?'':'s')+' asignada'+(ok===1?'':'s')+(miss.length?' · Sin asignar: '+esc(miss.join(', ')):'')+'. Pulsa Guardar.');
-    };
-    B.querySelector('#teNo').onclick=listT;
-    B.querySelector('#teOk').onclick=()=>{
-      const name=B.querySelector('#teN').value.trim(); if(!name){ msg(dT,'Pon un nombre al equipo.'); return; }
-      const r=parseRoster(B.querySelector('#teP').value); if(r.bad&&r.bad.length){ msg(dT,'Revisa: '+r.bad.join(' · ')); return; }
-      t.name=name; t.players=keepPh(r.out,t.players); if(i==null) tl.push(t); teamsSave(tl);
-      /* si el partido abierto usa este equipo, se actualiza */
-      if(matchMeta){ let ch=false; ['L','R'].forEach(k=>{ if(matchMeta[k]&&matchMeta[k].id===t.id){ matchMeta[k]={id:t.id,name:t.name,players:t.players.map(rp)}; ch=true; } }); if(ch){ matchApply(true); saveProject(); } }
-      listT();
-    };
+    let pl=(t.players||[]).map(x=>Object.assign({},x)), nameV=t.name||'';
+    const norm=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+    const sortPl=()=>pl.sort((a,b)=>(parseInt(a.n,10)||0)-(parseInt(b.n,10)||0));
+    const css='<style>.tpg{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}.tpc{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;cursor:pointer;color:var(--text);font:inherit;min-width:0}.tpc:hover{border-color:var(--accent)}.tpc .av{flex:none;aspect-ratio:1/1;width:64px;height:64px;border-radius:50%;background:#2b3038 center/cover no-repeat;display:grid;place-content:center;font:700 22px var(--f-head);color:#9aa3b0;position:relative}.tpc .nm{font-size:12.5px;text-align:center;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.tpc .dn{position:absolute;left:-4px;top:-4px;background:var(--accent);color:#111;border-radius:999px;font:700 12px var(--f-body);min-width:22px;padding:1px 5px;text-align:center}.tpc.add .av{background:transparent;border:2px dashed var(--line);font-size:30px;color:var(--accent)}</style>';
+    function grid(extra){
+      sortPl();
+      B.innerHTML=css+'<label style="'+lab+'">Nombre del equipo<input id="teN" style="'+fld+'" value="'+esc(nameV)+'" placeholder="Ej. Cadete A"></label>'+
+        '<div style="'+lab+'">Jugadoras · toca una para cambiar nombre, dorsal o foto</div>'+
+        '<div class="tpg">'+pl.map((q,k)=>'<button type="button" class="tpc" data-k="'+k+'"><span class="av" style="'+(q.photo&&phOk(q.photo)?'background-image:url('+q.photo+')':'')+'">'+(q.photo&&phOk(q.photo)?'':esc(String(q.n)))+'</span><span class="nm"><b>#'+esc(String(q.n))+'</b> '+esc(q.name||'Sin nombre')+'</span></button>').join('')+
+        '<button type="button" class="tpc add" id="tpAdd"><span class="av">＋</span><span class="nm">Jugadora</span></button></div>'+
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" id="tePh" type="button">📷 Fotos en bloque</button><input type="file" id="tePhF" accept="image/*" multiple hidden><span style="font-size:12.5px;color:var(--muted)">Varias a la vez; se asignan por el nombre del archivo: <b>7.jpg</b> o <b>Lisa.jpg</b></span></div>'+
+        (extra?'<div style="font-size:12.5px;color:var(--text)">'+extra+'</div>':'')+
+        '<div style="display:flex;gap:8px"><button class="btn primary" id="teOk">Guardar</button><button class="btn" id="teNo">Cancelar</button></div>';
+      const nm=B.querySelector('#teN'); nm.oninput=()=>{ nameV=nm.value; };
+      B.querySelectorAll('.tpc[data-k]').forEach(c=>c.onclick=()=>one(+c.dataset.k));
+      B.querySelector('#tpAdd').onclick=()=>one(-1);
+      B.querySelector('#tePh').onclick=()=>B.querySelector('#tePhF').click();
+      B.querySelector('#tePhF').onchange=async e=>{
+        const files=[...e.target.files]; e.target.value=''; if(!files.length) return;
+        if(!pl.length){ msg(dT,'Añade primero las jugadoras.'); return; }
+        let ok=0; const miss=[];
+        for(const f of files){
+          const base=norm(f.name.replace(/\.[^.]+$/,'')); let q=null; const m=base.match(/(?:^|\s)(\d{1,3})(?:\s|$)/);
+          if(m) q=pl.find(x=>String(parseInt(x.n,10))===String(parseInt(m[1],10)));
+          if(!q&&base){ q=pl.find(x=>norm(x.name)===base)||pl.find(x=>{ const nn=norm(x.name); return nn&&(base.includes(nn)||nn.includes(base)); })||pl.find(x=>norm(x.name).split(' ').some(w=>w.length>2&&base.split(' ').includes(w))); }
+          if(!q){ miss.push(f.name); continue; }
+          try{ q.photo=await photoFromFile(f); ok++; }catch(er){ miss.push(f.name); }
+        }
+        msg(dT,''); grid('✔ '+ok+' foto'+(ok===1?'':'s')+' asignada'+(ok===1?'':'s')+(miss.length?' · Sin asignar: '+esc(miss.join(', ')):'')+'. Pulsa Guardar.');
+      };
+      B.querySelector('#teNo').onclick=listT;
+      B.querySelector('#teOk').onclick=()=>{
+        const name=nameV.trim(); if(!name){ msg(dT,'Pon un nombre al equipo.'); return; }
+        t.name=name; t.players=pl.map(x=>{ const o={n:String(x.n),name:String(x.name||'')}; if(x.photo&&phOk(x.photo)) o.photo=x.photo; return o; }); if(i==null) tl.push(t); teamsSave(tl);
+        if(matchMeta){ let ch=false; ['L','R'].forEach(k=>{ if(matchMeta[k]&&matchMeta[k].id===t.id){ matchMeta[k]={id:t.id,name:t.name,players:t.players.map(rp)}; ch=true; } }); if(ch){ matchApply(true); saveProject(); } }
+        listT();
+      };
+    }
+    function one(k){
+      const q=k>=0?Object.assign({},pl[k]):{n:'',name:'',photo:''}; msg(dT,'');
+      B.innerHTML=css+'<div style="display:flex;gap:14px;align-items:center"><div class="tpc" style="width:110px;cursor:default"><span class="av" id="pfAv" style="width:90px;height:90px;'+(q.photo&&phOk(q.photo)?'background-image:url('+q.photo+')':'')+'">'+(q.photo&&phOk(q.photo)?'':'📷')+'</span></div><div style="display:flex;flex-direction:column;gap:8px"><button class="btn" id="pfPick" type="button">📷 '+(q.photo?'Cambiar foto':'Poner foto')+'</button><input type="file" id="pfF" accept="image/*" hidden>'+(q.photo?'<button class="btn" id="pfNo" type="button">Quitar foto</button>':'')+'</div></div>'+
+        '<label style="'+lab+'">Dorsal<input id="pfN" style="'+fld+'" inputmode="numeric" maxlength="3" value="'+esc(String(q.n))+'" placeholder="Ej. 7"></label>'+
+        '<label style="'+lab+'">Nombre<input id="pfName" style="'+fld+'" value="'+esc(q.name||'')+'" placeholder="Ej. Ana García"></label>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="pfOk">Listo</button><button class="btn" id="pfCa">Cancelar</button>'+(k>=0?'<button class="btn danger" id="pfDel">Quitar jugadora</button>':'')+'</div>';
+      B.querySelector('#pfPick').onclick=()=>B.querySelector('#pfF').click();
+      B.querySelector('#pfF').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; try{ q.photo=await photoFromFile(f); const av=B.querySelector('#pfAv'); av.style.backgroundImage='url('+q.photo+')'; av.textContent=''; }catch(er){ msg(dT,'No se pudo leer la imagen.'); } };
+      const no=B.querySelector('#pfNo'); if(no) no.onclick=()=>{ q.photo=''; const av=B.querySelector('#pfAv'); av.style.backgroundImage=''; av.textContent='📷'; no.remove(); };
+      B.querySelector('#pfCa').onclick=()=>grid('');
+      const dl=B.querySelector('#pfDel'); if(dl) dl.onclick=()=>{ pl.splice(k,1); grid(''); };
+      B.querySelector('#pfOk').onclick=()=>{
+        const n=B.querySelector('#pfN').value.trim(), nm=B.querySelector('#pfName').value.trim();
+        if(!n||!/^\d{1,3}$/.test(n)){ msg(dT,'Pon el dorsal (un número).'); return; }
+        if(pl.some((x,j)=>j!==k&&String(parseInt(x.n,10))===String(parseInt(n,10)))){ msg(dT,'Ya hay una jugadora con el dorsal '+n+'.'); return; }
+        const o={n:n,name:nm}; if(q.photo) o.photo=q.photo; if(k>=0) pl[k]=o; else pl.push(o); grid('');
+      };
+      B.querySelector('#pfN').focus();
+    }
+    grid('');
   }
   window.openTeams=()=>{ dT.showModal(); listT(); };
   /* ---- datos del partido ---- */
@@ -8273,7 +8300,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
    ['Reproductor y línea de tiempo',['<ul><li><b>−5 / −1 / +1 / +5 s:</b> saltos de tiempo (se cambian en Ajustes).</li><li><b>Fotograma anterior/siguiente:</b> teclas coma y punto, o flechas.</li><li><b>Espacio:</b> reproducir o pausar. <b>F:</b> pantalla completa.</li><li><b>Velocidad:</b> de 0,25× a 2×, útil para ver una jugada lenta.</li><li><b>Fotogramas:</b> los fps del avance fotograma a fotograma.</li><li><b>Dibujos:</b> muestra u oculta los dibujos al reproducir.</li><li><b>＋ Tag / ☰ Clips (iPad):</b> crear un clip manual aquí y abrir la lista.</li><li><b>Barra de avance:</b> las marcas son tus clips.</li></ul><p><b>Línea de tiempo:</b> muestra los clips en el tiempo, una fila por categoría. Con Zoom (− + Ajustar) acercas o ves todo el partido. <b>+ Marcador</b> deja una marca. <b>▾ Esconder</b> la oculta para dar más sitio al vídeo.</p>']],
    ['Botonera: cómo se etiqueta',['<ul><li><b>Categorías:</b> una acción (Tiro de 2, Pérdida, Rebote…). Al pulsarla se crea un clip. Cada una tiene color, tecla y, si quieres, puntos.</li><li><b>Descriptores</b> (tira de abajo): detalles de la acción, por ejemplo Resultado (anota/falla) o Zona. Unos grupos admiten uno solo y otros varios a la vez.</li><li><b>Jugadoras:</b> pulsa el dorsal para asignar la acción.</li><li><b>⚔ Ataque / 🛡 Defensa:</b> marca la fase de las jugadas nuevas; luego puedes filtrar por ella.</li><li><b>A− / A+:</b> tamaño de los botones.</li><li><b>✎ Editar:</b> pulsa cualquier botón para cambiar nombre, color, tamaño o borrarlo. También con clic derecho.</li><li><b>＋:</b> nueva categoría.</li><li><b>🎛 (arriba):</b> editor completo de categorías y de descriptores (grupos, colores, “varios a la vez” y teclas).</li><li><b>Abrir descriptores al pulsar una categoría:</b> se activa en Ajustes.</li></ul><p><b>Varias botoneras (conjuntos):</b> el desplegable junto a «Categorías» cambia de conjunto (Todos, Principal, Sistemas…). En 🎛 Botonera puedes crear más con «＋ Conjunto».</p><p><b>Botonera de jugadoras con fotos:</b> en 🎛 Botonera pulsa «＋ Jugadoras». Ese conjunto muestra a cada jugadora con su cara y su nombre; elige Local o Rival arriba. Para añadir una jugadora o ponerle foto pulsa «＋ Jugadora» (o ✎ Editar y toca su tarjeta). Al pulsar una jugadora en el partido se abre una ventana: eliges la categoría y luego los descriptores, y el clip queda guardado a su nombre en el instante en que la pulsaste. «＋ Otra categoría» deja añadir más acciones a la misma jugadora sin cerrar.</p><p>Cada categoría tiene sus segundos “antes” y “después”: el clip empieza unos segundos antes del instante en que pulsas y acaba unos segundos después.</p>']],
    ['Biblioteca (lista de clips)',['<ul><li>Pulsar un clip lo reproduce. <b>Ver todos</b> reproduce los filtrados uno tras otro.</li><li><b>Orden:</b> más recientes, tiempo, nombre o tipo.</li><li><b>Buscar:</b> por nombre, etiqueta, descriptor o comentario.</li><li><b>Filtros:</b> equipo, periodo, jugadora, fase, destacados ★ y chips de categorías y descriptores.</li><li><b>Marcar varios:</b> barra para reproducir, añadir a playlist, exportar, destacar o borrar.</li><li><b>🎞 Vídeo:</b> guarda los clips filtrados como archivo de vídeo.</li><li><b>Editar clip:</b> ajusta inicio y fin, comentario, categoría, jugadora y descriptores, y dibuja sobre la imagen.</li></ul>']],
-   ['Dibujar sobre el vídeo (Freeze frame)',['<p>Pausa en el instante que quieres explicar y pulsa <b>Freeze frame</b> (Mayús+F; en iPad, el lápiz ✏️). Aparece un menú con herramientas y colores. Puedes quitar la última figura (⌫) o <b>Borrar todo</b>.</p><ul><li><b>Pausa:</b> segundos que se queda congelada la imagen al reproducir el clip.</li><li><b>Sobre el vídeo (sin pausa):</b> el dibujo se superpone mientras el vídeo sigue.</li><li><b>✓ Listo:</b> guarda el dibujo. Quedan en Producción → Dibujos.</li></ul>']],
+   ['Dibujar sobre el vídeo (Congelar imagen)',['<p>Pausa en el instante que quieres explicar y pulsa <b>Congelar imagen</b> (Mayús+F; en iPad, el lápiz ✏️). Aparece un menú con herramientas y colores. Puedes quitar la última figura (⌫) o <b>Borrar todo</b>.</p><ul><li><b>Pausa:</b> segundos que se queda congelada la imagen al reproducir el clip.</li><li><b>Sobre el vídeo (sin pausa):</b> el dibujo se superpone mientras el vídeo sigue.</li><li><b>✓ Listo:</b> guarda el dibujo. Quedan en Producción → Dibujos.</li></ul>']],
    ['Mesa de producción',['<p>Para montar un vídeo de análisis con las jugadas que quieras enseñar.</p><ul><li><b>Playlists:</b> a la izquierda los clips disponibles (con buscador y filtros); a la derecha el orden del montaje. “Añadir todos” pasa los que ves.</li><li><b>Portada:</b> diapositiva de título al principio. <b>Vídeo ext.:</b> añade otro vídeo al montaje.</li><li><b>◄ Ini / Fin ►:</b> ajusta inicio o final del clip seleccionado en pasos de 0,1, 0,5 o 1 s.</li><li><b>▶ Reproducir</b> lo ve entero; <b>🎞 Vídeo</b> lo guarda como archivo; <b>Exportar</b> lo guarda como lista.</li><li><b>Dibujos:</b> todas las congelaciones y dibujos que hiciste.</li></ul>']],
    ['👤 Rendimiento: qué es y para qué sirve',['<p><b>Rendimiento</b> es una forma rápida de anotar acciones de esfuerzo o calidad de una jugadora que no son una jugada de la botonera: presión al balón, línea de pase, close-out, box-out, hustle… Sirve para valorar el trabajo defensivo que no sale en las estadísticas normales.</p><ol><li>Con el vídeo detenido en la jugada, elige el equipo.</li><li>Toca una o varias jugadoras.</li><li>Toca uno o varios rendimientos (de fábrica: Presión balón, Línea de pase, Close-out, Tiros punteados de 2 y de 3, Deflections, Recuperación / Tapón, Falta de ataque recibida, Falta táctica / Varios, 24"/5", Hustle, Box-out).</li><li>Opcional: <b>✓ Bien</b> (el clip sale en verde) o <b>✗ Mal</b> (rojo).</li><li><b>Añadir</b> deja el panel abierto; <b>Añadir y cerrar</b> lo cierra.</li></ol><p>Se crea un clip por cada jugadora y rendimiento (5 s antes y 3 s después). Luego puedes filtrarlos en la Biblioteca por jugadora o tipo, por ejemplo “todo lo que hizo mal en close-out”. <b>Editar lista</b> permite añadir tus propios rendimientos o borrar los que no uses.</p>']],
    ['🏀 Quinteto',['<p>Registra quién está en pista y calcula cuánto juega cada quinteto y cómo le va.</p><ul><li><b>En pista:</b> toca jugadoras del banquillo para meterlas (máximo 5) y a quien sale para sacarla. En el instante exacto del cambio pulsa <b>Aplicar</b>. <b>Cerrar tramo</b> termina el quinteto actual.</li><li><b>Datos:</b> quintetos con minutos, puntos a favor y en contra (12–8) y el +/− (la diferencia). También minutos y +/− por jugadora.</li><li><b>＋</b> crea una playlist con sus jugadas; <b>🎞</b> exporta su vídeo.</li></ul><p>Los minutos son tiempo de vídeo, no de reloj de partido, y el +/− cuenta solo los puntos que hayas etiquetado.</p>']],
@@ -8284,7 +8311,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
    ['Enlace (YouTube / URL) y Cámara en vivo',['<p><b>🔗 Enlace:</b> abre un vídeo de YouTube u otra URL y te deja etiquetar igual que con un archivo, en ordenador e iPad. No se pueden exportar vídeos de enlace.</p><p><b>📹 En vivo:</b> graba con la webcam o una capturadora HDMI mientras etiquetas. Al terminar, el partido se guarda como vídeo con sus clips. Mientras grabas no se puede editar clips, exportar ni dibujar. Si se cierra la página por error, la grabación se recupera al volver.</p>']],
    ['Nube y sincronización',['<p><b>☁ Nube</b> inicia sesión con tu correo y sube proyectos, botonera y equipos para seguir en otro dispositivo. Con la misma cuenta en el ordenador y el iPad, lo etiquetado en uno aparece en el otro. El vídeo en sí no se sube: hay que abrir el mismo archivo en cada dispositivo.</p>']],
    ['Modo iPad, diseño y Ajustes',['<ul><li><b>📱/💻:</b> fuerza modo iPad o modo ordenador.</li><li><b>▦ Diseño:</b> cada panel (botonera, biblioteca, producción, editor de clip) se puede mover, minimizar, maximizar, redimensionar o abrir en otra ventana.</li><li>La línea de tiempo y la zona de Análisis se pueden esconder para ver más vídeo.</li><li><b>⚙ Ajustes:</b> saltos de tiempo, velocidad inicial, fotogramas, tamaño de botonera, almacenamiento y copia de seguridad.</li></ul>']],
-   ['Atajos de teclado',['<table class="hp-t"><tr><td>Espacio</td><td>Reproducir / pausar</td></tr><tr><td>← → , .</td><td>Fotograma anterior / siguiente</td></tr><tr><td>Mayús + ← →</td><td>−1 s / +1 s</td></tr><tr><td>Ctrl/Cmd + ← →</td><td>−5 s / +5 s</td></tr><tr><td>F</td><td>Pantalla completa</td></tr><tr><td>Mayús + F</td><td>Freeze frame</td></tr><tr><td>Mayús + M</td><td>Añadir marcador</td></tr><tr><td>0</td><td>Cambiar de equipo</td></tr><tr><td>Mayús + 1 a 5</td><td>Cambiar de cuarto</td></tr><tr><td>Ctrl/Cmd + Z (+Mayús)</td><td>Deshacer (rehacer)</td></tr><tr><td>Tecla de cada categoría</td><td>Etiquetar (se asigna en el editor de botonera)</td></tr></table>']]
+   ['Atajos de teclado',['<table class="hp-t"><tr><td>Espacio</td><td>Reproducir / pausar</td></tr><tr><td>← → , .</td><td>Fotograma anterior / siguiente</td></tr><tr><td>Mayús + ← →</td><td>−1 s / +1 s</td></tr><tr><td>Ctrl/Cmd + ← →</td><td>−5 s / +5 s</td></tr><tr><td>F</td><td>Pantalla completa</td></tr><tr><td>Mayús + F</td><td>Congelar imagen</td></tr><tr><td>Mayús + M</td><td>Añadir marcador</td></tr><tr><td>0</td><td>Cambiar de equipo</td></tr><tr><td>Mayús + 1 a 5</td><td>Cambiar de cuarto</td></tr><tr><td>Ctrl/Cmd + Z (+Mayús)</td><td>Deshacer (rehacer)</td></tr><tr><td>Tecla de cada categoría</td><td>Etiquetar (se asigna en el editor de botonera)</td></tr></table>']]
   ];
   const dlg=document.createElement('dialog'); dlg.id='dlgHelp';
   dlg.innerHTML='<div class="dlg-h"><h2>Ayuda y tutorial</h2><button class="btn" data-x>Cerrar</button></div><div class="dlg-b" id="hpB"></div>';
@@ -9485,7 +9512,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
 (function(){ const b=document.getElementById('bTgBot'); if(!b) return;
   b.onclick=()=>{ const st=layout.panels.tags; st.vis=!st.vis; applyLayout(); saveLayout(); b.setAttribute('aria-pressed',String(!st.vis)); };
 })();
-/* ===== iPad: barra de freeze frame ===== */
+/* ===== iPad: barra de imagen congelada ===== */
 function ipFzSync(){
   const bar=document.getElementById('ipFz'); if(!bar) return;
   bar.hidden=true; document.body.classList.remove('fz','fzMin'); return; /* sustituida por la barra #dwBar sobre el vídeo */
@@ -10410,10 +10437,10 @@ $('#plList').addEventListener('drop',e=>{
 function renderTeleList(){
   const root=$('#pProd'); if(!root) return;
   const list=$('#tlList');
-  if(!teles.length){list.innerHTML='<li class="none">Aún no hay dibujos. Pausa el vídeo y pulsa «Freeze frame».</li>';return;}
+  if(!teles.length){list.innerHTML='<li class="none">Aún no hay dibujos. Pausa el vídeo y pulsa «Congelar imagen».</li>';return;}
   list.innerHTML=teles.map(t=>
     '<li class="prow tcard" data-id="'+t.id+'" tabindex="0" style="--tc:'+(t.mode==='freeze'?'var(--accent)':'var(--mark)')+'">'+
-    '<span class="rn">'+fmt(t.t)+'</span><span class="rt"><b>'+(t.mode==='freeze'?'Freeze frame':'Dibujo sobre el vídeo')+'</b><span class="rm">'+t.hold+' s · '+t.items.length+' figura'+(t.items.length===1?'':'s')+'</span></span>'+
+    '<span class="rn">'+fmt(t.t)+'</span><span class="rt"><b>'+(t.mode==='freeze'?'Congelar imagen':'Dibujo sobre el vídeo')+'</b><span class="rm">'+t.hold+' s · '+t.items.length+' figura'+(t.items.length===1?'':'s')+'</span></span>'+
     '<span class="ra"><button data-act="go" title="Ir al instante" aria-label="Ir al instante">⏵</button><button data-act="edit" title="Editar dibujo" aria-label="Editar dibujo">✎</button><button data-act="del" title="Borrar dibujo" aria-label="Borrar dibujo">'+ICON.trash+'</button></span></li>').join('');
 }
 $('#tlList').addEventListener('click',e=>{
@@ -11540,7 +11567,7 @@ function teleTick(){
   const now=performance.now();
   if(freeze){
     const rem=Math.max(0,(freeze.until-now)/1000);
-    $('#fbTxt').textContent='Freeze frame · '+Math.ceil(rem)+' s';
+    $('#fbTxt').textContent='Congelar imagen · '+Math.ceil(rem)+' s';
     if(now>=freeze.until) endFreeze(true);
     return;
   }
@@ -12010,7 +12037,7 @@ $('#dwClip').onclick=()=>{
   const ex=tl.clipId&&events.find(e=>e.id===tl.clipId);
   if(ex){selectedId=ex.id;renderList();renderDetail();toast('Este dibujo ya tiene su clip.');return;}
   const dur=video.duration||tl.t+4;
-  const ev=normEvent({id:uid(),btnId:FREEZE,label:'Freeze frame',color:'#FFB020',pts:0,cat:'Dibujo',name:'Freeze frame '+fmt(tl.t),
+  const ev=normEvent({id:uid(),btnId:FREEZE,label:'Congelar imagen',color:'#FFB020',pts:0,cat:'Dibujo',name:'Congelar imagen '+fmt(tl.t),
     t:tl.t,start:Math.max(0,tl.t-4),end:Math.min(dur,tl.t+4),team,player,period,video:videoName,note:''});
   events.push(ev); sortEvents(); tl.clipId=ev.id; selectedId=ev.id;
   commit(); renderDetail(); toast('Clip creado. Incluye el dibujo y la pausa al reproducirlo.');
@@ -12397,7 +12424,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-y · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-za · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
