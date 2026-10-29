@@ -375,6 +375,16 @@ body.ipad #dwBar .dws .c i{width:26px;height:26px}
 #dwBar.opts .dwp{display:flex}
 #dwBar.min .dws>.g,#dwBar.min .dws>.c,#dwBar.min .dws>.dwo,#dwBar.min .dws .r button:not([data-act=end]){display:none}
 #dwBar.min .dwp{display:none!important}
+/* en pantalla completa la fila se coloca entre los botones de la izquierda y el panel de cortes, sin taparlos */
+body.vfull #dwBar{left:136px;right:var(--dwR,8px)}
+#dwBar .dwmore{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px}
+#dwBar .dwmore button{width:auto!important;height:36px!important}
+#dwBar .dwc{height:32px;width:38px;padding:0!important;display:flex;align-items:center;justify-content:center}
+#dwBar .dwc i{width:20px;height:20px;border-radius:50%;border:2px solid #fff;display:block}
+#dwBar>.c{display:none;position:absolute;left:0;top:50px;flex-wrap:wrap;gap:6px;max-width:260px;background:rgba(5,12,20,.95);border:1px solid #2b4764;border-radius:14px;padding:8px;align-items:center}
+#dwBar>.c i{width:26px;height:26px;border-radius:50%;cursor:pointer;display:inline-block}
+#dwBar.colp>.c{display:flex}
+body.vfull #dwBar>.c{left:0}
 body.ipad #dwBar{width:auto}
 
 .tele.edit{pointer-events:auto;cursor:crosshair;outline:2px solid var(--accent);outline-offset:-2px}
@@ -9259,7 +9269,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     if(!recovered){
       if(!confirm('¿Terminar la grabación y guardar el partido?')) return;
       clearInterval(tick); const dur=el();
-      await new Promise(res=>{ rec.onstop=res; try{ rec.stop(); }catch(e){ res(); } });
+      await new Promise(res=>{ const to=setTimeout(res,4000); rec.onstop=()=>{ clearTimeout(to); res(); }; try{ if(rec.state==='inactive'){ clearTimeout(to); res(); } else rec.stop(); }catch(e){ clearTimeout(to); res(); } });
       stream.getTracks().forEach(t=>t.stop()); stream=null; try{ wake&&wake.release(); }catch(e){} wake=null;
       if(bar){ bar.remove(); bar=null; }
       shimOff(); video.srcObject=null; video.autoplay=false; video.muted=false; video.removeAttribute('src'); try{ video.load(); }catch(e){}
@@ -12054,13 +12064,20 @@ function barBuild(){
    +'<div class="hint">Pulsa D para abrir/cerrar. Esc: salir de la herramienta.</div>';
   /* barra compacta: fila de herramientas arriba + panel de ajustes plegable */
   { const k=[...dwBar.children]; const strip=document.createElement('div'); strip.className='dws'; strip.append(k[0],k[1],k[2]);
-    const o=document.createElement('button'); o.className='dwo'; o.setAttribute('data-dwui','opts'); o.title='Grosor, transparencia, estilo, animación, clip…'; o.textContent='⚙ Ajustes';
+    const o=document.createElement('button'); o.className='dwo'; o.setAttribute('data-dwui','opts'); o.title='Más herramientas, grosor, transparencia, estilo, animación, clip…'; o.textContent='＋ Más';
     const m=document.createElement('button'); m.className='dwm'; m.setAttribute('data-dwui','min'); m.title='Esconder o mostrar las herramientas'; m.textContent='▲';
-    strip.append(o,m); const pan=document.createElement('div'); pan.className='dwp'; k.slice(3).forEach(x=>pan.append(x)); dwBar.append(strip,pan);
+    const colEl=strip.querySelector('.c'); const cb=document.createElement('button'); cb.className='dwc'; cb.setAttribute('data-dwui','col'); cb.title='Color'; cb.innerHTML='<i></i>';
+    if(colEl){ colEl.remove(); strip.insertBefore(cb,strip.children[2]||null); }
+    strip.append(o,m); const pan=document.createElement('div'); pan.className='dwp'; k.slice(3).forEach(x=>pan.append(x));
+    /* en la fila solo las herramientas de cada día; el resto va en «Más» (dentro del panel) para no tapar el vídeo */
+    { const g=strip.querySelector('.g'); if(g){ const main=['select','arrow','line','curve','circle','rect','text','pen','spot'];
+        const more=document.createElement('div'); more.className='g dwmore'; [...g.children].forEach(b=>{ if(!main.includes(b.dataset.tool)) more.append(b); }); pan.insertBefore(more,pan.firstChild);
+        const lb=document.createElement('div'); lb.className='hint'; lb.textContent='Más herramientas'; pan.insertBefore(lb,more); } } dwBar.append(strip,pan); if(colEl) dwBar.append(colEl);
     let mn=false; try{ mn=localStorage.getItem('bbtag.dwMin')==='1'; }catch(_){}
     const ap=()=>{ dwBar.classList.toggle('min',mn); m.textContent=mn?'✏ Herramientas ▾':'▲'; o.classList.toggle('on',dwBar.classList.contains('opts')); };
-    dwBar.addEventListener('click',e=>{ const u=e.target.closest('[data-dwui]'); if(!u) return; e.stopPropagation();
-      if(u.dataset.dwui==='opts'){ dwBar.classList.toggle('opts'); mn=false; try{ localStorage.setItem('bbtag.dwMin','0'); }catch(_){} }
+    dwBar.addEventListener('click',e=>{ if(e.target.closest('.c [data-color]')) setTimeout(()=>dwBar.classList.remove('colp'),0); const u=e.target.closest('[data-dwui]'); if(!u) return; e.stopPropagation();
+      if(u.dataset.dwui==='col'){ dwBar.classList.toggle('colp'); return; }
+      if(u.dataset.dwui==='opts'){ dwBar.classList.remove('colp'); dwBar.classList.toggle('opts'); mn=false; try{ localStorage.setItem('bbtag.dwMin','0'); }catch(_){} }
       else { mn=!mn; if(mn) dwBar.classList.remove('opts'); try{ localStorage.setItem('bbtag.dwMin',mn?'1':'0'); }catch(_){} }
       ap(); },true);
     ap(); }
@@ -12077,6 +12094,7 @@ function barSync(){
   { const rc=dwBar.querySelector('#bRec'); if(rc){ rc.hidden=!DWREC.length; rc.innerHTML=DWREC.length?'<span style="font-size:11px;opacity:.7;flex:0 0 100%">Recientes</span>'+DWREC.map((e,i)=>{ const t=TOOLS.find(x=>x[0]===e.type); return '<button data-rec="'+i+'" title="Repetir: '+esc(t?t[1]:e.type)+'" style="color:'+e.color+'"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(t?t[2]:'')+'</svg></button>'; }).join(''):''; } }
   const col=(s?s.color:ed.color).toLowerCase();
   dwBar.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('on',b.dataset.color.toLowerCase()===col));
+  { const sw=dwBar.querySelector('.dwc i'); if(sw) sw.style.background=col; }
   const sw=s?s.sw:ed.sw;
   dwBar.querySelectorAll('[data-sw]').forEach(b=>{const v=+b.dataset.sw; b.classList.toggle('on',sw<=3?v===3:sw<=6?v===5:v===8);});
   { const cp=dwBar.querySelector('#bColPick'); if(cp) cp.value=safeColor(s?s.color:ed.color).slice(0,7);
@@ -12130,8 +12148,9 @@ $('#vwrap').appendChild(dwBar);
 const dwCuts=document.createElement('div'); dwCuts.id='dwCuts'; dwCuts.hidden=true; $('#vwrap').appendChild(dwCuts);
 let dwCutsMin=false, dwCutLast=null;
 function cutsSync(){
-  const on=!!teleEd; dwCuts.hidden=!on; if(!on) return;
-  const evs=events.filter(e=>e.end>e.start).slice().sort((a,b)=>a.start-b.start); if(!evs.length){ dwCuts.hidden=true; return; }
+  const on=!!teleEd; dwCuts.hidden=!on; if(!on){ dwBar.style.removeProperty('--dwR'); return; }
+  const evs=events.filter(e=>e.end>e.start).slice().sort((a,b)=>a.start-b.start); if(!evs.length){ dwCuts.hidden=true; dwBar.style.removeProperty('--dwR'); return; }
+  dwBar.style.setProperty('--dwR','216px');
   const ct=teleEd.tele.t, cur=evs.find(e=>String(e.id)===String(dwCutLast)&&ct>=e.start-0.05&&ct<=e.end+0.05)||evs.find(e=>ct>=e.start-0.05&&ct<=e.end+0.05);
   const sig=evs.map(e=>e.id+':'+e.start+':'+e.end).join('|')+'#'+teles.map(t=>t.id+':'+t.t+':'+t.items.length).join(',')+'#'+(cur?cur.id:'')+'#'+dwCutsMin; if(dwCuts.dataset.sig===sig) return; dwCuts.dataset.sig=sig;
   const g={}; evs.forEach(e=>{ const i=info(e), n=teles.filter(t=>t.items.length&&t.t>=e.start-0.05&&t.t<=e.end+0.05).length; (g[i.group]=g[i.group]||[]).push('<button data-cut="'+esc(e.id)+'"'+(cur&&cur.id===e.id?' class="on"':'')+'><i style="background:'+esc(i.color)+'"></i>'+esc(i.label)+(n?'<b title="Tiene dibujos">✎'+n+'</b>':'')+'<small>'+fmt(e.start)+'</small></button>'); });
@@ -12612,7 +12631,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zp · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zr · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
