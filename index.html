@@ -306,6 +306,33 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 #dwBar .r button{flex:1;white-space:nowrap;padding-left:3px;padding-right:3px}
 body:not(.vfull):not(.bbOpts) #pTags .bb-cats>.bb-sh{display:none!important}
 #bbOptsBtn.on{background:var(--accent);color:#000}
+/* Ventana de exportar estilo software (como Once) */
+.xw{background:#1c1d20;color:#f2f2f2;border:1px solid #34353a;border-radius:12px;width:min(640px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 60px rgba(0,0,0,.55);pointer-events:auto;font-family:var(--f-body)}
+.xt{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#2a2b2f;border-bottom:1px solid #34353a;flex:none}
+.xt i{width:12px;height:12px;border-radius:50%;display:block;flex:none}
+.xt i:nth-child(1){background:#ff5f57}.xt i:nth-child(2){background:#febc2e}.xt i:nth-child(3){background:#4a4b50}
+.xt b{flex:1;text-align:center;font:600 14px var(--f-body);margin-right:44px}
+.xb{padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.xg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.xc{background:#25262a;border:1px solid #303136;border-radius:12px;padding:12px 14px;min-width:0}
+.xc .xl{display:block;font:600 12.5px var(--f-body);color:#9a9ba2;margin:0 0 8px}
+.xc select,.xc input[type=text]{width:100%;padding:9px 10px;border-radius:9px;border:0;background:#17181a;color:#f2f2f2;box-sizing:border-box;font:inherit}
+.xc .xh{font-size:12px;color:#8b8c93;margin:8px 0 0}
+.xrow{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.xchk{display:flex;flex-wrap:wrap;gap:8px 18px}
+.xchk label,.xrow label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px}
+.xw input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:5px;background:#3a3b40;border:0;display:inline-grid;place-content:center;margin:0;flex:none;cursor:pointer}
+.xw input[type=checkbox]:checked{background:#00b95c}
+.xw input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.xf{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid #303136;flex:none;background:#1c1d20}
+.xf .btn{background:#34353a;border:0;color:#f2f2f2;border-radius:8px;padding:8px 18px}
+.xf .btn.primary{background:#00b95c;color:#fff;font-weight:700}
+.xf .btn.danger{background:#34353a;color:#ff7b72}
+.xpb{height:12px;border-radius:7px;background:#f2f2f2;overflow:hidden}
+.xpb>div{height:100%;width:0;background:#00c864;border-radius:7px;transition:width .3s}
+.xpc{text-align:center;font:600 15px var(--f-body);margin-top:10px}
+.xbig{font:700 22px var(--f-head);text-align:center}
+@media(max-width:560px){.xg{grid-template-columns:1fr}}
 #dwCuts{position:absolute;right:8px;top:8px;width:200px;max-height:calc(100% - 16px);overflow:auto;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:7px;z-index:6;color:#fff;font:600 12px Inter,Barlow,sans-serif}
 #dwCuts[hidden]{display:none}
 #dwCuts .h{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 6px;font-weight:800;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#9fb2c6;cursor:pointer}
@@ -6379,7 +6406,7 @@ function expExt(mime){return /mp4/.test(mime)?'mp4':'webm';}
 function expCleanU(n){return String(n||'').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);}
 function expClean(n){return String(n||'clip').replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,50)||'clip';}
 function expDur(list,draw){return list.reduce((a,e)=>e.cover?a+e.dur:e.ext?a+Math.max(0,e.end-e.start):a+Math.max(0,e.end-e.start)+(draw?teles.filter(t=>t.mode==='freeze'&&t.t>e.start&&t.t<e.end).reduce((x,t)=>x+t.hold,0):0),0);}
-function expDlgShell(html){
+function expDlgShell(html,title,foot){
   const DOC_=DLGDOC||document; let d=DOC_.getElementById('expDlg');
   if(!d){
     d=DOC_.createElement('div'); d.id='expDlg';
@@ -6387,7 +6414,8 @@ function expDlgShell(html){
   }
   const pill=!!(EXP.min&&EXP.busy&&html.indexOf('id="exBar"')>=0);
   d.style.cssText=pill?'position:fixed;right:14px;bottom:14px;z-index:9000;width:min(340px,calc(100% - 28px));pointer-events:none;':'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px;';
-  d.innerHTML='<div style="pointer-events:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);">'+html+'</div>';
+  if(title) d.innerHTML='<div class="xw"><div class="xt"><i></i><i></i><i></i><b>'+title+'</b></div><div class="xb">'+html+'</div>'+(foot?'<div class="xf">'+foot+'</div>':'')+'</div>';
+  else d.innerHTML='<div style="pointer-events:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,100%);max-height:100%;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.4);">'+html+'</div>';
   return d;
 }
 function expClose(){const d=(DLGDOC||document).getElementById('expDlg'); if(d) d.remove(); DLGDOC=null;}
@@ -6401,24 +6429,22 @@ function openExport(list,defName){
   if(!expMime()){toast('Este navegador no puede grabar vídeo. Prueba con Safari o Chrome actualizados.');return;}
   if(document.body.classList.contains('ipad')&&!DLGDOC){ openIpExport(list,defName); return; }
   const dur=expDur(list,true), mm=expMime();
-  const d=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">Guardar como vídeo</h3>'+
-    '<p style="margin:0 0 10px;color:var(--muted)">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'. Se procesa lo más rápido que permita el dispositivo; si no puede, se graba en tiempo real.</p>'+
-    '<label style="display:block;margin:8px 0 3px;font-weight:600">Archivo</label>'+
-    '<select id="exMode" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select>'+
-    '<div id="exNmBox" style="margin-top:8px"></div>'+
-    '<label style="display:block;margin:10px 0 3px;font-weight:600">Tipo de vídeo</label>'+
-    '<select id="exQ" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2)"><option value="720"'+(window.scoutDesktop?'':' selected')+'>MP4 rápido · 720p (recomendado)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'MP4 universal · 1080p (motor nativo, rápido)':'MP4 universal · motor propio 720p (lento)')+'</option><option value="1080">MP4 rápido · 1080p (calidad alta)</option>'+(window.scoutDesktop?'':'<option value="9001">MP4 universal · motor propio 1080p (máxima calidad, más lento)</option>')+'<option value="0">Original · sin dibujos ni recodificar</option></select>'+
-    '<p id="exQh" style="margin:6px 0 0;font-size:12.5px;color:var(--muted)"></p>'+
-    '<label style="display:flex;gap:8px;align-items:center;margin:12px 0 4px"><input type="checkbox" id="exDraw" checked> Incluir dibujos, lupas y freeze frames</label>'+
-    '<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" id="exTit" checked> Mostrar el nombre del clip en pantalla</label>'+
-    ''+efRowHtml()+'<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</p>'+
-    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se hace con el MOTOR PRO mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button></div>');
+  const qsel='<select id="exQ"><option value="720"'+(window.scoutDesktop?'':' selected')+'>MP4 rápido · 720p (recomendado)</option><option value="9000"'+(window.scoutDesktop?' selected':'')+'>'+(window.scoutDesktop?'MP4 universal · 1080p (motor nativo, rápido)':'MP4 universal · motor propio 720p (lento)')+'</option><option value="1080">MP4 rápido · 1080p (calidad alta)</option>'+(window.scoutDesktop?'':'<option value="9001">MP4 universal · motor propio 1080p (máxima calidad, más lento)</option>')+'<option value="0">Original · sin dibujos ni recodificar</option></select>';
+  const d=expDlgShell(
+    '<div class="xg"><div class="xc"><label class="xl">Archivo</label><select id="exMode"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select><div class="xh">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'</div></div>'+
+    '<div class="xc"><label class="xl">Tipo de vídeo</label>'+qsel+'<div class="xh" id="exQh"></div></div></div>'+
+    '<div class="xc"><div id="exNmBox"></div></div>'+
+    '<div class="xc"><div class="xl">Incluir:</div><div class="xchk"><label><input type="checkbox" id="exDraw" checked> Dibujos, lupas y freeze frames</label><label><input type="checkbox" id="exTit" checked> Nombre del clip en pantalla</label></div></div>'+
+    efRowHtml()+
+    '<div class="xh" style="color:#8b8c93;font-size:12px;padding:0 4px">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</div>',
+    'Opciones de exportación de vídeo',
+    '<button class="btn" id="exNo">Cancelar</button><button class="btn" id="exQ9" title="Se hace con el MOTOR PRO mientras sigues trabajando">➕ A la cola</button><button class="btn primary" id="exGo">Empezar</button>');
   d.querySelector('#exNo').onclick=expClose; efBind(d);
   { const box=d.querySelector('#exNmBox'), sel=d.querySelector('#exMode'); const fld='width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);box-sizing:border-box';
     const defs=list.map((e,i)=>String(i+1).padStart(2,'0')+'_'+expClean(evName(e)));
     const draw=()=>{ const keep=[...box.querySelectorAll('[data-nm]')].map(x=>x.value), one=(box.querySelector('#exNm')||{}).value;
-      if(sel.value==='one'){ box.innerHTML='<label style="display:block;margin:0 0 3px;font-weight:600">Nombre del archivo</label><input id="exNm" type="text" style="'+fld+'" placeholder="'+esc(expClean(defName||baseName()))+'" value="'+esc(one!=null?one:'')+'">'; }
-      else { box.innerHTML='<label style="display:block;margin:0 0 3px;font-weight:600">Nombre de cada clip <small style="font-weight:400;color:var(--muted)">(déjalo como está o cámbialo)</small></label><div style="max-height:170px;overflow:auto;display:flex;flex-direction:column;gap:5px">'+list.map((e,i)=>'<input data-nm="'+i+'" type="text" style="'+fld+'" value="'+esc(keep[i]!=null?keep[i]:defs[i])+'">').join('')+'</div>'; } };
+      if(sel.value==='one'){ box.innerHTML='<label class="xl">Nombre del archivo</label><input id="exNm" type="text" placeholder="'+esc(expClean(defName||baseName()))+'" value="'+esc(one!=null?one:'')+'">'; }
+      else { box.innerHTML='<label class="xl">Nombre de cada clip <small style="font-weight:400">(déjalo como está o cámbialo)</small></label><div style="max-height:170px;overflow:auto;display:flex;flex-direction:column;gap:5px">'+list.map((e,i)=>'<input data-nm="'+i+'" type="text" value="'+esc(keep[i]!=null?keep[i]:defs[i])+'">').join('')+'</div>'; } };
     sel.addEventListener('change',draw); draw(); d.__exNames=()=>{ const o={one:'',each:[]}; const a=box.querySelector('#exNm'); if(a) o.one=expCleanU(a.value); box.querySelectorAll('[data-nm]').forEach(x=>o.each.push(expCleanU(x.value))); return o; }; }
   { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'1080':'Igual de rápido que el de 720p (usa la tarjeta de vídeo) pero en 1920×1080 y con más calidad. Si tu vídeo es 1080p, este es el que conserva el detalle.','9001':'Misma compatibilidad que el motor propio, pero en 1080p y con mejor calidad. En el navegador tarda bastante más (puede ser 3-6 veces lo que dura el vídeo) y usa más memoria: déjalo trabajar sin cambiar de pestaña.','9000':window.scoutDesktop?'Cortes exactos en 1080p, compatible con cualquier reproductor y editor. Rápido gracias al motor nativo.':'Compatibilidad máxima (iMovie, Premiere, DaVinci). En el navegador es LENTO: tarda varias veces lo que dura el vídeo. Úsalo solo si el rápido no abre en tu editor.','720':'Rápido y ligero, se abre en QuickTime, iMovie, WhatsApp y el móvil. Se hace casi a la velocidad del vídeo.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
   d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,(d.__exNames().one||defName),d.querySelector('#exMode').value,{ff:true,hq:+d.querySelector('#exQ').value===9001,w:(window.scoutDesktop||+d.querySelector('#exQ').value===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
@@ -6435,15 +6461,17 @@ async function runExport(list,defName,mode,o){
   EXP.busy=true; EXP.cancel=false; EXP.min=false;
   const total=expDur(list,o.draw), t0=performance.now();
   const shell=(i,n,ev)=>{
-    const el=expDlgShell('<h3 style="margin:0 0 6px;font:700 20px var(--f-head)">'+(o.ff?'Exportando…':'Grabando…')+'</h3><p id="exInfo" style="margin:0 0 4px;color:var(--muted)"></p><p id="exModo" style="margin:0 0 10px;font-weight:700;font-size:13px"></p>'+
-      '<div style="height:10px;border-radius:6px;background:var(--panel2);overflow:hidden"><div id="exBar" style="height:100%;width:0;background:var(--accent)"></div></div>'+
-      '<p style="margin:10px 0 0;font-size:12.5px;color:var(--muted)">No cambies de pestaña ni bloquees la pantalla hasta que termine.</p>'+
-      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn" id="exMin" style="display:none">'+(EXP.min?'Ampliar':'Seguir trabajando')+'</button><button class="btn danger" id="exCan">Cancelar</button></div>');
+    const el=expDlgShell(
+      '<div class="xg"><div class="xc"><div class="xl">Exportaciones en cola:</div><div class="xbig" id="exQn">'+(1+(XQ.jobs.length))+'</div></div><div class="xc"><div class="xl">Estado del progreso:</div><div id="exInfo" style="font:600 14px var(--f-body);text-align:center;line-height:1.35"></div></div></div>'+
+      '<div class="xc"><div class="xl">Progreso</div><div class="xpb"><div id="exBar"></div></div><div class="xpc" id="exPct">0 %</div></div>'+
+      '<div class="xc"><div class="xl">Exportado:</div><div id="exModo" style="font-size:13px;color:#9a9ba2;min-height:34px"></div><div style="font-size:12px;color:#8b8c93;margin-top:6px">No cambies de pestaña ni bloquees la pantalla hasta que termine.</div></div>',
+      'Exportación de análisis de vídeo',
+      '<button class="btn" id="exMin" style="display:none">'+(EXP.min?'Ampliar':'Seguir trabajando')+'</button><button class="btn danger" id="exCan">Cancelar</button>');
     el.querySelector('#exMin').onclick=()=>{ EXP.min=!EXP.min; shell(); upd(); };
     el.querySelector('#exCan').onclick=()=>{EXP.cancel=true; el.querySelector('#exInfo').textContent='Cancelando…'; if(o.ff){ try{ if(FF.inst) FF.inst.terminate(); }catch(_){} FF.inst=null; FF.loading=null; clearInterval(window.__exTick); EXP.busy=false; EXP.frac=null; expClose(); toast('Exportación cancelada.'); }};
   };
   let info='';
-  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=(EXP.modo||'')+' · v6'; const mb=DD_.getElementById('exMin'); if(mb) mb.style.display=(o.ff||(EXP.modo&&EXP.modo.indexOf('🐢')!==0&&EXP.modo.indexOf('⚡')===0))?'':'none'; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const b=DD_.getElementById('exBar'); if(b) b.style.width=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total)))+'%'; };
+  const upd=()=>{ const DD_=DLGDOC||document; const e=DD_.getElementById('exInfo'); if(!e) return; const em=DD_.getElementById('exModo'); if(em) em.textContent=(EXP.modo||'')+' · v6'; const mb=DD_.getElementById('exMin'); if(mb) mb.style.display=(o.ff||(EXP.modo&&EXP.modo.indexOf('🐢')!==0&&EXP.modo.indexOf('⚡')===0))?'':'none'; const el=(performance.now()-t0)/1000; const fr=EXP.frac; e.textContent=fr!=null?info+' · '+Math.round(fr*100)+'%':info+' · '+fmt(Math.min(el,total))+' de '+fmt(total); const pc=(fr!=null?100*fr:Math.min(100,100*el/Math.max(1,total))); const b=DD_.getElementById('exBar'); if(b) b.style.width=pc+'%'; const pe=DD_.getElementById('exPct'); if(pe) pe.textContent=Math.round(pc)+' %'; };
   shell(); const tick=setInterval(upd,400); window.__exTick=tick;
   const out=[];
   try{
@@ -6758,11 +6786,11 @@ async function efPick(w){ w=w||window; const h=await (w.showDirectoryPicker?w:wi
 async function efPerm(){ if(!EXPF.use||!EXPF.dir) return false; try{ let p=await EXPF.dir.queryPermission({mode:'readwrite'}); if(p!=='granted') p=await EXPF.dir.requestPermission({mode:'readwrite'}); return p==='granted'; }catch(e){ return false; } }
 window.__expMute=()=>lsGet('bbtag.expMute')==='1';
 function efRowHtml(){
-  const mute='<div class="ef-row" style="display:flex;align-items:center;gap:8px;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><label style="display:flex;gap:8px;align-items:center;flex:1"><input type="checkbox" id="exMute"'+(window.__expMute()?' checked':'')+'> 🔇 Exportar sin sonido <span style="font-size:12.5px;color:var(--muted)">(si el audio sale desfasado)</span></label></div>';
-  if(!efHas()) return mute+'<p style="margin:8px 0 0;font-size:12.5px;color:var(--muted)">Este navegador no permite elegir carpeta: el archivo se guarda en Descargas.</p>';
-  return mute+'<div class="ef-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 4px;padding:8px 10px;border:1px solid var(--line);border-radius:10px">'+
-    '<label style="display:flex;gap:8px;align-items:center;flex:1;min-width:150px"><input type="checkbox" id="efUse"'+(EXPF.use?' checked':'')+'> Guardar en una carpeta</label>'+
-    '<span id="efName" style="font-size:12.5px;color:var(--muted)">'+(EXPF.dir?esc(EXPF.name):'sin elegir')+'</span><button class="btn" id="efPick" type="button">Elegir carpeta…</button></div>';
+  const mute='<div class="xc"><div class="xrow"><label style="flex:1"><input type="checkbox" id="exMute"'+(window.__expMute()?' checked':'')+'> Exportar sin sonido <span style="font-size:12px;color:#8b8c93">(si el audio sale desfasado)</span></label></div></div>';
+  if(!efHas()) return mute+'<div class="xh" style="font-size:12px;color:#8b8c93;padding:0 4px">Este navegador no permite elegir carpeta: el archivo se guarda en Descargas.</div>';
+  return mute+'<div class="xc"><div class="xrow" style="flex-wrap:wrap">'+
+    '<label style="flex:1;min-width:150px"><input type="checkbox" id="efUse"'+(EXPF.use?' checked':'')+'> Guardar en una carpeta</label>'+
+    '<span id="efName" style="font-size:12.5px;color:#8b8c93">'+(EXPF.dir?esc(EXPF.name):'sin elegir')+'</span><button class="btn" id="efPick" type="button" style="background:#34353a;border:0;color:#f2f2f2;border-radius:8px;padding:6px 12px">Elegir carpeta…</button></div></div>';
 }
 function efBind(root){
   { const m=root.querySelector('#exMute'); if(m) m.onchange=()=>lsSet('bbtag.expMute',m.checked?'1':'0'); }
@@ -12343,7 +12371,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-v · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-w · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
