@@ -8409,7 +8409,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }
     return out;
   }
-  const match=(c,x)=>c.kind==='team'?nz(x.team)===nz(c.team):c.kind==='player'?(nz(x.team)===nz(c.team)&&x.e.player===String(c.n)):x.e.label===c.cat;
+  const match=(c,x)=>c.kind==='team'?nz(x.team)===nz(c.team):c.kind==='player'?(nz(x.team)===nz(c.team)&&x.e.player===String(c.n)):(x.e.label===c.cat&&(!c.team||nz(x.team)===nz(c.team)));
   function run(c){ const ps=allProjects(), rows=[]; ps.forEach(p=>{ const r=p.evs.filter(x=>match(c,x)).sort((a,b)=>a.e.t-b.e.t); if(r.length) rows.push({k:p.k,title:p.title,date:p.date,evs:r}); });
     rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))); return {rows,n:rows.reduce((a,r)=>a+r.evs.length,0)}; }
   function options(){
@@ -8422,11 +8422,11 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   function openNew(){
     const O=options(); let kind='team';
     const d=expDlgShell('<div class="xc"><div class="xl">¿De qué quieres la colección?</div><select id="clK"><option value="team">De un equipo: todos sus cortes</option><option value="player">De una jugadora: todos sus cortes</option><option value="cat">De una categoría (ej. Pick and roll)</option></select></div>'+
-      '<div class="xc"><div class="xl" id="clVL">Equipo</div><select id="clV"></select><div class="xh">Se llena sola con todos tus proyectos guardados en este dispositivo.</div></div>'+
+      '<div class="xc"><div class="xl" id="clVL">Equipo</div><select id="clV"></select><div id="clTW" style="display:none;margin-top:10px"><div class="xl">De qué equipo</div><select id="clT"><option value="">Todos los equipos</option>'+O.teams.map(t=>'<option value="'+esc(t)+'">Solo '+esc(t)+'</option>').join('')+'</select></div><div class="xh">Se llena sola con todos tus proyectos guardados en este dispositivo.</div></div>'+
       '<div class="xc"><div class="xl">Nombre</div><input id="clN" type="text" placeholder="Se pone solo si lo dejas vacío"></div>',
       'Nueva colección','<button class="btn" id="clNo">Cancelar</button><button class="btn primary" id="clOk">Crear</button>');
     const sel=d.querySelector('#clV');
-    const fill=()=>{ kind=d.querySelector('#clK').value; d.querySelector('#clVL').textContent=kindName[kind];
+    const fill=()=>{ kind=d.querySelector('#clK').value; d.querySelector('#clVL').textContent=kindName[kind]; d.querySelector('#clTW').style.display=kind==='cat'?'block':'none';
       sel.innerHTML=kind==='team'?O.teams.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join(''):kind==='player'?O.players.map(p=>'<option value="'+esc(p.team+'|'+p.n)+'">'+esc(p.team)+' · #'+esc(p.n)+(p.name?' '+esc(p.name):'')+'</option>').join(''):O.cats.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
       if(!sel.options.length) sel.innerHTML='<option value="">Aún no hay datos: etiqueta algún partido primero</option>'; };
     d.querySelector('#clK').onchange=fill; fill();
@@ -8434,7 +8434,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     d.querySelector('#clOk').onclick=()=>{ const v=sel.value; if(!v) return; const c={id:uid(),kind};
       if(kind==='team'){ c.team=v; c.name=d.querySelector('#clN').value.trim()||('Todos los cortes de '+v); }
       else if(kind==='player'){ const p=O.players.find(x=>x.team+'|'+x.n===v); c.team=p.team; c.n=p.n; c.pname=p.name; c.name=d.querySelector('#clN').value.trim()||('#'+p.n+(p.name?' '+p.name:'')+' · '+p.team); }
-      else { c.cat=v; c.name=d.querySelector('#clN').value.trim()||('Todos: '+v); }
+      else { c.cat=v; const tt=d.querySelector('#clT').value; if(tt) c.team=tt; c.name=d.querySelector('#clN').value.trim()||(v+(tt?' · '+tt:' · todos los equipos')); }
       const a=get(); a.push(c); put(a); expClose(); render(); openColl(c.id); };
   }
   function openColl(id){
@@ -12598,7 +12598,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zm · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zn · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
