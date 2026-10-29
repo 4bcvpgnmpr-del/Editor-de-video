@@ -10827,22 +10827,27 @@ const AI={ses:null,loading:null,wide:null,wl:null};
 async function aiLoad(){
   if(AI.ses) return AI.ses;
   if(!AI.loading) AI.loading=(async()=>{
-    /* app de Mac: IA nativa (YOLOv8m, mucho más precisa y rápida que la del navegador) */
+    /* app de Mac: IA nativa (YOLOv8m, mucho más precisa) */
     if(window.scoutDesktop&&scoutDesktop.aiInit){ try{ const r=await scoutDesktop.aiInit(); if(r&&r.ok){ AI.ses={native:true,S:640,info:r.info}; return AI.ses; } console.warn('IA nativa no disponible',r&&r.error); }catch(e){ console.warn('IA nativa no disponible',e); } }
-    if(!window.ort) await new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src='ai/ort.wasm.min.js'; sc.onload=res; sc.onerror=()=>rej(new Error('No se pudo cargar la IA')); document.head.appendChild(sc); });
-    ort.env.wasm.numThreads=1; ort.env.wasm.wasmPaths=new URL('ai/',location.href).href;
-    try{ AI.ses=await ort.InferenceSession.create('ai/yolov8n_320.onnx',{executionProviders:['wasm']}); AI.ses.S=320; }
-    catch(e){ AI.ses=await ort.InferenceSession.create('ai/yolov8n.onnx',{executionProviders:['wasm']}); AI.ses.S=640; }
-    return AI.ses;
+    AI.ses=await aiLoadWasm(); return AI.ses;
   })();
   try{ return await AI.loading; }catch(e){ AI.loading=null; throw e; }
 }
+/* IA ligera en el propio navegador: modelo pequeño (320) para seguir en un recorte alrededor de la jugadora */
+async function aiLoadWasm(){
+  if(AI.wasm) return AI.wasm;
+  if(!window.ort) await new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src='ai/ort.wasm.min.js'; sc.onload=res; sc.onerror=()=>rej(new Error('No se pudo cargar la IA')); document.head.appendChild(sc); });
+  ort.env.wasm.numThreads=1; ort.env.wasm.wasmPaths=new URL('ai/',location.href).href;
+  let ses; try{ ses=await ort.InferenceSession.create('ai/yolov8n_320.onnx',{executionProviders:['wasm']}); ses.S=320; }
+  catch(e){ ses=await ort.InferenceSession.create('ai/yolov8n.onnx',{executionProviders:['wasm']}); ses.S=640; }
+  AI.wasm=ses; return ses;
+}
 /* modelo mediano (416) para buscar a la jugadora en todo el encuadre cuando la pierde */
 async function aiLoadWide(){
-  if(AI.ses&&AI.ses.native) return AI.ses;
+  if(AI.ses&&AI.ses.native&&!AI.useWasm) return AI.ses;
   if(AI.wide) return AI.wide;
   if(!AI.wl) AI.wl=(async()=>{
-    await aiLoad();
+    await aiLoadWasm();
     try{ AI.wide=await ort.InferenceSession.create('ai/yolov8n_416.onnx',{executionProviders:['wasm']}); AI.wide.S=416; }
     catch(e){ AI.wide=await ort.InferenceSession.create('ai/yolov8n.onnx',{executionProviders:['wasm']}); AI.wide.S=640; }
     return AI.wide;
@@ -10894,7 +10899,7 @@ function aiPan(a,b,w,h){
 async function aiTrackRun(p,secs,t0,ui){
   AI.src=null;
   const vw=video.videoWidth, vh=video.videoHeight; if(!vw||!vh) return null;
-  ui.msg('Cargando la IA…'); const ses=await aiLoad();
+  ui.msg('Cargando la IA…'); let ses=await aiLoad(); AI.useWasm=false; AI.rate0=video.playbackRate||1; AI.muted0=video.muted; let ema=0, nDet=0, eng=ses.native?'IA nativa':'IA';
   const cv=document.createElement('canvas'); cv.width=cv.height=640; const cx=cv.getContext('2d',{willReadFrequently:true});
   const seek=async t=>{ await new Promise(res=>{ let d=false; const f=()=>{ if(d) return; d=true; video.removeEventListener('seeked',f); res(); }; video.addEventListener('seeked',f); try{ video.currentTime=Math.min(t,(video.duration||t)-0.01); }catch(e){} setTimeout(f,1500); }); };
   const rw0=Math.min(vw,vw*0.3), roiAt=(x,y,w)=>{ const rw=Math.min(vw,w), rh=Math.min(vh,rw); return {x:Math.max(0,Math.min(vw-rw,x-rw/2)),y:Math.max(0,Math.min(vh-rh,y-rh*0.72)),w:rw,h:rh}; };
@@ -10920,16 +10925,18 @@ async function aiTrackRun(p,secs,t0,ui){
     const sx=pan.dx*vw/gcv.width, sy=pan.dy*vh/gcv.height;   /* cuánto se ha movido la imagen por el paneo de la cámara */
     const px=fx+sx+vx*kk, py=fy+sy+vy*kk, wide=lost>6;
     const roi=wide?{x:0,y:0,w:vw,h:vh}:roiAt(px,py,Math.max(rw0,hRef*5.5+Math.abs(vx)*3+Math.abs(sx)*2));
-    det=await aiDetect(wide?await aiLoadWide():ses,cv,cx,roi,0.2);
+    const tD=performance.now(); det=await aiDetect(wide?await aiLoadWide():ses,cv,cx,roi,0.2); { const dt_=performance.now()-tD; nDet++; if(nDet>1) ema=ema?ema*0.7+dt_*0.3:dt_; }
+    /* si la IA nativa va lenta en este equipo, se cambia a la ligera */
+    if(ses.native&&nDet>=4&&ema>230){ try{ ses=await aiLoadWasm(); AI.useWasm=true; eng='IA ligera (el Mac iba lento con la grande)'; }catch(e){} }
     let m=null, mc=1e9;
     det.boxes.forEach(b=>{ const dist=Math.hypot(b.vx-px,b.fy-py)/hRef; if(dist>(lost?3.2:0.95)*Math.max(1,kk)) return; const col=aiDist(sig,aiSig(det.img,b,det.S)), cost=dist*(lost?0.5:1)+col*2.2; if(cost<mc){ mc=cost; m=b; } });
     if(m&&mc<(lost?2.6:2.0)){ lost=0; vx=(m.vx-fx-sx)/kk*0.55+vx*0.3; vy=(m.fy-fy-sy)/kk*0.55+vy*0.3; fx=m.vx; fy=m.fy; hRef=hRef*0.8+m.vh*0.2; if(mc<0.9){ const s2=aiSig(det.img,m,det.S); for(let i=0;i<sig.length;i++) sig[i]=sig[i]*0.9+s2[i]*0.1; } }
     else { lost++; if(lost>24) break; fx+=sx+vx*0.8*kk; fy+=sy+vy*0.8*kk; vx*=0.85; vy*=0.85; fx=Math.max(0,Math.min(vw,fx)); fy=Math.max(0,Math.min(vh,fy)); }
     pts.push([+lt.toFixed(3),fx/vw,fy/vh]);
     if(useP){ const proc=(performance.now()-tIni)/1000; try{ video.playbackRate=Math.max(0.25,Math.min(1,step*0.9/Math.max(0.02,proc))); }catch(e){} }   /* si el análisis va lento, el vídeo corre más despacio para no saltarse fotogramas */
-    ui.msg('IA siguiendo a la jugadora… '+Math.min(100,Math.round(lt/secs*100))+'%'+(lost?' (buscándola)':''));
+    ui.msg(eng+' siguiendo a la jugadora… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/fotograma':'')+(lost?' (buscándola)':''));
   }
-  try{ video.pause(); }catch(e){}
+  try{ video.pause(); video.playbackRate=AI.rate0||1; }catch(e){}
   AI.src=null;
   return pts;
 }
@@ -10989,6 +10996,7 @@ async function autoTrack(p,secs,opts){
     }
   }catch(e){ toast('No se pudo seguir automáticamente: '+((e&&e.message)||e)); }
   bar.remove(); TRK.on=false;
+  try{ if(AI.rate0) video.playbackRate=AI.rate0; if(AI.muted0!==undefined) video.muted=AI.muted0; }catch(e){}
   try{ video.currentTime=t0; }catch(e){}
   if(opts){ opts.onDone(s.pts.length<4?null:s.pts); return; }
   if(s.pts.length<4){ tl.items.splice(idx,1); tl.rev++; teleKey=''; toast('No pude seguirla. Prueba pulsando justo sobre su cuerpo, o usa «A mano».'); return; }
@@ -12181,7 +12189,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-d · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-e · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
