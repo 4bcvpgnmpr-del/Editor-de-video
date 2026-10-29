@@ -304,6 +304,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 #dwBar .c i.on{border-color:#fff}
 #dwBar .r{display:flex;gap:3px;align-items:center}
 #dwBar .r button{flex:1;white-space:nowrap;padding-left:3px;padding-right:3px}
+#dwBar .rc{display:flex;flex-wrap:wrap;gap:3px;align-items:center}#dwBar .rc[hidden]{display:none}#dwBar .rc button{flex:1 1 26px;height:28px;padding:0;display:flex;align-items:center;justify-content:center}
 #bLensZ,#bSpotD{flex-wrap:wrap}#bLensZ span,#bSpotD span{flex:0 0 100%}#bLensZ[hidden],#bSpotD[hidden]{display:none}
 #dwBar .sl{display:flex;align-items:center;justify-content:space-between;gap:4px;color:#9fb2c6;font:700 11px Inter,Barlow,sans-serif}
 #dwBar .sl select{flex:1;min-width:0;background:#1d3248;color:#fff;border:0;border-radius:8px;padding:4px;font:700 12px Inter,Barlow,sans-serif}
@@ -10909,14 +10910,31 @@ function aiSig(img,b,S){
 const aiDist=(a,b)=>{ let s1=0,s2=0; for(let i=0;i<64;i++){ s1+=Math.min(a[i],b[i]); s2+=Math.min(a[64+i],b[64+i]); } return 1-(s1*0.6+s2*0.4); };
 /* movimiento de la cámara entre dos fotogramas (paneo): se busca cuánto se ha desplazado la imagen de fondo */
 function aiGray(gcv,gcx){ gcx.drawImage(AI.src||video,0,0,gcv.width,gcv.height); const d=gcx.getImageData(0,0,gcv.width,gcv.height).data, g=new Uint8Array(gcv.width*gcv.height); for(let i=0;i<g.length;i++) g[i]=(d[i*4]*77+d[i*4+1]*150+d[i*4+2]*29)>>8; return g; }
+function aiDown(g,w,h){ const w4=w>>2, h4=h>>2, o=new Uint8Array(w4*h4); for(let y=0;y<h4;y++) for(let x=0;x<w4;x++){ const i=(y*4)*w+x*4; o[y*w4+x]=(g[i]+g[i+1]+g[i+2]+g[i+3]+g[i+w]+g[i+w+1]+g[i+w+2]+g[i+w+3])>>3; } return o; }
+function aiSad(a,b,w,h,dx,dy,st){
+  let sad=0, n=0; const x0=Math.max(0,dx), x1=Math.min(w,w+dx), y0=Math.max(0,dy), y1=Math.min(h,h+dy);
+  for(let y=y0;y<y1;y+=st){ const ra=(y-dy)*w-dx, rb=y*w; for(let x=x0;x<x1;x+=st){ const d=b[rb+x]-a[ra+x]; sad+=d<0?-d:d; n++; } }
+  return sad/Math.max(1,n)+(Math.abs(dx)+Math.abs(dy))*0.02;
+}
+/* desplazamiento global de la imagen entre dos fotogramas (paneo de cámara): primero a baja resolución, luego se afina */
 function aiPan(a,b,w,h){
-  const Rx=Math.round(w*0.17), Ry=Math.round(h*0.12); let best=1e18, bx=0, by=0;
-  for(let dy=-Ry;dy<=Ry;dy++) for(let dx=-Rx;dx<=Rx;dx++){
-    let sad=0, n=0; const x0=Math.max(0,dx), x1=Math.min(w,w+dx), y0=Math.max(0,dy), y1=Math.min(h,h+dy);
-    for(let y=y0;y<y1;y+=2){ const ra=(y-dy)*w-dx, rb=y*w; for(let x=x0;x<x1;x+=2){ sad+=Math.abs(b[rb+x]-a[ra+x]); n++; } }
-    sad=sad/Math.max(1,n)+(Math.abs(dx)+Math.abs(dy))*0.02; if(sad<best){ best=sad; bx=dx; by=dy; }
-  }
+  const Rx=Math.round(w*0.17), Ry=Math.round(h*0.12), w4=w>>2, h4=h>>2, a4=aiDown(a,w,h), b4=aiDown(b,w,h);
+  let best=1e18, cx=0, cy=0; const Rx4=Math.ceil(Rx/4), Ry4=Math.ceil(Ry/4);
+  for(let dy=-Ry4;dy<=Ry4;dy++) for(let dx=-Rx4;dx<=Rx4;dx++){ const e=aiSad(a4,b4,w4,h4,dx,dy,1); if(e<best){ best=e; cx=dx; cy=dy; } }
+  best=1e18; let bx=cx*4, by=cy*4;
+  for(let dy=cy*4-4;dy<=cy*4+4;dy++) for(let dx=cx*4-4;dx<=cx*4+4;dx++){ if(Math.abs(dx)>Rx||Math.abs(dy)>Ry) continue; const e=aiSad(a,b,w,h,dx,dy,2); if(e<best){ best=e; bx=dx; by=dy; } }
   return {dx:bx,dy:by,err:best};
+}
+/* seguidor rápido por plantilla: busca en el fotograma nuevo el parche de la jugadora del anterior (unos ms, sin IA) */
+function aiTpl(a,b,w,h,cx,cy,bw,bh,R){
+  bw=Math.max(8,Math.min(w/3,Math.round(bw))); bh=Math.max(12,Math.min(h/2,Math.round(bh)));
+  const x0=Math.round(cx-bw/2), y0=Math.round(cy-bh/2); if(x0<R||y0<R||x0+bw+R>=w||y0+bh+R>=h) return null;
+  let best=1e12, bdx=0, bdy=0, zero=0;
+  for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){
+    let sum=0; for(let y=0;y<bh;y+=2){ const ia=(y0+y)*w+x0, ib=(y0+y+dy)*w+x0+dx; for(let x=0;x<bw;x+=2){ const d=a[ia+x]-b[ib+x]; sum+=d<0?-d:d; } }
+    if(dx===0&&dy===0) zero=sum; if(sum<best){ best=sum; bdx=dx; bdy=dy; }
+  }
+  const n=Math.ceil(bw/2)*Math.ceil(bh/2); return {dx:bdx,dy:bdy,sad:best/n,zero:zero/n};
 }
 async function aiTrackRun(p,secs,t0,ui){
   AI.src=null;
@@ -10930,11 +10948,11 @@ async function aiTrackRun(p,secs,t0,ui){
   let det=await aiDetect(ses,cv,cx,roiAt(fx,fy,rw0));
   let best=null, bd=1e9; det.boxes.forEach(b=>{ const d=Math.hypot(b.vx-fx,b.fy-fy)/b.vh; if(d<bd){ bd=d; best=b; } });
   if(!best||bd>0.9) return null;                                  /* no hay nadie donde pulsó */
-  const gcv=document.createElement('canvas'); gcv.width=192; gcv.height=Math.max(32,Math.round(192*vh/vw)); const gcx=gcv.getContext('2d',{willReadFrequently:true}); let prevG=aiGray(gcv,gcx); const snap=document.createElement('canvas'); snap.width=vw; snap.height=vh; AI.src=snap; snap.getContext('2d').drawImage(video,0,0);
+  const gcv=document.createElement('canvas'); gcv.width=288; gcv.height=Math.max(32,Math.round(288*vh/vw)); const gcx=gcv.getContext('2d',{willReadFrequently:true}); let prevG=aiGray(gcv,gcx); const snap=document.createElement('canvas'); snap.width=vw; snap.height=vh; AI.src=snap; snap.getContext('2d').drawImage(video,0,0);
   let sig=aiSig(det.img,best,det.S), hRef=best.vh, vx=0, vy=0, lost=0; fx=best.vx; fy=best.fy;
   const pts=[[0,fx/vw,fy/vh]], step=ses.native?0.1:0.15, N=Math.floor(secs/step);
   /* en vez de saltar a cada instante (lento), se deja correr el vídeo y se analiza el fotograma que llega: ~2 veces más rápido */
-  let useP=typeof video.requestVideoFrameCallback==='function', tPrev=0;
+  let useP=typeof video.requestVideoFrameCallback==='function', tPrev=0, DE=3, needDet=false, nTpl=0, pEma=0;
   if(useP){ try{ video.muted=true; video.playbackRate=1; await video.play(); }catch(e){ useP=false; } }
   for(let n=1;!ui.stop();n++){
     let lt;
@@ -10943,10 +10961,21 @@ async function aiTrackRun(p,secs,t0,ui){
     if(lt>secs+0.05) break; if(lt<=tPrev) continue;
     const kk=Math.max(0.3,Math.min(4,(lt-tPrev)/step)); tPrev=lt; const tIni=performance.now();
     if(AI.src) AI.src.getContext('2d').drawImage(video,0,0);
-    const curG=aiGray(gcv,gcx), pan=aiPan(prevG,curG,gcv.width,gcv.height); prevG=curG;
+    const curG=aiGray(gcv,gcx), prevG0=prevG; const pan=aiPan(prevG,curG,gcv.width,gcv.height); prevG=curG;
     const sx=pan.dx*vw/gcv.width, sy=pan.dy*vh/gcv.height;   /* cuánto se ha movido la imagen por el paneo de la cámara */
     const px=fx+sx+vx*kk, py=fy+sy+vy*kk, wide=lost>6;
     const roi=wide?{x:0,y:0,w:vw,h:vh}:roiAt(px,py,Math.max(rw0,hRef*5.5+Math.abs(vx)*3+Math.abs(sx)*2));
+    const gsc=gcv.width/vw; let tpl=null;
+    if(!wide&&!lost&&!needDet&&(n%DE!==0)){ tpl=aiTpl(prevG0,curG,gcv.width,gcv.height,fx*gsc,(fy-hRef*0.5)*gsc,hRef*0.38*gsc,hRef*0.8*gsc,Math.max(3,Math.round((hRef*0.25+Math.abs(vx)*kk+Math.abs(sx))*gsc))); }
+    if(tpl&&tpl.sad<22){
+      const ox=fx, oy=fy; fx=Math.max(0,Math.min(vw,fx+tpl.dx/gsc)); fy=Math.max(0,Math.min(vh,fy+tpl.dy/gsc)); vx=(fx-ox-sx)/kk*0.55+vx*0.3; vy=(fy-oy-sy)/kk*0.55+vy*0.3; nTpl++;
+      pts.push([+lt.toFixed(3),fx/vw,fy/vh]);
+      const proc0=(performance.now()-tIni)/1000; pEma=pEma?pEma*0.8+proc0*0.2:proc0;
+      if(useP){ try{ video.playbackRate=Math.max(0.25,Math.min(2.5,step*0.9/Math.max(0.015,pEma))); }catch(e){} }
+      ui.msg(eng+' siguiendo a la jugadora… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/IA':'')+' · rápido');
+      continue;
+    }
+    needDet=false;
     const tD=performance.now(); det=await aiDetect(wide?await aiLoadWide():ses,cv,cx,roi,0.2); { const dt_=performance.now()-tD; nDet++; if(nDet>1) ema=ema?ema*0.7+dt_*0.3:dt_; }
     /* si la IA nativa va lenta en este equipo, se cambia a la ligera */
     if(ses.native&&nDet>=4&&ema>230){ try{ ses=await aiLoadWasm(); AI.useWasm=true; eng='IA ligera (el Mac iba lento con la grande)'; }catch(e){} }
@@ -10955,11 +10984,11 @@ async function aiTrackRun(p,secs,t0,ui){
     if(m&&mc<(lost?2.6:2.0)){ lost=0; vx=(m.vx-fx-sx)/kk*0.55+vx*0.3; vy=(m.fy-fy-sy)/kk*0.55+vy*0.3; fx=m.vx; fy=m.fy; hRef=hRef*0.8+m.vh*0.2; if(mc<0.9){ const s2=aiSig(det.img,m,det.S); for(let i=0;i<sig.length;i++) sig[i]=sig[i]*0.9+s2[i]*0.1; } }
     else { lost++; if(lost>24) break; fx+=sx+vx*0.8*kk; fy+=sy+vy*0.8*kk; vx*=0.85; vy*=0.85; fx=Math.max(0,Math.min(vw,fx)); fy=Math.max(0,Math.min(vh,fy)); }
     pts.push([+lt.toFixed(3),fx/vw,fy/vh]);
-    if(useP){ const proc=(performance.now()-tIni)/1000; try{ video.playbackRate=Math.max(0.25,Math.min(1,step*0.9/Math.max(0.02,proc))); }catch(e){} }   /* si el análisis va lento, el vídeo corre más despacio para no saltarse fotogramas */
+    if(useP){ const proc=(performance.now()-tIni)/1000; pEma=pEma?pEma*0.8+proc*0.2:proc; try{ video.playbackRate=Math.max(0.25,Math.min(2.5,step*0.9/Math.max(0.015,pEma))); }catch(e){} }   /* si el análisis va lento, el vídeo corre más despacio para no saltarse fotogramas */
     ui.msg(eng+' siguiendo a la jugadora… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/fotograma':'')+(lost?' (buscándola)':''));
   }
   try{ video.pause(); video.playbackRate=AI.rate0||1; }catch(e){}
-  AI.src=null;
+  AI.src=null; AI.dbg={nTpl,nDet,pEma:Math.round(pEma*1000),ema:Math.round(ema)};
   return pts;
 }
 /* seguimiento automático: busca a la jugadora fotograma a fotograma comparando su aspecto */
@@ -11449,7 +11478,14 @@ $('#chkTele').onchange=e=>{playTele=e.target.checked;lsSet('bbtag.playTele',play
 
 /* ---------- editor ---------- */
 function ensureTele(tl){if(!teles.includes(tl)){teles.push(tl);teles.sort((a,b)=>a.t-b.t);}}
+let DWREC=[]; try{ DWREC=JSON.parse(lsGet('bbtag.dwRec')||'[]')||[]; }catch(_){ DWREC=[]; }
+function dwRecPush(it){
+  if(!it||!TOOLS.some(t=>t[0]===it.type)) return;
+  const e={type:it.type,color:it.color,sw:it.sw||4}; if(it.zoom) e.zoom=it.zoom; if(it.dim!=null) e.dim=it.dim; if(it.zst) e.zst=it.zst; if(it.tst) e.tst=it.tst;
+  const k=JSON.stringify(e); DWREC=DWREC.filter(x=>JSON.stringify(x)!==k); DWREC.unshift(e); DWREC=DWREC.slice(0,6); try{ lsSet('bbtag.dwRec',JSON.stringify(DWREC)); }catch(_){}
+}
 function commitTele(co){
+  if(teleEd){ const n=teleEd.tele.items.length; if(teleEd._n!=null&&n>teleEd._n) dwRecPush(teleEd.tele.items[n-1]); teleEd._n=n; }
   if(teleEd) teleEd.tele.rev++;
   record(co); renderTimeline(); renderLib(); renderDrawPanel(); renderList(); renderDetail();
 }
@@ -11708,6 +11744,7 @@ function barBuild(){
   const sws=[['Fino',3],['Medio',5],['Grueso',8]];
   dwBar.innerHTML='<div class="r"><button data-act="undo" title="Deshacer">↶</button><button data-act="del" title="Quitar la figura elegida (o la última si no hay ninguna elegida)">🗑</button><button data-act="clr" title="Borrar todos los dibujos de esta escena">Todo</button><button data-act="end" title="Terminar (D)">✕ Fin</button></div><div class="g">'+TOOLS.map(t=>'<button data-tool="'+t[0]+'" title="'+esc(t[1])+'" aria-label="'+esc(t[1])+'"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg></button>').join('')+'</div>'
    +'<div class="c">'+COLORS.map(c=>'<i data-color="'+c+'" style="background:'+c+'"></i>').join('')+'<input type="color" id="bColPick" title="Otro color: elige el tono y el brillo" aria-label="Otro color" style="width:26px;height:26px;padding:0;border:2px solid #fff6;border-radius:50%;background:none;cursor:pointer;overflow:hidden;vertical-align:middle">'+'</div>'
+   +'<div class="rc" id="bRec" hidden></div>'
    +'<div class="r" id="bSpotD" hidden><span style="font-size:12px;opacity:.8;align-self:center">Oscuridad</span><button data-sd="0.3">Suave</button><button data-sd="0.55">Media</button><button data-sd="0.8">Fuerte</button></div>'
    +'<div class="r" id="bLensZ" hidden><span style="font-size:12px;opacity:.8;align-self:center">Aumento</span><button data-lz="1.5">1,5×</button><button data-lz="2">2×</button><button data-lz="3">3×</button></div>'
    +'<div class="r">'+sws.map(a=>'<button data-sw="'+a[1]+'">'+a[0]+'</button>').join('')+'</div>'
@@ -11724,6 +11761,8 @@ function barSync(){
   const on=!!teleEd; dwBar.hidden=!on; if(!on) return;
   const ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null;
   dwBar.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===ed.tool));
+  if(ed._n==null) ed._n=ed.tele.items.length;
+  { const rc=dwBar.querySelector('#bRec'); if(rc){ rc.hidden=!DWREC.length; rc.innerHTML=DWREC.length?'<span style="font-size:11px;opacity:.7;flex:0 0 100%">Recientes</span>'+DWREC.map((e,i)=>{ const t=TOOLS.find(x=>x[0]===e.type); return '<button data-rec="'+i+'" title="Repetir: '+esc(t?t[1]:e.type)+'" style="color:'+e.color+'"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(t?t[2]:'')+'</svg></button>'; }).join(''):''; } }
   const col=(s?s.color:ed.color).toLowerCase();
   dwBar.querySelectorAll('[data-color]').forEach(b=>b.classList.toggle('on',b.dataset.color.toLowerCase()===col));
   const sw=s?s.sw:ed.sw;
@@ -11743,6 +11782,7 @@ dwBar.addEventListener('pointerdown',e=>e.stopPropagation());
 dwBar.addEventListener('click',e=>{
   e.stopPropagation(); if(!teleEd) return;
   const t=e.target.closest('[data-tool]'),c=e.target.closest('[data-color]'),w=e.target.closest('[data-sw]'),a=e.target.closest('[data-act]'), lz=e.target.closest('[data-lz]');
+  const rcb=e.target.closest('[data-rec]'); if(rcb){ const r=DWREC[+rcb.dataset.rec], ed=teleEd; if(r&&ed){ ed.color=r.color; teleColor=r.color; ed.sw=r.sw; teleSw=r.sw; if(r.zoom) ed.lensZoom=r.zoom; if(r.dim!=null) ed.spotDim=r.dim; ed.zst=r.zst||''; ed.tst=r.tst||''; setTool(r.type); } return; }
   const sd=e.target.closest('[data-sd]'); if(sd){ const v=+sd.dataset.sd, ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null; ed.spotDim=v; if(s&&s.type==='spot'){ s.dim=v; commitTele(true); } else barSync(); return; }
   if(lz){ const z=+lz.dataset.lz, ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null; ed.lensZoom=z; if(s&&s.type==='lens'){ s.zoom=z; commitTele(true); } else barSync(); return; }
   if(t) setTool(t.dataset.tool);
@@ -12240,7 +12280,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-l · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-n · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
