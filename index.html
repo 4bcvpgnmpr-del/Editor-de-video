@@ -1623,7 +1623,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
           </div>
           <div class="prod-view" data-view="pl">
             <div class="pr-clips">
-              <div class="pr-ch"><b>Clips disponibles</b><span class="hint" id="avInfo" style="margin:0"></span><label id="avPj" hidden style="margin-left:auto;font-size:12px;cursor:pointer;white-space:nowrap" title="Ver también los cortes de los otros partidos del proyecto"><input type="checkbox" style="vertical-align:-2px"> 📚 Todo el proyecto</label></div>
+              <div class="pr-ch"><b>Clips disponibles</b><span class="hint" id="avInfo" style="margin:0"></span><label id="avPj" hidden style="margin-left:auto;font-size:12px;cursor:pointer;white-space:nowrap" title="Ver también los cortes de los otros partidos de la colección"><input type="checkbox" style="vertical-align:-2px"> 📚 Toda la colección</label></div>
               <input id="plQ" type="search" maxlength="60" placeholder="Buscar clips…" aria-label="Buscar clips">
               <div class="pf" id="plFilters"></div>
               <ul class="av" id="plAvail" aria-label="Clips disponibles"></ul>
@@ -8473,7 +8473,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 (function(){
   const menu=document.getElementById('moreMenu'); if(!menu) return;
   const G=[['bProj','bMatch','bTeams','bPart'],['bLive','bLink','bCloud'],['bLayout','bMode'],['bHelp']];
-  const NAMES={bProj:'Mis proyectos',bMatch:'Datos del partido',bTeams:'Equipos y jugadoras',bPart:'Añadir otra parte',bLive:'Grabar en vivo',bLink:'Abrir enlace de vídeo',bCloud:'Nube (sincronizar)',bLayout:'Diseño de paneles',bMode:null,bHelp:'Ayuda y tour'};
+  const NAMES={bProj:'Mis colecciones',bMatch:'Datos del partido',bTeams:'Equipos y jugadoras',bPart:'Añadir otra parte',bLive:'Grabar en vivo',bLink:'Abrir enlace de vídeo',bCloud:'Nube (sincronizar)',bLayout:'Diseño de paneles',bMode:null,bHelp:'Ayuda y tour'};
   const st=document.createElement('style'); st.textContent='#moreMenu hr{border:0;border-top:1px solid var(--line);margin:4px 6px;width:calc(100% - 12px)}#moreMenu #bProd,#moreMenu #bCfg{display:none!important}';
   document.head.appendChild(st);
   const HR=[document.createElement('hr'),document.createElement('hr'),document.createElement('hr')];
@@ -8628,33 +8628,35 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const inp='padding:7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13.5px';
   const S={gid:'',cat:'',game:'',side:'',q:'',sel:new Set(),view:'lib'};
 
-  /* un vídeo nuevo siempre pertenece a un proyecto: se mete en el activo o se pregunta */
+  /* un vídeo nuevo siempre pertenece a una colección: se mete en el activo o se pregunta */
   const SK='bbtag.group.skip';
   const skGet=()=>{ try{ return JSON.parse(lsGet(SK)||'[]'); }catch(e){ return []; } };
   function askProject(key){
     const gs=gGet(), T=titlesGet(), nm=(T[key]&&T[key].t)||videoName||'este vídeo';
-    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">¿En qué proyecto va «'+esc(nm)+'»?</h3><p class="hint" style="margin:0 0 10px">Así tendrás todos los cortes de varios partidos juntos en una biblioteca.</p><div id="apB" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto"></div>');
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">¿En qué colección va «'+esc(nm)+'»?</h3><p class="hint" style="margin:0 0 10px">Es opcional: una colección junta los cortes de varios partidos (una liga, un rival…). Si es un partido suelto, pulsa «Solo este partido».</p><div id="apB" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto"></div>');
     d.firstElementChild.style.width='min(480px,100%)';
     const B=d.querySelector('#apB');
-    B.innerHTML=gs.map(g=>'<button data-g="'+esc(g.id)+'" style="'+btn+';text-align:left"><b>'+esc(g.name)+'</b><br><span style="color:var(--muted);font-size:12.5px">'+g.keys.length+' partidos</span></button>').join('')+'<button id="apNew" class="btn primary">＋ Proyecto nuevo</button>';
-    const fin=g=>{ const a=gGet(), x=a.find(y=>y.id===g.id); if(x&&!x.keys.includes(key)) x.keys.push(key); gSet(a); lsSet(AK,g.id); expClose(); toast('Añadido al proyecto «'+g.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} };
+    B.innerHTML=gs.map(g=>'<button data-g="'+esc(g.id)+'" style="'+btn+';text-align:left"><b>'+esc(g.name)+'</b><br><span style="color:var(--muted);font-size:12.5px">'+g.keys.length+' partidos</span></button>').join('')+'<button id="apNew" class="btn">＋ Colección nueva</button><button id="apSolo" class="btn primary">Solo este partido</button>';
+    const fin=g=>{ const a=gGet(), x=a.find(y=>y.id===g.id); if(x&&!x.keys.includes(key)) x.keys.push(key); gSet(a); lsSet(AK,g.id); expClose(); toast('Añadido a la colección «'+g.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} };
     B.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>fin(gGet().find(x=>x.id===b.dataset.g)));
-    B.querySelector('#apNew').onclick=()=>askName('Nombre del proyecto','',n=>{ const a=gGet(), g={id:uid(),name:n.slice(0,60),keys:[]}; a.push(g); gSet(a); fin(g); });
+    B.querySelector('#apSolo').onclick=()=>{ const k=skGet(); if(!k.includes(key)) k.push(key); lsSet(SK,JSON.stringify(k)); expClose(); };
+    B.querySelector('#apNew').onclick=()=>askName('Nombre de la colección','',n=>{ const a=gGet(), g={id:uid(),name:n.slice(0,60),keys:[]}; a.push(g); gSet(a); fin(g); });
   }
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     try{
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
       const gs=gGet(); if(gs.some(g=>g.keys.includes(videoKey))) return;
+      if(!gs.length) return; /* sin colecciones creadas, no se pregunta nada */
       const act=gs.find(x=>x.id===aGet());
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
-        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
+        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido a la colección «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
       if(skGet().includes(videoKey)) return;
       if(!(q(videoKey)&&q(videoKey).events&&q(videoKey).events.length)&&!events.length) { /* partido recién abierto: se pregunta igualmente */ }
       DLGDOC=null; askProject(videoKey);
     }catch(e){}
   },1200); });
 
-  /* partido nuevo dentro de un proyecto: empieza desde cero (sin los equipos del partido anterior) */
+  /* partido nuevo dentro de una colección: empieza desde cero (sin los equipos del partido anterior) */
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     try{
       if(!aGet()||matchMeta||events.length) return;
@@ -8665,10 +8667,10 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     }catch(e){}
   },400); });
 
-  /* empezar un partido dentro de un proyecto: elegir de dónde viene el vídeo */
+  /* empezar un partido dentro de una colección: elegir de dónde viene el vídeo */
   function pickSource(g){
     lsSet(AK,g.id);
-    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Proyecto «'+esc(g.name)+'»</h3><p class="hint" style="margin:0 0 10px">¿De dónde viene el vídeo del partido?</p><div id="psB" style="display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="psNo">Cerrar</button></div>');
+    const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Colección «'+esc(g.name)+'»</h3><p class="hint" style="margin:0 0 10px">¿De dónde viene el vídeo del partido?</p><div id="psB" style="display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="psNo">Cerrar</button></div>');
     d.firstElementChild.style.width='min(440px,100%)';
     const B=d.querySelector('#psB'), IP=document.body.classList.contains('ipad')||(typeof IPM!=='undefined'&&IPM.on);
     const items=[['📂',IP?'Desde Fotos':'Elegir vídeo del ordenador',()=>document.getElementById('fileVideo').click()]];
@@ -8679,7 +8681,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     d.querySelector('#psNo').onclick=expClose;
   }
   function newProject(){
-    askName('Nombre del proyecto','',n=>{
+    askName('Nombre de la colección','',n=>{
       const a=gGet(), g={id:uid(),name:n.slice(0,60),keys:[]}; a.push(g); gSet(a);
       try{ window.__renderRec&&window.__renderRec(); }catch(e){}
       DLGDOC=null; pickSource(g);
@@ -8710,18 +8712,18 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   window.__pjNew=newProject;
   window.__pjApi={create:(name)=>{ const a=gGet(), g={id:uid(),name:String(name).slice(0,60),keys:[]}; a.push(g); gSet(a); lsSet(AK,g.id); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return g; }};
 
-  /* inicio: tarjetas de proyectos */
+  /* inicio: tarjetas de colecciones */
   window.__pjHome=function(){
     const home=document.getElementById('ipHome'); if(!home) return;
     let c=document.getElementById('hmProjs');
     if(!c){ c=document.createElement('div'); c.id='hmProjs'; const fh=home.querySelector('.hm-fh'); fh.parentNode.insertBefore(c,fh); }
     let rec=[]; try{ rec=JSON.parse(lsGet('bbtag.recent')||'[]'); }catch(e){}
     const gs=gGet();
-    c.innerHTML='<div class="hm-fh" style="margin-top:6px"><h3>Proyectos</h3></div><div class="hm-r" id="hmPg" style="margin-bottom:14px">'+
+    c.innerHTML='<div class="hm-fh" style="margin-top:6px"><h3>Colecciones</h3></div><div class="hm-r" id="hmPg" style="margin-bottom:14px">'+
       gs.map(g=>{ const r=rec.find(x=>g.keys.includes(x.key)&&x.th); const n=g.keys.reduce((a,k)=>{ const o=q(k); return a+((o&&o.events)||[]).length; },0);
-        return '<div class="hm-w" style="position:relative"><span class="hm-d" data-pdel="'+esc(g.id)+'" role="button" aria-label="Borrar proyecto" title="Borrar proyecto">🗑</span><button class="hm-c" style="width:100%" data-pg="'+esc(g.id)+'"><div class="th" style="'+(r?'background-image:url('+r.th+')':'')+'">'+(r?'':'📚')+'</div><b>'+esc(g.name)+'</b><small>'+g.keys.length+' partidos · '+n+' cortes</small></button></div>'; }).join('')+
+        return '<div class="hm-w" style="position:relative"><span class="hm-d" data-pdel="'+esc(g.id)+'" role="button" aria-label="Borrar colección" title="Borrar colección">🗑</span><button class="hm-c" style="width:100%" data-pg="'+esc(g.id)+'"><div class="th" style="'+(r?'background-image:url('+r.th+')':'')+'">'+(r?'':'📚')+'</div><b>'+esc(g.name)+'</b><small>'+g.keys.length+' partidos · '+n+' cortes</small></button></div>'; }).join('')+
       '</div>';
-    { const g0=c.querySelector('#hmPg'); const nb=document.createElement('button'); nb.className='hm-c'; nb.id='hmPgNew'; nb.style.width='100%'; nb.innerHTML='<div class="th" style="font-size:44px;background:#1d3a2c">＋</div><b>Proyecto nuevo</b><small>Empieza aquí: crea el proyecto y añade el vídeo</small>'; g0.insertBefore(nb,g0.firstChild); }
+    { const g0=c.querySelector('#hmPg'); const nb=document.createElement('button'); nb.className='hm-c'; nb.id='hmPgNew'; nb.style.width='100%'; nb.innerHTML='<div class="th" style="font-size:44px;background:#1d3a2c">＋</div><b>Colección nueva</b><small>Empieza aquí: crea la colección y añade el vídeo</small>'; g0.insertBefore(nb,g0.firstChild); }
     { let mt=c.querySelector('#hmMore'); if(!mt){ mt=document.createElement('button'); mt.id='hmMore'; mt.className='btn'; mt.style.cssText='margin:0 0 10px'; c.appendChild(mt); }
       const on=document.body.classList.contains('pjMore'); mt.textContent=on?'▴ Menos opciones':'▾ Más opciones (botones, equipos, enlace, cámara, ajustes…)'; mt.onclick=()=>{ document.body.classList.toggle('pjMore'); window.__pjHome(); }; }
     c.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{
@@ -8735,10 +8737,10 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     c.querySelector('#hmPgNew').onclick=newProject;
     c.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async e=>{
       e.stopPropagation(); const a=gGet(), g=a.find(x=>x.id===b.dataset.pdel); if(!g) return;
-      if(!(await askOk('¿Borrar el proyecto «'+g.name+'»?','Se quita el proyecto de la lista. Los vídeos que no estén en otro proyecto empezarán de cero al abrirlos.'))) return;
+      if(!(await askOk('¿Borrar la colección «'+g.name+'»?','Se quita la colección de la lista. Los vídeos que no estén en otra colección empezarán de cero al abrirlos.'))) return;
       gSet(a.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,'');
       try{ window.__renderRec&&window.__renderRec(); }catch(er){} try{ window.__vtRender&&window.__vtRender(); }catch(er){}
-      toast('Proyecto «'+g.name+'» borrado.');
+      toast('Colección «'+g.name+'» borrado.');
     });
   };
   setTimeout(()=>{ try{ window.__pjHome(); }catch(e){} },500);
@@ -8773,21 +8775,21 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     function head(){
       const gs=gGet(), act=aGet();
       if(S.gid){ const g=gs.find(x=>x.id===S.gid); if(g){ if(act!==g.id) lsSet(AK,g.id);
-        return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><h3 style="margin:0;font:700 22px var(--f-head)">📁 '+esc(g.name)+'</h3><span style="flex:1"></span><button style="'+btn+'" id="pjRen">✎ Cambiar nombre</button><button style="'+btn+'" id="pjDel" title="Borrar proyecto">🗑 Borrar</button><button class="btn" id="pjX">Cerrar</button></div>'; } }
-      return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font:700 20px var(--f-head)">📚 Proyectos y biblioteca</h3><span style="flex:1"></span><button class="btn" id="pjX">Cerrar</button></div>'+
+        return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><h3 style="margin:0;font:700 22px var(--f-head)">📁 '+esc(g.name)+'</h3><span style="flex:1"></span><button style="'+btn+'" id="pjRen">✎ Cambiar nombre</button><button style="'+btn+'" id="pjDel" title="Borrar colección">🗑 Borrar</button><button class="btn" id="pjX">Cerrar</button></div>'; } }
+      return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font:700 20px var(--f-head)">📚 Colecciones y biblioteca</h3><span style="flex:1"></span><button class="btn" id="pjX">Cerrar</button></div>'+
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><select id="pjG" style="'+inp+';min-width:200px"><option value="">Todos los partidos guardados</option>'+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+' ('+g.keys.length+')</option>').join('')+'</select>'+
-        '<button style="'+btn+'" id="pjNew">＋ Nuevo proyecto</button>'+
-        (S.gid?'<button class="btn primary" id="pjAdd">＋ Añadir partido</button><button style="'+btn+'" id="pjParts">🏀 Partidos</button><button style="'+btn+'" id="pjRen">✎ Nombre</button><button style="'+btn+'" id="pjDel">🗑</button><label style="font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer" title="Cada vídeo nuevo que abras se añade solo a este proyecto"><input type="checkbox" id="pjAct"'+(act===S.gid?' checked':'')+'> Proyecto activo</label>':'')+'</div>';
+        '<button style="'+btn+'" id="pjNew">＋ Nueva colección</button>'+
+        (S.gid?'<button class="btn primary" id="pjAdd">＋ Añadir partido</button><button style="'+btn+'" id="pjParts">🏀 Partidos</button><button style="'+btn+'" id="pjRen">✎ Nombre</button><button style="'+btn+'" id="pjDel">🗑</button><label style="font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer" title="Cada vídeo nuevo que abras se añade solo a esta colección"><input type="checkbox" id="pjAct"'+(act===S.gid?' checked':'')+'> Colección activa</label>':'')+'</div>';
     }
     function bind(){
       B.querySelector('#pjX').onclick=expClose;
       const pg=B.querySelector('#pjG'); if(pg) pg.onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
       const pn=B.querySelector('#pjNew'); if(pn) pn.onclick=()=>{ expClose(); newProject(); };
       const ap=B.querySelector('#pjAdd'); if(ap) ap.onclick=()=>{ const g=gGet().find(x=>x.id===S.gid); expClose(); DLGDOC=null; pickSource(g); };
-      const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const g0=gGet().find(x=>x.id===S.gid); askName('Nombre del proyecto',g0.name,n=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); g.name=n.slice(0,60); gSet(gs); draw(); }); };
-      const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=async()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!(await askOk('¿Borrar el proyecto «'+g.name+'»?','Se quita el proyecto. Los vídeos que no estén en otro proyecto empezarán de cero al abrirlos.'))) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
+      const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const g0=gGet().find(x=>x.id===S.gid); askName('Nombre de la colección',g0.name,n=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); g.name=n.slice(0,60); gSet(gs); draw(); }); };
+      const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=async()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!(await askOk('¿Borrar la colección «'+g.name+'»?','Se quita la colección. Los vídeos que no estén en otra colección empezarán de cero al abrirlos.'))) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
       const pa=B.querySelector('#pjParts'); if(pa) pa.onclick=()=>{ S.view=S.view==='games'?'lib':'games'; draw(); };
-      const ac=B.querySelector('#pjAct'); if(ac) ac.onchange=()=>{ lsSet(AK,ac.checked?S.gid:''); toast(ac.checked?'Proyecto activo: los vídeos nuevos se añaden aquí.':'Ya no se añaden vídeos solos.'); };
+      const ac=B.querySelector('#pjAct'); if(ac) ac.onchange=()=>{ lsSet(AK,ac.checked?S.gid:''); toast(ac.checked?'Colección activa: los vídeos nuevos se añaden aquí.':'Ya no se añaden vídeos solos.'); };
     }
     function drawGames(){
       const gs=gGet(), g=gs.find(x=>x.id===S.gid); const all=Object.keys(gameOf).sort((a,b)=>(gameOf[b].added||0)-(gameOf[a].added||0));
@@ -8806,7 +8808,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       const games=keysOf();
       const nSel=[...S.sel].filter(id=>all.some(r=>r.id===id)).length;
       const gsel=gGet().find(x=>x.id===S.gid);
-      const strip=gsel?'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'+(gsel.keys.length?gsel.keys.map(k=>{ const n=k===videoKey?events.length:((q(k)&&q(k).events)||[]).length; return '<button style="'+btn+';display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;font-size:15px" data-open="'+esc(k)+'"><span style="font-size:20px">▶</span><span style="flex:1;min-width:0"><b>'+esc(titleOf(k))+'</b><br><span style="color:var(--muted);font-size:12.5px">'+(dateOf(k)?esc(matchDate(dateOf(k)))+' · ':'')+n+' cortes · toca para abrir</span></span></button>'; }).join(''):'<p style="color:var(--muted);margin:0">Este proyecto está vacío.</p>')+'<button class="btn primary" id="pjAdd" style="align-self:flex-start;padding:11px 18px;font-size:15px">＋ Añadir partido</button></div>':'';
+      const strip=gsel?'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'+(gsel.keys.length?gsel.keys.map(k=>{ const n=k===videoKey?events.length:((q(k)&&q(k).events)||[]).length; return '<button style="'+btn+';display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;font-size:15px" data-open="'+esc(k)+'"><span style="font-size:20px">▶</span><span style="flex:1;min-width:0"><b>'+esc(titleOf(k))+'</b><br><span style="color:var(--muted);font-size:12.5px">'+(dateOf(k)?esc(matchDate(dateOf(k)))+' · ':'')+n+' cortes · toca para abrir</span></span></button>'; }).join(''):'<p style="color:var(--muted);margin:0">Esta colección está vacía.</p>')+'<button class="btn primary" id="pjAdd" style="align-self:flex-start;padding:11px 18px;font-size:15px">＋ Añadir partido</button></div>':'';
       B.innerHTML=head()+strip+
         (all.length?'':'<p style="color:var(--muted)">'+(S.gid?(gsel&&gsel.keys.length?'Aún no hay cortes. Abre un partido y etiqueta las jugadas con la botonera: aparecerán aquí.':''):'Todavía no hay cortes guardados. Abre un partido y etiquétalo.')+'</p>')+
         (all.length?'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+
@@ -8857,14 +8859,14 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   }
   const bar=document.querySelector('.top-actions');
   if(bar){
-    const b=document.createElement('button'); b.className='btn'; b.id='bProj'; b.title='Proyectos: varios partidos y una biblioteca con todos sus cortes'; b.innerHTML='<span class="ic">📚</span><span class="tx">Proyectos</span>';
+    const b=document.createElement('button'); b.className='btn'; b.id='bProj'; b.title='Colecciones: varios partidos y una biblioteca con todos sus cortes'; b.innerHTML='<span class="ic">📚</span><span class="tx">Colecciones</span>';
     b.onclick=e=>{ DLGDOC=e.currentTarget.ownerDocument; S.view='lib'; openProj(); };
     bar.appendChild(b); const m=document.getElementById('moreMenu'); if(m) m.appendChild(b);
   }
   window.openProjects=()=>{ DLGDOC=null; S.view='lib'; openProj(); };
 })();
 
-/* ===== Lista única de cortes del proyecto (todos los partidos) ===== */
+/* ===== Lista única de cortes de la colección (todos los partidos) ===== */
 (function(){
   const $l=document.getElementById('list'); if(!$l) return;
   const MK='bbtag.pjmode';
@@ -8879,7 +8881,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const titleOf=k=>{ const T=titlesGet(); return (T[k]&&T[k].t)||k.split('|')[0]; };
   /* interruptor 📚 junto al contador */
   const cnt=document.getElementById('cnt'); let tg=null;
-  if(cnt){ tg=document.createElement('label'); tg.id='pjTg'; tg.style.cssText='display:none;margin-left:8px;font-size:12px;cursor:pointer;white-space:nowrap'; tg.title='Ver en esta lista los cortes de todos los partidos del proyecto'; tg.innerHTML='<input type="checkbox" style="vertical-align:-2px"> 📚 Todo el proyecto'; cnt.after(tg);
+  if(cnt){ tg=document.createElement('label'); tg.id='pjTg'; tg.style.cssText='display:none;margin-left:8px;font-size:12px;cursor:pointer;white-space:nowrap'; tg.title='Ver en esta lista los cortes de todos los partidos de la colección'; tg.innerHTML='<input type="checkbox" style="vertical-align:-2px"> 📚 Toda la colección'; cnt.after(tg);
     tg.querySelector('input').onchange=e=>{ lsSet(MK,e.target.checked?'1':'0'); renderList(); }; }
   const css=document.createElement('style');
   css.textContent='.evg{padding:6px 10px;font:700 12px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0}.evg.cur{color:var(--accent,#EB8300)}.evx{opacity:.92}.evx .cat{opacity:.9}';
@@ -8913,7 +8915,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     before.forEach(x=>putBefore(x.frag));
     putBefore(cur.frag);
     after.forEach(x=>list.appendChild(x.frag));
-    const total=gs.reduce((a,x)=>a+x.n,0); const c=document.getElementById('cnt'); if(c) c.textContent=total+' en el proyecto';
+    const total=gs.reduce((a,x)=>a+x.n,0); const c=document.getElementById('cnt'); if(c) c.textContent=total+' en la colección';
   };
   /* ir a un corte de otro partido */
   function go(k,id,play){
@@ -9395,7 +9397,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
    '<button class="hm-t" id="hmFile"><i style="background:#ff5a5a"></i><span>Desde Archivos<small>iCloud, Drive, En mi iPad</small></span></button>'+
    '<button class="hm-t" id="hmMarks"><i style="background:#ff9f2f"></i><span>Recuperar marcas<small>Archivo de proyecto</small></span></button>'+
    '<button class="hm-t" id="hmEdit"><i style="background:#ffc933"></i><span>Editar set de botones</span></button>'+
-   '</div><div class="hm-fh"><h3>Sin proyecto</h3><select id="hmTeamF" aria-label="Filtrar por equipo" hidden></select></div><div class="hm-r" id="hmRec"></div></div>';
+   '</div><div class="hm-fh"><h3>Partidos</h3><select id="hmTeamF" aria-label="Filtrar por equipo" hidden></select></div><div class="hm-r" id="hmRec"></div></div>';
   B.appendChild(h);
   const f2=document.createElement('input'); f2.type='file'; f2.accept='.mp4,.m4v,.mov,.webm,.mkv'; f2.hidden=true; B.appendChild(f2);
   f2.onchange=e=>{ loadFile(e.target.files[0]); e.target.value=''; };
@@ -9510,17 +9512,17 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   h2.textContent='Sala de análisis';
   /* tres acciones */
   const hero=document.createElement('div'); hero.id='hmHero';
-  hero.innerHTML='<button id="hhOpen"><span class="ic">▶</span><b>Abrir un vídeo</b><small>Elige un partido de este equipo y empieza a etiquetar</small></button>'+
-    '<button id="hhPj"><span class="ic">📁</span><b>Proyecto nuevo</b><small>Te guiamos paso a paso</small></button>'+
+  hero.innerHTML='<button id="hhOpen"><span class="ic">▶</span><b>Nuevo partido</b><small>Elige un partido de este equipo y empieza a etiquetar</small></button>'+
+    '<button id="hhPj"><span class="ic">📁</span><b>Colección nueva</b><small>Agrupa varios partidos</small></button>'+
     '<button id="hhLive"><span class="ic" style="color:#ff4d4d">●</span><b>Cámara en vivo</b><small>Graba y etiqueta un partido a la vez</small></button>';
   h2.after(hero);
   document.getElementById('hhOpen').onclick=()=>clk('hmPhoto');
   document.getElementById('hhPj').onclick=()=>wizard();
   document.getElementById('hhLive').onclick=()=>clk('hmLive');
   /* barra de menús */
-  const M=[['Archivo',[['Abrir un vídeo','Elegir del equipo','hmPhoto'],['Proyecto nuevo','Paso a paso','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Exportar vídeo','Los cortes como archivo de vídeo','@savevid'],['Guardar proyecto','Archivo de proyecto','bJson'],['Cargar proyecto','Abrir un archivo de proyecto','bLoad'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
+  const M=[['Archivo',[['Nuevo partido','Elegir el vídeo del equipo','hmPhoto'],['Colección nueva','Agrupa varios partidos','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Exportar vídeo','Los cortes como archivo de vídeo','@savevid'],['Guardar proyecto','Archivo de proyecto','bJson'],['Cargar proyecto','Abrir un archivo de proyecto','bLoad'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
     ['Herramientas',[['Análisis previo','Vídeos guardados','hmPrev'],['Editar set de botones','Tu botonera de etiquetas','hmEdit'],['Equipos','Jugadoras guardadas','hmTeams'],['Nube','Sincronizar iPad y ordenador','hmCloud'],['-'],['Ajustes','Preferencias y copia de seguridad','hmSet']]],
-    ['Ayuda',[['Primeros pasos','Equipos, fotos y proyectos','@guide'],['Tutorial de cada función','','hmHelp']]]];
+    ['Ayuda',[['Primeros pasos','Equipos, fotos y colecciones','@guide'],['Tutorial de cada función','','hmHelp']]]];
   if(!FEAT.vivo||!FEAT.nube){ const hide=new Set([!FEAT.vivo&&'hmLive',!FEAT.nube&&'hmCloud'].filter(Boolean)); M.forEach(m=>{ m[1]=m[1].filter(it=>!hide.has(it[2])); const o=[]; m[1].forEach(it=>{ if(it[0]==='-'&&(!o.length||o[o.length-1][0]==='-')) return; o.push(it); }); while(o.length&&o[o.length-1][0]==='-') o.pop(); m[1]=o; }); }
   const bar=document.createElement('div'); bar.id='hmBar';
   bar.innerHTML='<span class="hb-brand">Scout<b>Flow</b> Video</span>'+M.map((m,i)=>'<div class="mn" data-m="'+i+'"><button type="button">'+m[0]+'</button><div class="dd">'+m[1].map(it=>it[0]==='-'?'<hr>':'<button type="button" data-t="'+it[2]+'">'+it[0]+(it[1]?'<small>'+it[1]+'</small>':'')+'</button>').join('')+'</div></div>').join('')+'<span class="hb-sp"></span><button type="button" class="hb-ic" id="hbGear" title="Ajustes" aria-label="Ajustes">⚙</button>';
@@ -9537,15 +9539,15 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     try{ localStorage.setItem('bbtag.welcome','1'); }catch(e){}
     const ov=document.createElement('div'); ov.id='pwOv'; document.body.appendChild(ov);
     const S=[['👥','Crea tu equipo','En Herramientas › Equipos escribe las jugadoras (dorsal y nombre) y añade su foto. Puedes subir varias fotos a la vez: se asignan por el nombre del archivo.','hmTeams'],
-      ['📁','Crea un proyecto','Archivo › Proyecto nuevo. Un proyecto agrupa los partidos de una liga, un rival o la temporada.','@wizard'],
-      ['🎬','Abre un partido','Elige el vídeo y, en el botón Partido (📅), asigna tu equipo y el rival: las fotos llegan solas a la botonera.',''],
-      ['🏷️','Etiqueta y analiza','Pulsa jugadora y acción mientras ves el vídeo. Después genera clips, estadísticas y vídeos con dibujos y seguimiento.','']];
+      ['🎬','Abre un partido','Pulsa «Nuevo partido», elige el vídeo y, en el botón Partido (📅), asigna tu equipo y el rival: las fotos llegan solas a la botonera.','hmPhoto'],
+      ['🏷️','Etiqueta y analiza','Pulsa jugadora y acción mientras ves el vídeo. Después genera clips, estadísticas y vídeos con dibujos y seguimiento.',''],
+      ['📁','Colección (opcional)','Archivo › Colección nueva. Junta los partidos de una liga, un rival o una jugadora para verlos todos a la vez.','@wizard']];
     ov.innerHTML='<div class="pw"><h3>Te damos la bienvenida a ScoutFlow Video</h3><p>Cuatro pasos para empezar:</p><div class="pw-o">'+S.map((s,k)=>'<button data-k="'+k+'"><span class="e">'+s[0]+'</span><span>'+(k+1)+'. '+s[1]+'<small>'+s[2]+'</small></span></button>').join('')+'</div><div class="pw-f"><button id="gdX" class="go">Entendido</button></div></div>';
     const close=()=>ov.remove(); ov.querySelector('#gdX').onclick=close; ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
     ov.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ const t=S[+b.dataset.k][3]; if(!t) return; close(); if(t==='@wizard') wizard(); else clk(t); });
   }
   try{ setTimeout(()=>{ let seen=''; try{ seen=localStorage.getItem('bbtag.welcome')||''; }catch(e){} const gs=JSON.parse(localStorage.getItem('bbtag.groups')||'[]'), tm=JSON.parse(localStorage.getItem('bbtag.teams')||'[]'); if(!seen&&!gs.length&&!tm.length&&!document.getElementById('pwOv')) guide(); },1200); }catch(e){}
-  /* asistente: proyecto nuevo paso a paso */
+  /* asistente: colección nuevo paso a paso */
   function wizard(){
     if(document.getElementById('pwOv')) return;
     const ov=document.createElement('div'); ov.id='pwOv'; document.body.appendChild(ov);
@@ -9553,20 +9555,20 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     const close=()=>ov.remove(), steps=n=>'<div class="pw-steps"><i class="'+(n>=1?'on':'')+'"></i><i class="'+(n>=2?'on':'')+'"></i><i class="'+(n>=3?'on':'')+'"></i></div>';
     const esc2=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     function p1(){
-      ov.innerHTML='<div class="pw">'+steps(1)+'<h3>Paso 1 de 3 · ¿Cómo se llama?</h3><p>Un proyecto agrupa varios partidos: una liga, un rival o toda la temporada.</p><input type="text" id="pwN" maxlength="60" placeholder="Ej. Liga 2026-27" value="'+esc2(name)+'"><div class="pw-f"><button id="pwC">Cancelar</button><button class="go" id="pwG">Siguiente →</button></div></div>';
+      ov.innerHTML='<div class="pw">'+steps(1)+'<h3>Paso 1 de 3 · ¿Cómo se llama?</h3><p>Una colección agrupa varios partidos: una liga, un rival o una jugadora.</p><input type="text" id="pwN" maxlength="60" placeholder="Ej. Liga 2026-27" value="'+esc2(name)+'"><div class="pw-f"><button id="pwC">Cancelar</button><button class="go" id="pwG">Siguiente →</button></div></div>';
       const i=ov.querySelector('#pwN'); setTimeout(()=>{ i.focus(); i.select(); },30);
       const go=()=>{ const v=i.value.trim(); if(!v){ i.focus(); return; } name=v; p2(); };
       ov.querySelector('#pwG').onclick=go; ov.querySelector('#pwC').onclick=close;
       i.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') go(); else if(e.key==='Escape') close(); });
     }
     function p2(){
-      const O=[['📂','Elegir un vídeo de este equipo','El partido que ya tienes guardado','hmPhoto'],['🔗','Pegar un enlace','YouTube, directo o URL','hmLink'],['🔴','Grabar en vivo','Cámara o captura del partido','hmLive'],['⏭','Lo añado después','Crea el proyecto vacío','']];
-      ov.innerHTML='<div class="pw">'+steps(2)+'<h3>Paso 2 de 3 · ¿De dónde viene el vídeo?</h3><p>Proyecto «'+esc2(name)+'». Elige cómo quieres añadir el primer partido.</p><div class="pw-o">'+O.map((o,k)=>'<button data-k="'+k+'"><span class="e">'+o[0]+'</span><span>'+o[1]+'<small>'+o[2]+'</small></span></button>').join('')+'</div><div class="pw-f"><button id="pwB">← Atrás</button><span></span></div></div>';
+      const O=[['📂','Elegir un vídeo de este equipo','El partido que ya tienes guardado','hmPhoto'],['🔗','Pegar un enlace','YouTube, directo o URL','hmLink'],['🔴','Grabar en vivo','Cámara o captura del partido','hmLive'],['⏭','Lo añado después','Crea la colección vacía','']];
+      ov.innerHTML='<div class="pw">'+steps(2)+'<h3>Paso 2 de 3 · ¿De dónde viene el vídeo?</h3><p>Colección «'+esc2(name)+'». Elige cómo quieres añadir el primer partido.</p><div class="pw-o">'+O.map((o,k)=>'<button data-k="'+k+'"><span class="e">'+o[0]+'</span><span>'+o[1]+'<small>'+o[2]+'</small></span></button>').join('')+'</div><div class="pw-f"><button id="pwB">← Atrás</button><span></span></div></div>';
       ov.querySelector('#pwB').onclick=p1;
       ov.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{
         const o=O[+b.dataset.k]; let ok=false;
         try{ if(window.__pjApi){ window.__pjApi.create(name); ok=true; } }catch(e){}
-        if(!ok){ if(typeof toast==='function') toast('No se pudo crear el proyecto.'); close(); return; }
+        if(!ok){ if(typeof toast==='function') toast('No se pudo crear la colección.'); close(); return; }
         close(); try{ if(window.__pjHome) window.__pjHome(); }catch(e){}
         if(o[3]) clk(o[3]); else p3(true);
         if(o[3]&&typeof toast==='function') toast('Paso 3: etiqueta las jugadas con la botonera. Todo se guarda solo en «'+name+'».');
@@ -9574,13 +9576,13 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     }
     function p3(vacio){
       const o2=document.createElement('div'); o2.id='pwOv'; document.body.appendChild(o2);
-      o2.innerHTML='<div class="pw">'+steps(3)+'<h3>¡Proyecto «'+esc2(name)+'» creado!</h3><p>Cuando quieras, pulsa <b>Abrir un vídeo</b> y el partido se añadirá solo a este proyecto. Después etiqueta las jugadas con la botonera.</p><div class="pw-f"><span></span><button class="go" id="pwK">Entendido</button></div></div>';
+      o2.innerHTML='<div class="pw">'+steps(3)+'<h3>¡Colección «'+esc2(name)+'» creada!</h3><p>Cuando quieras, pulsa <b>Nuevo partido</b> y el partido se añadirá solo a esta colección. Después etiqueta las jugadas con la botonera.</p><div class="pw-f"><span></span><button class="go" id="pwK">Entendido</button></div></div>';
       o2.querySelector('#pwK').onclick=()=>o2.remove();
     }
     p1();
   }
   window.__pjNew=wizard;
-  const hint=document.createElement('p'); hint.id='hmHint'; hint.style.cssText='order:3;text-align:center;color:#9aa3b2;margin:26px 0 0;display:none'; hint.textContent='Todos tus vídeos viven dentro de un proyecto. Empieza creando el primero.'; hero.after(hint);
+  const hint=document.createElement('p'); hint.id='hmHint'; hint.style.cssText='order:3;text-align:center;color:#9aa3b2;margin:26px 0 0;display:none'; hint.textContent='Empieza abriendo un partido con «Nuevo partido».'; hero.after(hint);
   const css2=document.createElement('style'); css2.textContent='#ipHome:has(#hmProjs.hmEmpty) #hmHint,#ipHome .hm-in:has(#hmProjs.hmEmpty) #hmHint{display:block!important}'; document.head.appendChild(css2);
   const marca=()=>{ const c=document.getElementById('hmProjs'); if(c) c.classList.toggle('hmEmpty',!c.querySelector('#hmPg .hm-w')); };
   new MutationObserver(marca).observe(home,{childList:true,subtree:true}); marca();
@@ -12525,7 +12527,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zh · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zi · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
