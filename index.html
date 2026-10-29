@@ -1361,7 +1361,6 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
       <span class="tsep"></span>
       <button class="btn ico" id="bTgBot" title="Mostrar u ocultar la botonera" aria-label="Mostrar u ocultar la botonera">👁</button>
       <button class="btn" id="bCfg" title="Editar botonera"><span class="ic">⚙</span><span class="tx">Botonera</span></button>
-      <button class="btn" id="bSaveVid" title="Guardar los cortes como archivo de vídeo"><span class="ic">🎞</span><span class="tx">Guardar vídeo</span></button>
       <button class="btn" id="bProd" aria-pressed="false" title="Mesa de producción: playlists y dibujos"><span class="ic">🎬</span><span class="tx">Producción</span></button>
       <button class="btn" id="bMode" title="Cambiar entre modo iPad y modo ordenador"><span class="ic">📱</span><span class="tx">iPad</span></button>
       <button class="btn" id="bLayout" title="Paneles y diseño"><span class="ic">▦</span><span class="tx">Diseño</span></button>
@@ -5053,8 +5052,8 @@ function changeSpeed(dir){
 }
 $('#bPlayF').onclick=playFiltered;
 $('#bExpF').onclick=()=>{ DLGDOC=null; const f=filters.sort==='time'?filtered().slice().sort((a,b)=>a.start-b.start):sortedFiltered(); openExport(f,isFiltered()?'filtrados':'todos'); };
-function saveVideoNow(){ if(!hasVideo){ toast('Abre un vídeo primero.'); return; } if(!events.length){ toast('Marca algún corte y luego guarda el vídeo.'); return; } const b=$('#bExpF'); if(b&&!b.disabled) b.click(); else toast('No hay cortes con el filtro actual.'); }
-$('#bSaveVid').onclick=saveVideoNow; window.__saveVideo=saveVideoNow;
+function saveVideoNow(){ if(!hasVideo){ toast('Abre un vídeo primero.'); return; } if(!events.length){ toast('Marca algún corte y luego exporta el vídeo.'); return; } const b=$('#bExpF'); if(b&&!b.disabled) b.click(); else toast('No hay cortes con el filtro actual.'); }
+window.__saveVideo=saveVideoNow;
 $('#bPrevClip').onclick=()=>{if(clip) startClipAt(Math.max(0,clip.idx-1));};
 $('#bNextClip').onclick=()=>{if(clip){ if(clip.idx<clip.queue.length-1) startClipAt(clip.idx+1); else stopClip(true);} };
 $('#bStopClip').onclick=()=>stopClip(true);
@@ -9347,7 +9346,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   document.getElementById('hhPj').onclick=()=>wizard();
   document.getElementById('hhLive').onclick=()=>clk('hmLive');
   /* barra de menús */
-  const M=[['Archivo',[['Abrir un vídeo','Elegir del equipo','hmPhoto'],['Proyecto nuevo','Paso a paso','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Guardar vídeo','Exportar los cortes como vídeo','@savevid'],['Guardar proyecto','Archivo de proyecto','bJson'],['Cargar proyecto','Abrir un archivo de proyecto','bLoad'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
+  const M=[['Archivo',[['Abrir un vídeo','Elegir del equipo','hmPhoto'],['Proyecto nuevo','Paso a paso','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Exportar vídeo','Los cortes como archivo de vídeo','@savevid'],['Guardar proyecto','Archivo de proyecto','bJson'],['Cargar proyecto','Abrir un archivo de proyecto','bLoad'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
     ['Herramientas',[['Análisis previo','Vídeos guardados','hmPrev'],['Editar set de botones','Tu botonera de etiquetas','hmEdit'],['Equipos','Jugadoras guardadas','hmTeams'],['Nube','Sincronizar iPad y ordenador','hmCloud'],['-'],['Ajustes','Preferencias y copia de seguridad','hmSet']]],
     ['Ayuda',[['Primeros pasos','Equipos, fotos y proyectos','@guide'],['Tutorial de cada función','','hmHelp']]]];
   const bar=document.createElement('div'); bar.id='hmBar';
@@ -12334,7 +12333,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-t · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-u · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
