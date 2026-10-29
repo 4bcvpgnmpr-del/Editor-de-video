@@ -353,6 +353,28 @@ html.ed-pub #bFebTop,html.ed-pub #bFebCuts,html.ed-pub #bYtMarks,html.ed-pub #bL
 #dwBar .sl select{flex:1;min-width:0;background:#1d3248;color:#fff;border:0;border-radius:8px;padding:4px;font:700 12px Inter,Barlow,sans-serif}
 body.ipad #dwBar{width:210px}body.ipad #dwBar .g button{height:40px}body.ipad #dwBar button{padding:9px 6px;font-size:14px}body.ipad #dwBar .c i{height:22px}
 #dwBar .hint{color:#9fb2c6;font:600 11px Inter,Barlow,sans-serif;line-height:1.3}
+/* barra de dibujo compacta (fila arriba) */
+#dwBar{left:8px;right:8px;top:8px;width:auto;max-height:none;overflow:visible;padding:0;background:none;border:0;display:block;pointer-events:none}
+#dwBar>*{pointer-events:auto}
+#dwBar .dws{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:6px;width:max-content;max-width:100%;scrollbar-width:none}
+#dwBar .dws::-webkit-scrollbar{display:none}
+#dwBar .dws>*{flex:none}
+#dwBar .dws .g{display:flex;grid-template-columns:none;gap:3px}
+#dwBar .dws .g button{width:32px;height:32px;flex:none}
+#dwBar .dws .c{display:flex;grid-template-columns:none;gap:4px;align-items:center}
+#dwBar .dws .c i{width:20px;height:20px;flex:none}
+#dwBar .dws .r button{flex:none;padding:6px 10px;height:32px}
+#dwBar .dwo,#dwBar .dwm{height:32px;padding:0 12px!important;white-space:nowrap}
+#dwBar .dwo.on{background:#f2803f}
+body.ipad #dwBar .dws .g button{width:44px;height:44px}
+body.ipad #dwBar .dws .r button,body.ipad #dwBar .dwo,body.ipad #dwBar .dwm{height:44px}
+body.ipad #dwBar .dws .c i{width:26px;height:26px}
+#dwBar .dwp{display:none;margin-top:6px;width:min(300px,100%);max-height:55vh;overflow:auto;flex-direction:column;gap:6px;background:rgba(5,12,20,.95);border:1px solid #2b4764;border-radius:14px;padding:8px}
+#dwBar.opts .dwp{display:flex}
+#dwBar.min .dws>.g,#dwBar.min .dws>.c,#dwBar.min .dws>.dwo,#dwBar.min .dws .r button:not([data-act=end]){display:none}
+#dwBar.min .dwp{display:none!important}
+body.ipad #dwBar{width:auto}
+
 .tele.edit{pointer-events:auto;cursor:crosshair;outline:2px solid var(--accent);outline-offset:-2px}
 .tele svg,.tele canvas{position:absolute;inset:0;width:100%;height:100%}
 .tele svg{touch-action:none;overflow:hidden}
@@ -11943,6 +11965,18 @@ function barBuild(){
    +'<div class="r"><button data-act="prev">▶ Probar</button><button data-act="clip">✂ Clip</button></div>'
    +'<div class="r"><button data-act="delall">Borrar todo</button></div>'
    +'<div class="hint">Pulsa D para abrir/cerrar. Esc: salir de la herramienta.</div>';
+  /* barra compacta: fila de herramientas arriba + panel de ajustes plegable */
+  { const k=[...dwBar.children]; const strip=document.createElement('div'); strip.className='dws'; strip.append(k[0],k[1],k[2]);
+    const o=document.createElement('button'); o.className='dwo'; o.setAttribute('data-dwui','opts'); o.title='Grosor, transparencia, estilo, animación, clip…'; o.textContent='⚙ Ajustes';
+    const m=document.createElement('button'); m.className='dwm'; m.setAttribute('data-dwui','min'); m.title='Esconder o mostrar las herramientas'; m.textContent='▲';
+    strip.append(o,m); const pan=document.createElement('div'); pan.className='dwp'; k.slice(3).forEach(x=>pan.append(x)); dwBar.append(strip,pan);
+    let mn=false; try{ mn=localStorage.getItem('bbtag.dwMin')==='1'; }catch(_){}
+    const ap=()=>{ dwBar.classList.toggle('min',mn); m.textContent=mn?'✏ Herramientas ▾':'▲'; o.classList.toggle('on',dwBar.classList.contains('opts')); };
+    dwBar.addEventListener('click',e=>{ const u=e.target.closest('[data-dwui]'); if(!u) return; e.stopPropagation();
+      if(u.dataset.dwui==='opts'){ dwBar.classList.toggle('opts'); mn=false; try{ localStorage.setItem('bbtag.dwMin','0'); }catch(_){} }
+      else { mn=!mn; if(mn) dwBar.classList.remove('opts'); try{ localStorage.setItem('bbtag.dwMin',mn?'1':'0'); }catch(_){} }
+      ap(); },true);
+    ap(); }
 }
 function barSync(){
   const on=!!teleEd; dwBar.hidden=!on; try{ cutsSync(); }catch(_){} if(!on) return;
@@ -12491,7 +12525,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zg · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zh · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
