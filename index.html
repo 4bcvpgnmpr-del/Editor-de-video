@@ -7782,41 +7782,23 @@ function wbDraw(){
 }
 function wbSize(){ const cv=document.getElementById('wbCv'); if(!cv) return; const r=cv.parentElement.getBoundingClientRect(); const d=Math.min(2,window.devicePixelRatio||1); cv.width=Math.round(r.width*d); cv.height=Math.round(r.height*d); wbDraw(); }
 function wbSet(on){
+  /* la pizarra es la misma que la de ScoutFlow Entrenador (pizarra.html), a pantalla completa bajo la barra superior */
   WB.on=on; let el=document.getElementById('ipWb');
-  if(on){ video.pause();
-    if(!el){ el=document.createElement('div'); el.id='ipWb';
-      el.innerHTML='<div class="wb-c"><canvas id="wbCv"></canvas></div><div class="wb-t"><div class="wb-g" id="wbTools"><button data-t="pen" aria-pressed="true">✏️</button><button data-t="arrow" aria-pressed="false">↗</button><button data-t="o" aria-pressed="false">●</button><button data-t="x" aria-pressed="false">✕</button><button data-t="erase" aria-pressed="false">🧽</button></div><div class="wb-g" id="wbCols"></div><div class="wb-g"><button id="wbUndo">↶</button><button id="wbClr">🗑</button></div><div class="wb-g"><select id="wbCourt"><option value="full">Pista completa</option><option value="half">Media pista</option><option value="none">Sin pista</option></select></div><div class="wb-g"><button id="wbPrev">‹</button><span id="wbPg">1/1</span><button id="wbNext">›</button><button id="wbAdd">＋</button></div><div class="wb-g"><button id="wbSave">↓ PNG</button></div></div>';
+  if(on){ try{ video.pause(); }catch(e){}
+    if(!el){ el=document.createElement('div'); el.id='ipWb'; el.style.padding='0';
+      el.innerHTML='<iframe id="wbFr" title="Pizarra" style="flex:1;width:100%;border:0;background:#fff" allow="fullscreen"></iframe><button id="wbX" type="button" style="position:absolute;right:12px;bottom:14px;z-index:5;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#111;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">↩ Volver al vídeo</button>';
+      el.querySelector('#wbX').onclick=()=>wbSet(false);
       document.body.appendChild(el);
-      el.querySelector('#wbCols').innerHTML=['#e53935','#1e88e5','#43a047','#fb8c00','#212121'].map(c=>'<button data-c="'+c+'" style="background:'+c+'" aria-pressed="'+(c===WB.color)+'"></button>').join('');
-      const cv=el.querySelector('#wbCv');
-      const pt=e=>{const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];};
-      const erase=q=>{ const pg=WB.pages[WB.i]; pg.strokes=pg.strokes.filter(st=>{ const pts=st.p||[[st.x,st.y]]; return !pts.some(a=>Math.hypot((a[0]-q[0])*cv.width,(a[1]-q[1])*cv.height)<cv.width*0.02); }); };
-      cv.addEventListener('pointerdown',e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); const q=pt(e), pg=WB.pages[WB.i];
-        if(WB.tool==='o'){ pg.strokes.push({t:'o',x:q[0],y:q[1],c:WB.color,n:WB.n}); WB.n=WB.n%5+1; }
-        else if(WB.tool==='x'){ pg.strokes.push({t:'x',x:q[0],y:q[1],c:WB.color}); }
-        else if(WB.tool==='erase'){ WB.er=true; erase(q); }
-        else WB.cur={t:WB.tool,c:WB.color,p:[q]};
-        wbDraw(); });
-      cv.addEventListener('pointermove',e=>{ if(WB.er){ erase(pt(e)); wbDraw(); } else if(WB.cur){ WB.cur.p.push(pt(e)); wbDraw(); } });
-      const up=()=>{ WB.er=false; if(WB.cur){ if(WB.cur.p.length>1) WB.pages[WB.i].strokes.push(WB.cur); WB.cur=null; wbDraw(); } };
-      cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
-      el.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const pg=WB.pages[WB.i];
-        if(b.dataset.t){ WB.tool=b.dataset.t; el.querySelectorAll('#wbTools button').forEach(x=>x.setAttribute('aria-pressed',x===b)); }
-        else if(b.dataset.c){ WB.color=b.dataset.c; el.querySelectorAll('#wbCols button').forEach(x=>x.setAttribute('aria-pressed',x===b)); }
-        else if(b.id==='wbUndo'){ pg.strokes.pop(); wbDraw(); }
-        else if(b.id==='wbClr'){ pg.strokes=[]; WB.n=1; wbDraw(); }
-        else if(b.id==='wbPrev'){ WB.i=Math.max(0,WB.i-1); el.querySelector('#wbCourt').value=WB.pages[WB.i].court; wbDraw(); }
-        else if(b.id==='wbNext'){ WB.i=Math.min(WB.pages.length-1,WB.i+1); el.querySelector('#wbCourt').value=WB.pages[WB.i].court; wbDraw(); }
-        else if(b.id==='wbAdd'){ WB.pages.push({strokes:[],court:pg.court}); WB.i=WB.pages.length-1; wbDraw(); }
-        else if(b.id==='wbSave'){ cv.toBlob(bl=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download='pizarra_'+(WB.i+1)+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); },'image/png'); }
-      });
-      el.querySelector('#wbCourt').onchange=e=>{ WB.pages[WB.i].court=e.target.value; wbDraw(); };
-      window.addEventListener('resize',()=>{ if(WB.on) wbSize(); });
+      window.addEventListener('message',e=>{ const d=e.data; if(d&&d.scoutflowEntrenador==='cerrar'&&WB.on) wbSet(false); });
     }
-    el.hidden=false; wbSize(); }
+    const tp=document.querySelector('.top'); el.style.top=((tp&&tp.getBoundingClientRect().bottom)||54)+'px';
+    const fr=el.querySelector('#wbFr'); if(!fr.getAttribute('src')) fr.setAttribute('src','pizarra.html');
+    el.hidden=false; }
   else if(el) el.hidden=true;
+  const bp=document.getElementById('bPiz'); if(bp) bp.classList.toggle('on',!!on);
   ipSegSync();
 }
+(function(){ const bc=document.getElementById('bCfg'); if(!bc) return; const b=document.createElement('button'); b.className='btn'; b.id='bPiz'; b.title='Pizarra táctica (la misma de ScoutFlow Entrenador)'; b.innerHTML='<span class="ic">📋</span><span class="tx">Pizarra</span>'; bc.parentNode.insertBefore(b,bc); b.onclick=()=>wbSet(!WB.on); })();
 
 /* ===== iPad: selector Vídeo | Pizarra | Proyección ===== */
 function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g.querySelectorAll('button').forEach(b=>{ const m=b.dataset.v; b.setAttribute('aria-pressed',(m==='wb'&&WB.on)||(m==='pj'&&PJ.on&&!WB.on)||(m==='v'&&!WB.on&&!PJ.on)); }); }
@@ -10162,7 +10144,7 @@ $('#dlgMk').addEventListener('click',e=>{if(e.target===$('#dlgMk')) $('#dlgMk').
    Un dibujo ("tele") está ligado a un instante del vídeo. Un clip que
    contiene ese instante lo reproduce automáticamente.
    ===================================================================== */
-const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move','tline','img','pen','beam','wall','ghost','play','track','wave','ptri'];
+const SHAPES=['arrow','line','curve','circle','rect','text','hl','spot','lens','num','cone','zone','traj','move','tline','img','pen','beam','wall','ghost','play','track','wave','ptri','screen'];
 function normTele(x){
   if(!x||!isFinite(x.t)) return null;
   return {id:x.id||uid(),t:+x.t,mode:x.mode==='overlay'?'overlay':'freeze',hold:clamp(+x.hold||3,0.5,60),fade:clamp(x.fade==null?0:(+x.fade||0),0,3),
@@ -10675,6 +10657,7 @@ const TOOLS=[
   ['select','Seleccionar y mover','<path d="M6 3l13 8-6 2-3 6z" fill="currentColor" stroke="none"/>'],
   ['arrow','Flecha','<path d="M4 20L19 5"/><path d="M10 5h9v9"/>'],
   ['line','Línea','<path d="M4 20L20 4"/>'],
+  ['screen','Bloqueo: arrastra desde el jugador que bloquea hacia donde pone el bloqueo (acaba en una barra)','<path d="M4 19L14 9"/><path d="M9.5 6.5l8 8" stroke-width="3.4"/>'],
   ['wave','Línea ondulada: el bote (arrastra desde el balón hasta donde llega)','<path d="M3 15c2-5 3-5 5 0s3 5 5 0 3-5 5 0"/><path d="M17 9l4 2-3 3"/>'],
   ['plink','Línea entre 2 jugadoras que se mueve con ellas: pulsa en los pies de cada una',  '<circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M7 16.5L17 7.5" stroke-dasharray="3 2"/>'],
   ['ptri','Polígono que sigue a 3 o más jugadoras (hasta 6): pulsa en los pies de cada una; el triángulo es el clásico del 3 contra 2','<path d="M12 4L4 19h16z" stroke-dasharray="3 2"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/>'],
@@ -10889,6 +10872,11 @@ function shapeSVG(s,i){
       const d='M'+f1(X(s.x1))+' '+f1(Y(s.y1))+' L'+f1(X(s.x2))+' '+f1(Y(s.y2));
       return g(hit(d)+'<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+sw+'" stroke-linecap="round"/>');
     }
+    case 'screen':{
+      const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2), len=Math.hypot(x2-x1,y2-y1)||1, ux=(x2-x1)/len, uy=(y2-y1)/len, nx=-uy, ny=ux, bl=14+sw*2.4, ex=x2-ux*sw*0.4, ey=y2-uy*sw*0.4;
+      const d='M'+f1(x1)+' '+f1(y1)+' L'+f1(ex)+' '+f1(ey), b='M'+f1(x2+nx*bl)+' '+f1(y2+ny*bl)+' L'+f1(x2-nx*bl)+' '+f1(y2-ny*bl);
+      return g(hit(d)+'<g style="filter:drop-shadow(0 3px 3px rgba(0,0,0,.55))"><path d="'+d+'" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="'+f1(sw+4)+'" stroke-linecap="round"/><path d="'+b+'" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="'+f1(sw*1.5+4)+'" stroke-linecap="round"/><path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+f1(sw)+'" stroke-linecap="round"/><path d="'+b+'" fill="none" stroke="'+c+'" stroke-width="'+f1(sw*1.5)+'" stroke-linecap="round"/></g>');
+    }
     case 'wave':{
       const sw2=sw*1.5, w=wavePts(X(s.x1),Y(s.y1),X(s.x2),Y(s.y2),sw2), d=w.d;
       return g(hit('M'+f1(X(s.x1))+' '+f1(Y(s.y1))+' L'+f1(X(s.x2))+' '+f1(Y(s.y2)))+'<g style="filter:drop-shadow(0 3px 3px rgba(0,0,0,.55))"><path d="'+d+'" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="'+f1(sw2+4)+'" stroke-linecap="round" stroke-linejoin="round"/><path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+f1(sw2)+'" stroke-linecap="round" stroke-linejoin="round"/>'+(w.h?'<polygon points="'+fp(w.h.pts)+'" fill="'+c+'" stroke="#fff" stroke-opacity=".9" stroke-width="3" stroke-linejoin="round"/>':'')+'</g>');
@@ -11020,7 +11008,7 @@ function bboxOf(s){
   const pts=[];
   switch(s.type){
     case 'ptri':(s.paths||[]).forEach(pp=>(pp||[]).forEach(q=>pts.push([X(q[1]),Y(q[2])])));if(!pts.length) pts.push([0,0]);break;
-    case 'line':case 'wave':case 'tline':case 'arrow':case 'move':pts.push([X(s.x1),Y(s.y1)],[X(s.x2),Y(s.y2)]);break;
+    case 'line':case 'wave':case 'tline':case 'arrow':case 'move':case 'screen':pts.push([X(s.x1),Y(s.y1)],[X(s.x2),Y(s.y2)]);break;
     case 'curve':pts.push([X(s.x1),Y(s.y1)],[X(s.x2),Y(s.y2)],[X(s.cx),Y(s.cy)]);break;
     case 'cone':{const x1=X(s.x1),y1=Y(s.y1),x2=X(s.x2),y2=Y(s.y2),len=Math.hypot(x2-x1,y2-y1)||1,nx=-(y2-y1)/len,ny=(x2-x1)/len,h=len*0.38;pts.push([x1,y1],[x2+nx*h,y2+ny*h],[x2-nx*h,y2-ny*h]);break;}
     case 'circle':case 'spot':case 'lens':{const r=X(s.r);pts.push([X(s.cx)-r,Y(s.cy)-r],[X(s.cx)+r,Y(s.cy)+r]);break;}
@@ -11039,7 +11027,8 @@ function bboxOf(s){
 }
 function handlesOf(s){
   switch(s.type){
-    case 'arrow':case 'line':case 'wave':case 'tline':case 'move':case 'cone':case 'wall':case 'ghost':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2]];
+    case 'arrow':case 'line':case 'wave':case 'tline':case 'move':case 'cone':case 'wall':case 'ghost':case 'screen':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2]];
+    case 'text':{ const fs=20+(s.sw||4)*3; return [['ts',s.x+(String(s.text||'').length*fs*0.58+16)/SW,s.y]]; }
     case 'curve':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2],['c',s.cx,s.cy]];
     case 'track':{ const h=[['r',s.cx+(s.r||0.024),s.cy]], P=s.pts||[]; return h; }
     case 'circle':case 'spot':case 'lens':case 'beam':return [['r',s.cx+(s.r||0.024),s.cy]];
@@ -11581,6 +11570,7 @@ document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.tar
     circle:{rows:[['color','Color'],['c2','Color de relleno'],['c3','Color de brillo']],presets:[['Normal',{c2:undefined,c3:undefined,sw:4}],['Sin relleno',{c2:'none'}],['Sin brillo',{c3:'none'}],['Fino',{sw:2,c2:'none',c3:'none'}]]},
     rect:{rows:[['color','Color'],['c2','Color de relleno']],presets:[['Normal',{c2:undefined,sw:4}],['Sin relleno',{c2:'none'}],['Fino',{sw:2,c2:'none'}]]},
     zone:{rows:[['color','Color de las líneas'],['c2','Color de relleno 1'],['c3','Color de relleno 2']],presets:[['Rayada',{zst:''}],['Rellena',{zst:'fill'}],['Solo contorno',{zst:'fill',c2:'none'}]]},
+    screen:{rows:[['color','Color']],presets:[['Normal',{sw:4}],['Gruesa',{sw:8}],['Fina',{sw:2}]]},
     arrow:{rows:AR,presets:[['Normal',{c3:undefined,sw:4,dbl:undefined}],['Doble punta',{dbl:true}],['Sin brillo',{c3:'none'}],['Gruesa',{sw:7}],['Fina',{sw:2}]]},
     curve:{rows:AR,presets:[['Normal',{c3:undefined,sw:4,dbl:undefined}],['Doble punta',{dbl:true}],['Sin brillo',{c3:'none'}],['Gruesa',{sw:7}],['Fina',{sw:2}]]},
     spot:{rows:[['color','Color del aro'],['c2','Color del halo']],presets:[['Normal',{dim:0.55}],['Oscuro',{dim:0.8}],['Suave',{dim:0.3}],['Sin halo',{c2:'none'}]]},
@@ -11604,8 +11594,8 @@ document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.tar
     st.textContent=sel+'{position:relative}'+Object.keys(DEF).map(k=>'#dwBar [data-tool="'+k+'"]::after').join(',')+'{content:"";position:absolute;right:3px;bottom:3px;width:0;height:0;border-left:5px solid transparent;border-bottom:5px solid currentColor;opacity:.55;pointer-events:none}'+Object.keys(DEF).map(k=>'#dwBar [data-tool="'+k+'"].on::after,#dwBar [data-tool="'+k+'"][aria-pressed="true"]::after').join(',')+'{opacity:.95}';
     document.head.appendChild(st); }catch(e){}
   const KEYS=['color','sw','c2','c3','c4','tst','t3d','zst','dim','st','zoom','dbl','sq'];
-  const GEO={line:{x1:.3,y1:.65,x2:.7,y2:.35},wave:{x1:.3,y1:.6,x2:.7,y2:.4},pen:{pts:[[.3,.6],[.4,.4],[.5,.6],[.6,.4],[.7,.55]]},hl:{pts:[[.3,.55],[.5,.45],[.7,.55]]},num:{x:.5,y:.5,label:'1'},cone:{x1:.3,y1:.5,x2:.75,y2:.5},traj:{pts:[[.3,.65],[.45,.4],[.6,.6],[.72,.35]]},tline:{x1:.3,y1:.5,x2:.7,y2:.5,label:'4 m'},move:{x1:.3,y1:.6,x2:.7,y2:.4},beam:{cx:.5,cy:.8,r:.07},wall:{x1:.3,y1:.6,x2:.7,y2:.4},text:{x:.2,y:.62,text:'Texto'},circle:{cx:.5,cy:.5,r:.13},rect:{x:.3,y:.3,rw:.4,rh:.3},zone:{pts:[[.3,.7],[.7,.7],[.6,.3],[.4,.3]]},arrow:{x1:.3,y1:.65,x2:.7,y2:.35},curve:{x1:.3,y1:.7,cx:.5,cy:.25,x2:.7,y2:.4},spot:{cx:.5,cy:.5,r:.13}};
-  const VB={line:[220,140,560,330],wave:[220,140,560,330],pen:[250,160,500,300],hl:[250,160,500,300],num:[430,200,140,160],cone:[250,150,560,280],traj:[250,130,500,340],tline:[250,200,500,170],move:[220,140,560,330],beam:[380,100,240,380],wall:[220,140,560,330],text:[170,300,260,90],circle:[330,130,340,300],rect:[250,130,500,300],zone:[250,130,500,340],arrow:[220,140,560,330],curve:[220,120,560,360],spot:[330,130,340,300]};
+  const GEO={line:{x1:.3,y1:.65,x2:.7,y2:.35},screen:{x1:.3,y1:.65,x2:.7,y2:.35},wave:{x1:.3,y1:.6,x2:.7,y2:.4},pen:{pts:[[.3,.6],[.4,.4],[.5,.6],[.6,.4],[.7,.55]]},hl:{pts:[[.3,.55],[.5,.45],[.7,.55]]},num:{x:.5,y:.5,label:'1'},cone:{x1:.3,y1:.5,x2:.75,y2:.5},traj:{pts:[[.3,.65],[.45,.4],[.6,.6],[.72,.35]]},tline:{x1:.3,y1:.5,x2:.7,y2:.5,label:'4 m'},move:{x1:.3,y1:.6,x2:.7,y2:.4},beam:{cx:.5,cy:.8,r:.07},wall:{x1:.3,y1:.6,x2:.7,y2:.4},text:{x:.2,y:.62,text:'Texto'},circle:{cx:.5,cy:.5,r:.13},rect:{x:.3,y:.3,rw:.4,rh:.3},zone:{pts:[[.3,.7],[.7,.7],[.6,.3],[.4,.3]]},arrow:{x1:.3,y1:.65,x2:.7,y2:.35},curve:{x1:.3,y1:.7,cx:.5,cy:.25,x2:.7,y2:.4},spot:{cx:.5,cy:.5,r:.13}};
+  const VB={line:[220,140,560,330],screen:[220,140,560,330],wave:[220,140,560,330],pen:[250,160,500,300],hl:[250,160,500,300],num:[430,200,140,160],cone:[250,150,560,280],traj:[250,130,500,340],tline:[250,200,500,170],move:[220,140,560,330],beam:[380,100,240,380],wall:[220,140,560,330],text:[170,300,260,90],circle:[330,130,340,300],rect:[250,130,500,300],zone:[250,130,500,340],arrow:[220,140,560,330],curve:[220,120,560,360],spot:[330,130,340,300]};
   let panel=null, row=null, hsv={h:0,s:1,v:1}, pid=9000;
   const cur=()=>{ const ed=teleEd; if(!ed) return null; const s=ed.sel!=null?ed.tele.items[ed.sel]:null; const type=s?s.type:ed.tool; return {ed,s,type,def:DEF[type]}; };
   const getv=(c,k)=>{ if(c.s&&k in c.s) return c.s[k]; if(k==='color') return c.ed.color; if(k==='sw') return c.ed.sw; if(k==='t3d') return c.ed.t3d; if(k==='tst') return c.ed.tst; if(k==='zst') return c.ed.zst; if(k==='zoom') return c.ed.lensZoom; return (TPD[c.type]||{})[k]; };
@@ -12227,7 +12217,7 @@ teleSvg.addEventListener('dblclick',e=>{
 function startDraw(type,p){
   const ed=teleEd, tl=ed.tele, base={type,color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim}; if(ed.op&&ed.op<1) base.op=ed.op;
   let s;
-  if(['arrow','line','wave','tline','move','cone','wall','ghost'].includes(type)) s=Object.assign(base,{x1:p.x,y1:p.y,x2:p.x,y2:p.y});
+  if(['arrow','line','wave','tline','move','cone','wall','ghost','screen'].includes(type)) s=Object.assign(base,{x1:p.x,y1:p.y,x2:p.x,y2:p.y});
   else if(type==='curve') s=Object.assign(base,{x1:p.x,y1:p.y,x2:p.x,y2:p.y,cx:p.x,cy:p.y});
   else if(['circle','spot','lens','beam'].includes(type)) s=Object.assign(base,{cx:p.x,cy:p.y,r:0},type==='lens'?{zoom:ed.lensZoom||2}:type==='spot'?{dim:ed.spotDim==null?0.55:ed.spotDim}:{});
   else if(type==='rect'||type==='play') s=Object.assign(base,{x:p.x,y:p.y,rw:0,rh:0});
@@ -12278,6 +12268,7 @@ function startHandle(name,p0){
     if(name==='p1'){s.x1=q.x;s.y1=q.y;}
     else if(name==='p2'){s.x2=q.x;s.y2=q.y;}
     else if(name==='c'){s.cx=q.x;s.cy=q.y;}
+    else if(name==='ts'){ const n=Math.max(1,String(s.text||'').length), fs=Math.max(12,(q.x*SW-s.x*SW-16)/(n*0.58)); s.sw=Math.max(1,Math.min(24,Math.round((fs-20)/3*2)/2)); }
     else if(name==='r'){s.r=Math.max(0.008,Math.hypot((q.x-s.cx)*SW,(q.y-s.cy)*SH)/SW);}
     else if(name==='br'){ if(s.type==='img'){s.rw=Math.max(0.02,q.x-s.x);s.rh=s.rw*(s.ar||1)*SW/SH;} else {s.rw=Math.max(0.01,q.x-s.x);s.rh=Math.max(0.01,q.y-s.y);} }
     else if(name[0]==='v'){s.pts[+name.slice(1)]=[q.x,q.y];}
@@ -12952,7 +12943,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz15 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz17 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
