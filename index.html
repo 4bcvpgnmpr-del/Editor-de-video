@@ -3781,7 +3781,7 @@ If you want to offset all timestamps of a track such that the first one is zero,
 /* ===== Ediciones: una sola app, funciones que se encienden o apagan =====
    EDITION: 'pro' (todo) o 'publica' (sin IA, seguimiento, Cortes FEB, YouTube, cámara en vivo, nube ni envío a Entrenador).
    Para probar la pública desde la edición pro: añade ?ed=publica a la dirección. */
-const EDITION='pro';
+const EDITION='publica';
 const ED=(function(){ let e=EDITION; try{ if(e==='pro'&&new URLSearchParams(location.search).get('ed')==='publica') e='publica'; }catch(_){} return e; })();
 const FEAT=(function(){ const pro=ED==='pro'; return {seguimiento:pro,febcuts:pro,ytmarks:pro,vivo:pro,nube:pro,ia:pro,entrenador:pro}; })();
 if(!FEAT.nube||!FEAT.vivo||!FEAT.seguimiento) document.documentElement.classList.add('ed-pub');
@@ -11031,12 +11031,22 @@ const TRK={on:false};
 function userRate(){ const v=parseFloat((document.getElementById('speed')||{}).value); return v>0?v:1; }
 /* red de seguridad: si algún seguimiento dejó el vídeo en cámara lenta, al reproducir vuelve a la velocidad elegida */
 video.addEventListener('play',()=>{ try{ if(!TRK.on&&!EXP.busy&&Math.abs(video.playbackRate-userRate())>0.01) video.playbackRate=userRate(); }catch(_){} });
+/* quita saltos sueltos de la detección y suaviza el recorrido en el tiempo (gaussiana), sin mover el punto de salida */
+function aiSmooth(pts,sig){
+  sig=sig||0.2; let A=pts.map(q=>q.slice()); const n=A.length; if(n<4) return A;
+  /* saltos sueltos: un punto que se aleja mucho de la media de sus vecinos se sustituye por ella */
+  for(let pass=0;pass<2;pass++) for(let i=1;i<n-1;i++){ const a=A[i-1],b=A[i],c=A[i+1], k=(b[0]-a[0])/Math.max(1e-6,c[0]-a[0]), mx=a[1]+(c[1]-a[1])*k, my=a[2]+(c[2]-a[2])*k, d=Math.hypot((b[1]-mx)*16/9,b[2]-my), sp=Math.hypot((c[1]-a[1])*16/9,c[2]-a[2]); if(d>0.012+sp*0.6){ b[1]=mx; b[2]=my; } }
+  const O=A.map(q=>q.slice());
+  for(let i=1;i<n;i++){ let sw=0,sx=0,sy=0; for(let j=0;j<n;j++){ const dt=A[j][0]-A[i][0]; if(Math.abs(dt)>sig*3) continue; const w=Math.exp(-dt*dt/(2*sig*sig)); sw+=w; sx+=w*A[j][1]; sy+=w*A[j][2]; } O[i][1]=sx/sw; O[i][2]=sy/sw; }
+  return O;
+}
 function trkPos(s,lt){
   const P=(s.pts||[]).filter(p=>p&&isFinite(p[0])&&isFinite(p[1])&&isFinite(p[2])); if(!P.length) return null;
   if(P.length===1||lt<=P[0][0]) return [P[0][1],P[0][2],0,P];
   const L=P[P.length-1]; if(lt>=L[0]) return [L[1],L[2],P.length-1,P];
   let i=1; while(i<P.length-1&&P[i][0]<lt) i++;
   const a=P[i-1], b=P[i], k=(lt-a[0])/Math.max(1e-6,b[0]-a[0]);
+  if(P.length>=4){ const p0=P[Math.max(0,i-2)], p3=P[Math.min(P.length-1,i+1)], k2=k*k, k3=k2*k, cr=(q0,q1,q2,q3)=>0.5*((2*q1)+(-q0+q2)*k+(2*q0-5*q1+4*q2-q3)*k2+(-q0+3*q1-3*q2+q3)*k3); return [cr(p0[1],a[1],b[1],p3[1]),cr(p0[2],a[2],b[2],p3[2]),i,P]; }
   return [a[1]+(b[1]-a[1])*k,a[2]+(b[2]-a[2])*k,i,P];
 }
 function trackDraw(ctx,s,W,H,lt){
@@ -11318,7 +11328,18 @@ async function aiTrackRun(p,secs,t0,ui){
 }
 
 /* ===== ANÁLISIS DE TODAS LAS JUGADORAS (como Once): se detecta a todas en el clip y cada una recibe un ID fijo ===== */
+/* copia oculta del vídeo para analizar: el vídeo de pantalla se queda quieto mientras la IA piensa, como en Once */
+async function aiClone(){
+  try{ const src=video.currentSrc||video.src; if(!src) return video;
+    const av=document.createElement('video'); av.muted=video.muted; av.preload='auto'; av.playsInline=true; av.crossOrigin=video.crossOrigin||null; av.style.cssText='position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none'; av.src=src; document.body.appendChild(av);
+    await new Promise((res,rej)=>{ let d=false; const ok=()=>{ if(!d){ d=true; res(); } }; av.addEventListener('loadeddata',ok,{once:true}); av.addEventListener('error',()=>{ if(!d){ d=true; rej(new Error('clon')); } },{once:true}); setTimeout(()=>{ if(!d){ d=true; rej(new Error('clon')); } },8000); });
+    if(!av.videoWidth) throw new Error('clon'); return av; }catch(e){ return video; }
+}
 async function aiMultiRun(secs,t0,ui,sel){
+  const video=await aiClone(); const isClone=(video!==window.__mainVideo&&video.style&&video.style.left==='-9999px');
+  try{ return await aiMultiRun2(video,isClone,secs,t0,ui,sel); } finally { if(isClone){ try{ video.pause(); video.removeAttribute('src'); video.load(); video.remove(); }catch(e){} } }
+}
+async function aiMultiRun2(video,isClone,secs,t0,ui,sel){
   AI.src=null;
   const vw=video.videoWidth, vh=video.videoHeight; if(!vw||!vh) return null;
   ui.msg('Cargando la IA…'); let ses=await aiLoad(); AI.useWasm=false; AI.rate0=userRate(); AI.muted0=video.muted;
@@ -11328,9 +11349,9 @@ async function aiMultiRun(secs,t0,ui,sel){
   const gcv=document.createElement('canvas'); gcv.width=288; gcv.height=Math.max(32,Math.round(288*vh/vw)); const gcx=gcv.getContext('2d',{willReadFrequently:true});
   await new Promise(res=>{ let d=false; const f=()=>{ if(d) return; d=true; video.removeEventListener('seeked',f); res(); }; video.addEventListener('seeked',f); try{ video.currentTime=t0; }catch(e){} setTimeout(f,1500); });
   sx_.drawImage(video,0,0); let prevG=aiGray(gcv,gcx);
-  const tracks=[]; let nid=0, tPrev=-1, nF=0, ema=0, pEma=0, stall=0, tgt=null; const step=useNative?0.12:0.18, MAXLOST=Math.round(2.2/step);
+  const tracks=[]; let nid=0, tPrev=-1, nF=0, ema=0, pEma=0, stall=0, tgt=null; const step=useNative?0.1:0.12, MAXLOST=Math.round(2.2/step);
   const newTrack=(b,img,S,lt)=>({id:++nid,fx:b.vx,fy:b.fy,px:b.vx,py:b.fy,vx:0,vy:0,h:b.vh,sig:aiSig(img,b,S),lost:0,last:lt,pts:[[+lt.toFixed(3),b.vx/vw,b.fy/vh]],dead:false});
-  let useP=typeof video.requestVideoFrameCallback==='function';
+  let useP=false;
   if(useP){ try{ video.muted=true; video.playbackRate=0.5; await video.play(); }catch(e){ useP=false; } }
   for(let n=0;!ui.stop();n++){
     let lt, firstFrame=(n===0);
@@ -11367,14 +11388,26 @@ async function aiMultiRun(secs,t0,ui,sel){
   }
   try{ video.pause(); video.playbackRate=AI.rate0||1; }catch(e){}
   AI.src=null; if(ui.frame) ui.frame(null);
-  return tracks.filter(t=>t.pts.length>=3).map(t=>({id:t.id,pts:t.pts,h:t.h/vh}));
+  return tracks.filter(t=>t.pts.length>=3).map(t=>({id:t.id,pts:t.pts,h:t.h/vh,sig:t.sig}));
 }
 /* de todas las jugadoras analizadas, elige la que está donde se pulsó (al inicio del clip) */
 function aiPick(tracks,p,secs){
   let best=null, bd=1e9;
   (tracks||[]).forEach(t=>{ const q=t.pts[0]; if(q[0]>0.35) return; const h=Math.max(0.03,t.h), d=Math.min(Math.hypot((q[1]-p.x)*16/9,q[2]-p.y)/h, Math.hypot((q[1]-p.x)*16/9,q[2]-h*0.5-p.y)/h); if(d<bd){ bd=d; best=t; } });
   if(!best||bd>0.9||best.pts.length<4) return null;
-  const out=best.pts.filter(q=>q[0]<=secs+0.05).map(q=>q.slice()); out[0][0]=0; return out.length>=4?out:null;
+  let out=best.pts.filter(q=>q[0]<=secs+0.05).map(q=>q.slice()); out[0][0]=0;
+  /* si la pista se corta (la tapan, se cruza), se enlaza con la pista nueva que aparece donde ella iba y con la misma camiseta */
+  const used=new Set([best.id]); let cur=best;
+  for(let g=0;g<6;g++){
+    const e=out[out.length-1]; if(e[0]>=secs-0.25) break;
+    const vx=out.length>3?(e[1]-out[out.length-4][1])/Math.max(0.05,e[0]-out[out.length-4][0]):0, vy=out.length>3?(e[2]-out[out.length-4][2])/Math.max(0.05,e[0]-out[out.length-4][0]):0;
+    let nb=null, nc=1e9;
+    (tracks||[]).forEach(t=>{ if(used.has(t.id)||!t.sig||!cur.sig) return; const q=t.pts[0], gap=q[0]-e[0]; if(gap<-0.05||gap>2.5) return; const h=Math.max(0.03,cur.h), px=e[1]+vx*Math.max(0,gap)*0.6, py=e[2]+vy*Math.max(0,gap)*0.6, dist=Math.hypot((q[1]-px)*16/9,q[2]-py)/h; if(dist>1.2+gap*2.2) return; const col=aiDist(cur.sig,t.sig); if(col>0.5) return; const c=dist+col*3; if(c<nc){ nc=c; nb=t; } });
+    if(!nb) break; used.add(nb.id); cur=nb;
+    nb.pts.forEach(q=>{ if(q[0]>e[0]&&q[0]<=secs+0.05) out.push(q.slice()); });
+    if(out[out.length-1]===e) break;
+  }
+  return out.length>=4?out:null;
 }
 /* seguimiento automático: busca a la jugadora fotograma a fotograma comparando su aspecto */
 async function autoTrack(p,secs,opts){
@@ -11390,8 +11423,10 @@ async function autoTrack(p,secs,opts){
   const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.04,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:0,ring:1,trail:0,panel:0}};
   let idx=-1; if(!opts){ tl.items.push(s); idx=tl.items.length-1; } ed.sel=null; TRK.on=true;
   let stop=false;
-  const bar=document.createElement('div'); bar.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9800;background:var(--panel,#222);color:var(--text,#fff);border:1px solid var(--line,#444);border-radius:12px;padding:10px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5)';
-  bar.innerHTML='<b id="atT">Siguiendo a la jugadora… 0%</b><button class="btn" id="atS">Parar</button>'; document.body.appendChild(bar);
+  /* ventana «Rastreo en curso» como la de Once: el vídeo se queda quieto mientras la IA piensa */
+  const bar=document.createElement('div'); bar.style.cssText='position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)';
+  bar.innerHTML='<div style="width:min(300px,86vw);background:#232427;border:1px solid #3a3b40;border-radius:6px;padding:14px 18px 16px;text-align:center;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.6);font:13px system-ui"><div style="font-size:12px;font-weight:600;margin-bottom:22px">Rastreo</div><div style="font-size:12px;margin-bottom:10px">Rastreo en curso</div><div style="position:relative;height:18px;background:#fff;border-radius:2px;overflow:hidden;margin-bottom:16px"><div id="atF" style="position:absolute;left:0;top:0;bottom:0;width:0;background:#19e68c;transition:width .2s"></div><span id="atP" style="position:relative;font-size:10px;color:#222;line-height:18px">0 %</span></div><button class="btn" id="atS" style="background:#19e68c;color:#06281a;border:0;font-weight:700;padding:5px 16px;border-radius:4px">Cancelar</button><b id="atT" style="display:none">0%</b></div>'; document.body.appendChild(bar);
+  { const T=bar.querySelector('#atT'); new MutationObserver(()=>{ const m=/(\d+)\s*%/.exec(T.textContent||''); if(m){ bar.querySelector('#atF').style.width=m[1]+'%'; bar.querySelector('#atP').textContent=m[1]+' %'; } }).observe(T,{childList:true,characterData:true,subtree:true}); }
   bar.querySelector('#atS').onclick=()=>{ stop=true; };
   try{
     video.pause();
@@ -11400,13 +11435,13 @@ async function autoTrack(p,secs,opts){
       /* 1) análisis de todas las jugadoras del clip (se guarda: las demás jugadoras del mismo clip salen al instante) */
       const single=((document.getElementById('dwTrkMode')||{}).value==='auto1');
       let M=(!single&&AI.multi&&AI.multi.key===videoKey&&Math.abs(AI.multi.t0-t0)<0.04&&AI.multi.secs>=secs-0.01)?AI.multi:null;
-      if(!M&&!single){ try{ const trs=await aiMultiRun(secs,t0,Object.assign({pt:q=>{ s.pts.push(q); tl.rev++; }},ui0),p); if(trs&&trs.length) M=AI.multi={key:videoKey,t0,secs,tracks:trs}; }catch(e){ console.warn('Análisis múltiple no disponible',e); } }
+      if(!M&&!single){ try{ const trs=await aiMultiRun(secs,t0,ui0,p); if(trs&&trs.length) M=AI.multi={key:videoKey,t0,secs,tracks:trs}; }catch(e){ console.warn('Análisis múltiple no disponible',e); } }
       if(M&&!stop) aiPts=aiPick(M.tracks,p,secs);
       /* 2) si no hay nadie donde pulsó, el seguimiento de una sola jugadora de siempre */
       if(!aiPts&&!stop){ s.pts.length=1; tl.rev++; aiPts=await aiTrackRun(p,secs,t0,{pt:q=>{ s.pts.push(q); tl.rev++; },msg:ui0.msg,stop:ui0.stop}); }; }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); toast('La IA no se pudo cargar ('+((e&&e.message)||e)+'). Uso el seguimiento básico, que falla más. Revisa que la carpeta «ai» esté subida a GitHub.'); }
     if(aiPts&&aiPts.length>=4){
-      /* recorrido suave: se promedia cada punto con sus vecinos (dos pasadas) para quitar los tirones de la detección */
-      const A=aiPts.map(q=>q.slice()); for(let pass=0;pass<2;pass++){ const B=A.map(q=>q.slice()); for(let i=1;i<A.length-1;i++){ B[i][1]=A[i-1][1]*0.25+A[i][1]*0.5+A[i+1][1]*0.25; B[i][2]=A[i-1][2]*0.25+A[i][2]*0.5+A[i+1][2]*0.25; } for(let i=0;i<A.length;i++){ A[i][1]=B[i][1]; A[i][2]=B[i][2]; } }
+      /* recorrido suave: se quitan saltos sueltos y se promedia en el tiempo (sin temblor) */
+      const A=aiSmooth(aiPts);
       s.pts=[s.pts[0]].concat(A.slice(1)); tl.rev++; } else {
     s.pts.length=1; tl.rev++;
     let fx=p.x*cw, fy=p.y*ch;                               /* pies */
@@ -12741,7 +12776,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz1 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz3 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
