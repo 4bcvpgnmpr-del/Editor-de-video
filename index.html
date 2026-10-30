@@ -1758,7 +1758,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
               <button class="mini" id="dwDup">Duplicar</button>
               <button class="mini" id="dwDel">Borrar figura</button>
               <button class="mini" id="dwText" hidden>Editar texto</button>
-              <span id="dwTrkTool" hidden style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="dwTrkMode" title="Cómo seguir a la jugadora"><option value="auto">Automático (todas las jugadoras)</option><option value="auto1">Automático (solo una)</option><option value="man">A mano</option></select><select id="dwTrkDur" title="Hasta cuándo seguirla"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select><span class="hint" style="margin:0">Pulsa en sus pies</span></span>
+              <span id="dwTrkTool" hidden style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="dwTrkMode" title="Cómo seguir a la jugadora"><option value="auto">Automático (todas las jugadoras)</option><option value="auto1">Automático (solo una)</option><option value="man">A mano</option></select><select id="dwTrkDur" title="Hasta cuándo seguirla"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select><span class="hint" style="margin:0">Pulsa en sus pies y confirma</span></span>
               <span id="dwTrk" hidden style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap"><label><input type="checkbox" data-trk="beam"> Foco</label><label><input type="checkbox" data-trk="ring"> Anillo</label><label><input type="checkbox" data-trk="trail"> Estela</label><label><input type="checkbox" data-trk="panel"> Panel</label><button class="mini" id="dwTrkRe">Repetir seguimiento</button></span>
               <span id="dwPlay" hidden style="display:inline-flex;gap:6px;align-items:center"><select id="dwPlayV" title="Cómo se ve la jugada"><option value="ambas">2D + 3D</option><option value="2d">Solo 2D</option><option value="3d">Solo 3D</option></select><button class="mini" id="dwPlayF">Cambiar jugada</button></span>
             </div>
@@ -11451,11 +11451,28 @@ async function autoTrack(p,secs,opts){
   trkFinish(ed,tl,s,idx);
   toast('Seguimiento listo. Si se desvía, pulsa «Repetir seguimiento» o usa «A mano».');
 }
+/* como Once: pulsas a la jugadora, queda el anillo puesto y la IA solo piensa cuando das la orden */
+let TP=null;
+function trkPendClose(){ if(TP){ clearInterval(TP.iv); TP.el.remove(); TP=null; } }
+function trkPend(p){
+  const vw=document.getElementById('vwrap'); if(!vw) return;
+  trkPendClose();
+  const el=document.createElement('div'); el.id='trkPend'; el.style.cssText='position:absolute;z-index:15;pointer-events:none;width:0;height:0';
+  el.innerHTML='<div style="position:absolute;left:-26px;top:-11px;width:52px;height:22px;border:3px solid #ff3b30;border-radius:50%;box-shadow:0 0 10px rgba(255,59,48,.7);background:rgba(255,59,48,.18)"></div>'
+   +'<div style="position:absolute;left:-70px;top:18px;display:flex;gap:6px;pointer-events:auto;white-space:nowrap"><button class="btn primary" id="tpGo" type="button" title="La IA sigue a esta jugadora">✓ Seguir</button><button class="btn" id="tpNo" type="button" title="Quitar">✕</button></div>';
+  vw.appendChild(el);
+  const place=()=>{ const tr=document.getElementById('tele'), ref=(tr&&tr.offsetWidth>0)?tr:video, r=ref.getBoundingClientRect(), w=vw.getBoundingClientRect(); if(!r.width) return; el.style.left=(r.left-w.left+p.x*r.width)+'px'; el.style.top=(r.top-w.top+p.y*r.height)+'px'; };
+  place();
+  TP={el,iv:setInterval(()=>{ if(!teleEd||!document.body.contains(el)){ trkPendClose(); return; } place(); },200)};
+  el.querySelector('#tpGo').onclick=()=>{ trkPendClose(); autoTrack(p,+((document.getElementById('dwTrkDur')||{}).value)||5); };
+  el.querySelector('#tpNo').onclick=trkPendClose;
+  toast('Ajusta con otro toque si hace falta y pulsa «✓ Seguir» para que la IA la siga.');
+}
 function startTrack(p){
   const ed=teleEd, tl=ed.tele, t0=tl.t;
   const modeSel=document.getElementById('dwTrkMode'), file=!(window.__srcMode&&window.__srcMode()!=='file');
   if(modeSel&&(modeSel.value==='auto'||modeSel.value==='auto1')){
-    if(file) return void autoTrack(p,+((document.getElementById('dwTrkDur')||{}).value)||5);
+    if(file) return void trkPend(p);
     toast('El seguimiento automático solo funciona con vídeos del equipo o archivos. Va a mano.');
   }
   const s={type:'track',color:ed.color,sw:ed.sw,est:ed.est,anim:ed.anim,r:0.04,cx:p.x,cy:p.y,pts:[[0,p.x,p.y]],st:{beam:0,ring:1,trail:0,panel:0}};
@@ -12724,7 +12741,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz1 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
