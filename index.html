@@ -1753,7 +1753,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
               <button class="mini" id="dwDup">Duplicar</button>
               <button class="mini" id="dwDel">Borrar figura</button>
               <button class="mini" id="dwText" hidden>Editar texto</button>
-              <span id="dwTrkTool" hidden style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="dwTrkMode" title="Cómo seguir a la jugadora"><option value="auto">Automático</option><option value="man">A mano</option></select><select id="dwTrkDur" title="Hasta cuándo seguirla"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select><span class="hint" style="margin:0">Pulsa en sus pies</span></span>
+              <span id="dwTrkTool" hidden style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="dwTrkMode" title="Cómo seguir a la jugadora"><option value="auto">Automático (todas las jugadoras)</option><option value="auto1">Automático (solo una)</option><option value="man">A mano</option></select><select id="dwTrkDur" title="Hasta cuándo seguirla"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select><span class="hint" style="margin:0">Pulsa en sus pies</span></span>
               <span id="dwTrk" hidden style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap"><label><input type="checkbox" data-trk="beam"> Foco</label><label><input type="checkbox" data-trk="ring"> Anillo</label><label><input type="checkbox" data-trk="trail"> Estela</label><label><input type="checkbox" data-trk="panel"> Panel</label><button class="mini" id="dwTrkRe">Repetir seguimiento</button></span>
               <span id="dwPlay" hidden style="display:inline-flex;gap:6px;align-items:center"><select id="dwPlayV" title="Cómo se ve la jugada"><option value="ambas">2D + 3D</option><option value="2d">Solo 2D</option><option value="3d">Solo 3D</option></select><button class="mini" id="dwPlayF">Cambiar jugada</button></span>
             </div>
@@ -11265,13 +11265,13 @@ async function aiTrackRun(p,secs,t0,ui){
   let sig=aiSig(det.img,best,det.S), hRef=best.vh, vx=0, vy=0, lost=0; fx=best.vx; fy=best.fy;
   const pts=[[0,fx/vw,fy/vh]], step=ses.native?0.1:0.15, N=Math.floor(secs/step);
   /* en vez de saltar a cada instante (lento), se deja correr el vídeo y se analiza el fotograma que llega: ~2 veces más rápido */
-  let useP=typeof video.requestVideoFrameCallback==='function', tPrev=0, DE=3, needDet=false, nTpl=0, pEma=0;
+  let stallS=0, useP=typeof video.requestVideoFrameCallback==='function', tPrev=0, DE=3, needDet=false, nTpl=0, pEma=0;
   if(useP){ try{ video.muted=true; video.playbackRate=1; await video.play(); }catch(e){ useP=false; } }
   for(let n=1;!ui.stop();n++){
     let lt;
     if(useP){ const mt=await new Promise(res=>{ let d=false; const fin=v=>{ if(!d){ d=true; res(v); } }; const cb=(now,meta)=>{ if(meta.mediaTime>=t0+tPrev+step*0.9||video.ended) fin(meta.mediaTime); else video.requestVideoFrameCallback(cb); }; video.requestVideoFrameCallback(cb); setTimeout(()=>fin(video.currentTime),1500); }); lt=mt-t0; if(video.ended&&lt<=tPrev) break; }
     else { if(n>N) break; lt=n*step; await seek(t0+lt); }
-    if(lt>secs+0.05) break; if(lt<=tPrev) continue;
+    if(lt>secs+0.05) break; if(lt<=tPrev){ if(video.ended||++stallS>=2) break; continue; } stallS=0;
     const kk=Math.max(0.3,Math.min(4,(lt-tPrev)/step)); tPrev=lt; const tIni=performance.now();
     if(AI.src) AI.src.getContext('2d').drawImage(video,0,0);
     const curG=aiGray(gcv,gcx), prevG0=prevG; const pan=aiPan(prevG,curG,gcv.width,gcv.height); prevG=curG;
@@ -11282,7 +11282,7 @@ async function aiTrackRun(p,secs,t0,ui){
     if(!wide&&!lost&&!needDet&&(n%DE!==0)){ tpl=aiTpl(prevG0,curG,gcv.width,gcv.height,fx*gsc,(fy-hRef*0.5)*gsc,hRef*0.38*gsc,hRef*0.8*gsc,Math.max(3,Math.round((hRef*0.25+Math.abs(vx)*kk+Math.abs(sx))*gsc))); }
     if(tpl&&tpl.sad<22){
       const ox=fx, oy=fy; fx=Math.max(0,Math.min(vw,fx+tpl.dx/gsc)); fy=Math.max(0,Math.min(vh,fy+tpl.dy/gsc)); vx=(fx-ox-sx)/kk*0.55+vx*0.3; vy=(fy-oy-sy)/kk*0.55+vy*0.3; nTpl++;
-      pts.push([+lt.toFixed(3),fx/vw,fy/vh]);
+      pts.push([+lt.toFixed(3),fx/vw,fy/vh]); if(ui.pt) ui.pt(pts[pts.length-1]);
       const proc0=(performance.now()-tIni)/1000; pEma=pEma?pEma*0.8+proc0*0.2:proc0;
       if(useP){ try{ video.playbackRate=Math.max(0.25,Math.min(2.5,step*0.9/Math.max(0.015,pEma))); }catch(e){} }
       ui.msg(eng+' siguiendo a la jugadora… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/IA':'')+' · rápido');
@@ -11296,13 +11296,71 @@ async function aiTrackRun(p,secs,t0,ui){
     det.boxes.forEach(b=>{ const dist=Math.hypot(b.vx-px,b.fy-py)/hRef; if(dist>(lost?3.2:0.95)*Math.max(1,kk)) return; const col=aiDist(sig,aiSig(det.img,b,det.S)), cost=dist*(lost?0.5:1)+col*2.2; if(cost<mc){ mc=cost; m=b; } });
     if(m&&mc<(lost?2.6:2.0)){ lost=0; vx=(m.vx-fx-sx)/kk*0.55+vx*0.3; vy=(m.fy-fy-sy)/kk*0.55+vy*0.3; fx=m.vx; fy=m.fy; hRef=hRef*0.8+m.vh*0.2; if(mc<0.9){ const s2=aiSig(det.img,m,det.S); for(let i=0;i<sig.length;i++) sig[i]=sig[i]*0.9+s2[i]*0.1; } }
     else { lost++; if(lost>24) break; fx+=sx+vx*0.8*kk; fy+=sy+vy*0.8*kk; vx*=0.85; vy*=0.85; fx=Math.max(0,Math.min(vw,fx)); fy=Math.max(0,Math.min(vh,fy)); }
-    pts.push([+lt.toFixed(3),fx/vw,fy/vh]);
+    pts.push([+lt.toFixed(3),fx/vw,fy/vh]); if(ui.pt) ui.pt(pts[pts.length-1]);
     if(useP){ const proc=(performance.now()-tIni)/1000; pEma=pEma?pEma*0.8+proc*0.2:proc; try{ video.playbackRate=Math.max(0.25,Math.min(2.5,step*0.9/Math.max(0.015,pEma))); }catch(e){} }   /* si el análisis va lento, el vídeo corre más despacio para no saltarse fotogramas */
     ui.msg(eng+' siguiendo a la jugadora… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/fotograma':'')+(lost?' (buscándola)':''));
   }
   try{ video.pause(); video.playbackRate=AI.rate0||1; }catch(e){}
   AI.src=null; AI.dbg={nTpl,nDet,pEma:Math.round(pEma*1000),ema:Math.round(ema)};
   return pts;
+}
+
+/* ===== ANÁLISIS DE TODAS LAS JUGADORAS (como Once): se detecta a todas en el clip y cada una recibe un ID fijo ===== */
+async function aiMultiRun(secs,t0,ui){
+  AI.src=null;
+  const vw=video.videoWidth, vh=video.videoHeight; if(!vw||!vh) return null;
+  ui.msg('Cargando la IA…'); let ses=await aiLoad(); AI.useWasm=false; AI.rate0=userRate(); AI.muted0=video.muted;
+  const useNative=!!ses.native; if(!useNative){ try{ ses=await aiLoadWide(); }catch(e){} }
+  const cv=document.createElement('canvas'); cv.width=cv.height=640; const cx=cv.getContext('2d',{willReadFrequently:true});
+  const full={x:0,y:0,w:vw,h:vh}, snap=document.createElement('canvas'); snap.width=vw; snap.height=vh; const sx_=snap.getContext('2d'); AI.src=snap;
+  const gcv=document.createElement('canvas'); gcv.width=288; gcv.height=Math.max(32,Math.round(288*vh/vw)); const gcx=gcv.getContext('2d',{willReadFrequently:true});
+  await new Promise(res=>{ let d=false; const f=()=>{ if(d) return; d=true; video.removeEventListener('seeked',f); res(); }; video.addEventListener('seeked',f); try{ video.currentTime=t0; }catch(e){} setTimeout(f,1500); });
+  sx_.drawImage(video,0,0); let prevG=aiGray(gcv,gcx);
+  const tracks=[]; let nid=0, tPrev=-1, nF=0, ema=0, pEma=0, stall=0; const step=useNative?0.12:0.18, MAXLOST=Math.round(2.2/step);
+  const newTrack=(b,img,S,lt)=>({id:++nid,fx:b.vx,fy:b.fy,px:b.vx,py:b.fy,vx:0,vy:0,h:b.vh,sig:aiSig(img,b,S),lost:0,last:lt,pts:[[+lt.toFixed(3),b.vx/vw,b.fy/vh]],dead:false});
+  let useP=typeof video.requestVideoFrameCallback==='function';
+  if(useP){ try{ video.muted=true; video.playbackRate=0.5; await video.play(); }catch(e){ useP=false; } }
+  for(let n=0;!ui.stop();n++){
+    let lt, firstFrame=(n===0);
+    if(firstFrame) lt=0;
+    else if(useP){ lt=await new Promise(res=>{ let d=false; const fin=v=>{ if(!d){ d=true; res(v); } }; const cb=(now,meta)=>{ if(meta.mediaTime>=t0+tPrev+step*0.9||video.ended) fin(meta.mediaTime-t0); else video.requestVideoFrameCallback(cb); }; video.requestVideoFrameCallback(cb); setTimeout(()=>fin(video.currentTime-t0),1500); }); }
+    else { lt=n*step; if(lt>secs+0.05) break; await new Promise(res=>{ let d=false; const f=()=>{ if(d) return; d=true; video.removeEventListener('seeked',f); res(); }; video.addEventListener('seeked',f); try{ video.currentTime=Math.min(t0+lt,(video.duration||t0+lt)-0.01); }catch(e){} setTimeout(f,1500); }); }
+    if(lt>secs+0.05) break; if(!firstFrame&&lt<=tPrev){ if(video.ended||++stall>=2) break; continue; } stall=0;
+    const dt=firstFrame?step:Math.max(0.02,lt-tPrev); tPrev=lt; const tIni=performance.now();
+    sx_.drawImage(video,0,0);
+    let sx=0, sy=0;
+    if(!firstFrame){ const curG=aiGray(gcv,gcx); const pan=aiPan(prevG,curG,gcv.width,gcv.height); prevG=curG; sx=pan.dx*vw/gcv.width; sy=pan.dy*vh/gcv.height; }
+    const tD=performance.now(); const det=await aiDetect(ses,cv,cx,full,0.25); { const d_=performance.now()-tD; nF++; if(nF>1) ema=ema?ema*0.7+d_*0.3:d_; }
+    /* si la IA nativa va lenta en este equipo se cambia a la ligera */
+    if(ses.native&&nF>=4&&ema>420){ try{ ses=await aiLoadWide(); AI.useWasm=true; }catch(e){} }
+    const B=det.boxes.filter(b=>b.vh>vh*0.035);
+    B.forEach(b=>{ b.sg=aiSig(det.img,b,det.S); });
+    const act=tracks.filter(t=>!t.dead);
+    act.forEach(t=>{ t.px=t.fx+sx+t.vx*dt; t.py=t.fy+sy+t.vy*dt; t.fx=t.px; t.fy=t.py; });   /* dónde debería estar ahora (paneo + velocidad) */
+    const pairs=[];
+    if(!firstFrame) act.forEach((t,ti)=>B.forEach((b,bi)=>{ const dist=Math.hypot(b.vx-t.px,b.fy-t.py)/t.h, gate=0.8+Math.min(t.lost,10)*0.3; if(dist>gate) return; const col=aiDist(t.sig,b.sg), cost=dist*(t.lost?0.6:1)+col*1.7; if(cost<2.1) pairs.push([cost,ti,bi]); }));
+    pairs.sort((a,b)=>a[0]-b[0]); const ut=new Set(), ub=new Set();
+    pairs.forEach(([c,ti,bi])=>{ if(ut.has(ti)||ub.has(bi)) return; ut.add(ti); ub.add(bi); const t=act[ti], b=B[bi];
+      const lim=t.h*4, nvx=(b.vx-(t.fx-t.vx*dt)-sx)/dt, nvy=(b.fy-(t.fy-t.vy*dt)-sy)/dt;
+      t.vx=Math.max(-lim,Math.min(lim,nvx))*0.5+t.vx*0.4; t.vy=Math.max(-lim,Math.min(lim,nvy))*0.5+t.vy*0.4;
+      t.fx=b.vx; t.fy=b.fy; t.h=t.h*0.8+b.vh*0.2; t.lost=0; t.last=lt; if(c<0.9){ for(let i=0;i<t.sig.length;i++) t.sig[i]=t.sig[i]*0.92+b.sg[i]*0.08; }
+      t.pts.push([+lt.toFixed(3),b.vx/vw,b.fy/vh]); });
+    act.forEach((t,ti)=>{ if(ut.has(ti)) return; t.lost++; t.vx*=0.85; t.vy*=0.85; if(t.lost>MAXLOST) t.dead=true; });
+    B.forEach((b,bi)=>{ if(ub.has(bi)) return; tracks.push(newTrack(b,det.img,det.S,lt)); });
+    if(useP){ const proc=(performance.now()-tIni)/1000; pEma=pEma?pEma*0.8+proc*0.2:proc; try{ video.playbackRate=Math.max(0.2,Math.min(2,step*0.9/Math.max(0.02,pEma))); }catch(e){} }
+    ui.msg((ses.native&&!AI.useWasm?'IA nativa':'IA')+' analizando a todas las jugadoras… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/fotograma':''));
+    if(ui.frame) ui.frame(tracks.filter(t=>!t.dead&&!t.lost).map(t=>[t.fx/vw,t.fy/vh,t.h/vh]));
+  }
+  try{ video.pause(); video.playbackRate=AI.rate0||1; }catch(e){}
+  AI.src=null; if(ui.frame) ui.frame(null);
+  return tracks.filter(t=>t.pts.length>=3).map(t=>({id:t.id,pts:t.pts,h:t.h/vh}));
+}
+/* de todas las jugadoras analizadas, elige la que está donde se pulsó (al inicio del clip) */
+function aiPick(tracks,p,secs){
+  let best=null, bd=1e9;
+  (tracks||[]).forEach(t=>{ const q=t.pts[0]; if(q[0]>0.35) return; const h=Math.max(0.03,t.h), d=Math.min(Math.hypot((q[1]-p.x)*16/9,q[2]-p.y)/h, Math.hypot((q[1]-p.x)*16/9,q[2]-h*0.5-p.y)/h); if(d<bd){ bd=d; best=t; } });
+  if(!best||bd>0.9||best.pts.length<4) return null;
+  const out=best.pts.filter(q=>q[0]<=secs+0.05).map(q=>q.slice()); out[0][0]=0; return out.length>=4?out:null;
 }
 /* seguimiento automático: busca a la jugadora fotograma a fotograma comparando su aspecto */
 async function autoTrack(p,secs,opts){
@@ -11323,8 +11381,20 @@ async function autoTrack(p,secs,opts){
   bar.querySelector('#atS').onclick=()=>{ stop=true; };
   try{
     video.pause();
-    let aiPts=null; try{ aiPts=await aiTrackRun(p,secs,t0,{msg:tx=>{ const el=bar.querySelector('#atT'); if(el) el.textContent=tx; },stop:()=>stop}); }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); toast('La IA no se pudo cargar ('+((e&&e.message)||e)+'). Uso el seguimiento básico, que falla más. Revisa que la carpeta «ai» esté subida a GitHub.'); }
-    if(aiPts&&aiPts.length>=4){ aiPts.forEach((q,i)=>{ if(i) s.pts.push(q); }); tl.rev++; } else {
+    let aiPts=null; try{
+      const ui0={msg:tx=>{ const el=bar.querySelector('#atT'); if(el) el.textContent=tx; },stop:()=>stop};
+      /* 1) análisis de todas las jugadoras del clip (se guarda: las demás jugadoras del mismo clip salen al instante) */
+      const single=((document.getElementById('dwTrkMode')||{}).value==='auto1');
+      let M=(!single&&AI.multi&&AI.multi.key===videoKey&&Math.abs(AI.multi.t0-t0)<0.04&&AI.multi.secs>=secs-0.01)?AI.multi:null;
+      if(!M&&!single){ try{ const trs=await aiMultiRun(secs,t0,ui0); if(trs&&trs.length) M=AI.multi={key:videoKey,t0,secs,tracks:trs}; }catch(e){ console.warn('Análisis múltiple no disponible',e); } }
+      if(M&&!stop) aiPts=aiPick(M.tracks,p,secs);
+      /* 2) si no hay nadie donde pulsó, el seguimiento de una sola jugadora de siempre */
+      if(!aiPts&&!stop) aiPts=await aiTrackRun(p,secs,t0,{pt:q=>{ s.pts.push(q); tl.rev++; },msg:ui0.msg,stop:ui0.stop}); }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); toast('La IA no se pudo cargar ('+((e&&e.message)||e)+'). Uso el seguimiento básico, que falla más. Revisa que la carpeta «ai» esté subida a GitHub.'); }
+    if(aiPts&&aiPts.length>=4){
+      /* recorrido suave: se promedia cada punto con sus vecinos (dos pasadas) para quitar los tirones de la detección */
+      const A=aiPts.map(q=>q.slice()); for(let pass=0;pass<2;pass++){ const B=A.map(q=>q.slice()); for(let i=1;i<A.length-1;i++){ B[i][1]=A[i-1][1]*0.25+A[i][1]*0.5+A[i+1][1]*0.25; B[i][2]=A[i-1][2]*0.25+A[i][2]*0.5+A[i+1][2]*0.25; } for(let i=0;i<A.length;i++){ A[i][1]=B[i][1]; A[i][2]=B[i][2]; } }
+      s.pts=[s.pts[0]].concat(A.slice(1)); tl.rev++; } else {
+    s.pts.length=1; tl.rev++;
     let fx=p.x*cw, fy=p.y*ch;                               /* pies */
     let data=await grab(t0);
     const patch=(d,x,y)=>{ const o=new Float32Array(bw*bh*3); let k=0; for(let j=0;j<bh;j++) for(let i=0;i<bw;i++){ const xx=Math.min(cw-1,Math.max(0,Math.round(x-bw/2+i))), yy=Math.min(ch-1,Math.max(0,Math.round(y-bh+j+bh*0.1))); const q=(yy*cw+xx)*4; o[k++]=d[q]; o[k++]=d[q+1]; o[k++]=d[q+2]; } return o; };
@@ -11370,7 +11440,7 @@ async function autoTrack(p,secs,opts){
 function startTrack(p){
   const ed=teleEd, tl=ed.tele, t0=tl.t;
   const modeSel=document.getElementById('dwTrkMode'), file=!(window.__srcMode&&window.__srcMode()!=='file');
-  if(modeSel&&modeSel.value==='auto'){
+  if(modeSel&&(modeSel.value==='auto'||modeSel.value==='auto1')){
     if(file) return void autoTrack(p,+((document.getElementById('dwTrkDur')||{}).value)||5);
     toast('El seguimiento automático solo funciona con vídeos del equipo o archivos. Va a mano.');
   }
@@ -11390,7 +11460,7 @@ function startTrack(p){
   });
 }
 document.addEventListener('change',e=>{ const c=e.target&&e.target.closest&&e.target.closest('#dwTrk [data-trk]'); if(!c||!teleEd) return; const s=teleEd.tele.items[teleEd.sel]; if(!s||s.type!=='track') return; s.st=s.st||{}; s.st[c.dataset.trk]=c.checked?1:0; teleEd.tele.rev++; teleKey=''; commitTele(); });
-document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.target.closest('#dwTrkRe'); if(!b||!teleEd) return; const ed=teleEd, s=ed.tele.items[ed.sel]; if(!s||s.type!=='track') return; ed.tele.items.splice(ed.sel,1); ed.tele.rev++; setTool('track'); toast('Pulsa en sus pies y síguela de nuevo.'); });
+document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.target.closest('#dwTrkRe'); if(!b||!teleEd) return; const ed=teleEd, s=ed.tele.items[ed.sel]; if(!s||s.type!=='track') return; AI.multi=null; ed.tele.items.splice(ed.sel,1); ed.tele.rev++; setTool('track'); toast('Pulsa en sus pies y síguela de nuevo.'); });
 /* borrar o editar un dibujo: los botones aparecen pegados al propio dibujo */
 (function(){
   const vw=document.getElementById('vwrap'); if(!vw) return;
@@ -12079,7 +12149,7 @@ function barBuild(){
     if(colEl){ colEl.remove(); strip.insertBefore(cb,strip.children[2]||null); }
     strip.append(o,m); const pan=document.createElement('div'); pan.className='dwp'; k.slice(3).forEach(x=>pan.append(x));
     /* en la fila solo las herramientas de cada día; el resto va en «Más» (dentro del panel) para no tapar el vídeo */
-    { const g=strip.querySelector('.g'); if(g){ const main=['select','arrow','line','curve','circle','rect','text','pen','spot'];
+    { const g=strip.querySelector('.g'); if(g){ const main=['select','arrow','line','curve','circle','rect','text','pen','spot','track'];
         const more=document.createElement('div'); more.className='g dwmore'; [...g.children].forEach(b=>{ if(!main.includes(b.dataset.tool)) more.append(b); }); pan.insertBefore(more,pan.firstChild);
         const lb=document.createElement('div'); lb.className='hint'; lb.textContent='Más herramientas'; pan.insertBefore(lb,more); } } dwBar.append(strip,pan); if(colEl) dwBar.append(colEl);
     let mn=false; try{ mn=localStorage.getItem('bbtag.dwMin')==='1'; }catch(_){}
@@ -12640,7 +12710,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zu · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zx · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
