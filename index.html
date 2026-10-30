@@ -356,9 +356,9 @@ html.ed-pub [data-ent],html.ed-pub #entAll,html.ed-pub [data-entf],html.ed-pub #
 body.ipad #dwBar{width:210px}body.ipad #dwBar .g button{height:40px}body.ipad #dwBar button{padding:9px 6px;font-size:14px}body.ipad #dwBar .c i{height:22px}
 #dwBar .hint{color:#9fb2c6;font:600 11px Inter,Barlow,sans-serif;line-height:1.3}
 /* barra de dibujo compacta (fila arriba) */
-#dwBar{left:8px;right:8px;top:8px;width:auto;max-height:none;overflow:visible;padding:0;background:none;border:0;display:block;pointer-events:none}
+#dwBar{left:0;right:0;top:0;width:auto;max-height:none;overflow:visible;padding:0;background:none;border:0;display:block;pointer-events:none}
 #dwBar>*{pointer-events:auto}
-#dwBar .dws{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;background:rgba(5,12,20,.93);border:1px solid #2b4764;border-radius:14px;padding:6px;width:max-content;max-width:100%;scrollbar-width:none}
+#dwBar .dws{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;background:#17181c;border:0;border-bottom:1px solid #2b4764;border-radius:0;padding:0 10px;height:var(--dwH,46px);box-sizing:border-box;width:100%;scrollbar-width:none}
 #dwBar .dws::-webkit-scrollbar{display:none}
 #dwBar .dws>*{flex:none}
 #dwBar .dws .g{display:flex;grid-template-columns:none;gap:3px}
@@ -376,15 +376,20 @@ body.ipad #dwBar .dws .c i{width:26px;height:26px}
 #dwBar.min .dws>.g,#dwBar.min .dws>.c,#dwBar.min .dws>.dwo,#dwBar.min .dws .r button:not([data-act=end]){display:none}
 #dwBar.min .dwp{display:none!important}
 /* en pantalla completa la fila se coloca entre los botones de la izquierda y el panel de cortes, sin taparlos */
-body.vfull #dwBar{left:136px;right:var(--dwR,8px)}
+/* barra fija arriba como Once: va por encima del vídeo, no encima de la imagen */
+.vwrap{--dwH:46px}
+body.vfull .vwrap{--dwH:58px}
+.vwrap.dwOn video{top:var(--dwH);bottom:0;height:auto}
+.vwrap.dwOn #dwCuts{top:calc(var(--dwH) + 8px);max-height:calc(100% - var(--dwH) - 16px)}
+body.vfull #dwBar .dws{padding-left:188px}
+body.vfull #dwBar>.c{left:188px}
 #dwBar .dwmore{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px}
 #dwBar .dwmore button{width:auto!important;height:36px!important}
 #dwBar .dwc{height:32px;width:38px;padding:0!important;display:flex;align-items:center;justify-content:center}
 #dwBar .dwc i{width:20px;height:20px;border-radius:50%;border:2px solid #fff;display:block}
-#dwBar>.c{display:none;position:absolute;left:0;top:50px;flex-wrap:wrap;gap:6px;max-width:260px;background:rgba(5,12,20,.95);border:1px solid #2b4764;border-radius:14px;padding:8px;align-items:center}
+#dwBar>.c{display:none;position:absolute;left:10px;top:calc(var(--dwH,46px) + 4px);flex-wrap:wrap;gap:6px;max-width:260px;background:rgba(5,12,20,.95);border:1px solid #2b4764;border-radius:14px;padding:8px;align-items:center}
 #dwBar>.c i{width:26px;height:26px;border-radius:50%;cursor:pointer;display:inline-block}
 #dwBar.colp>.c{display:flex}
-body.vfull #dwBar>.c{left:0}
 body.ipad #dwBar{width:auto}
 
 .tele.edit{pointer-events:auto;cursor:crosshair;outline:2px solid var(--accent);outline-offset:-2px}
@@ -10691,10 +10696,10 @@ let teleColor=COLORS[0], teleSw=4, teleEst=(lsGet('bbtag.teleEst')||'pro'), tele
 const tele=$('#tele'), teleSvg=$('#teleSvg'), lensCv=$('#lensCv');
 
 function layoutTele(){
-  const wrap=tele.parentElement||$('#vwrap'), ww=wrap.clientWidth, wh=wrap.clientHeight, vw_=video.videoWidth, vh_=video.videoHeight;
+  const wrap=tele.parentElement||$('#vwrap'), dT=wrap.classList.contains('dwOn')?(parseFloat(getComputedStyle(wrap).getPropertyValue('--dwH'))||46):0, ww=wrap.clientWidth, wh=wrap.clientHeight-dT, vw_=video.videoWidth, vh_=video.videoHeight;
   if(!vw_||!vh_||!ww||!wh) return;
   const sc=Math.min(ww/vw_,wh/vh_), w=vw_*sc, h=vh_*sc;
-  tele.style.left=((ww-w)/2)+'px'; tele.style.top=((wh-h)/2)+'px'; tele.style.width=w+'px'; tele.style.height=h+'px';
+  tele.style.left=((ww-w)/2)+'px'; tele.style.top=(dT+(wh-h)/2)+'px'; tele.style.width=w+'px'; tele.style.height=h+'px';
   SH=SW*vh_/vw_; teleSvg.setAttribute('viewBox','0 0 '+SW+' '+SH.toFixed(2));
   const dpr=Math.min(2,window.devicePixelRatio||1);
   if(lensCv.width!==Math.round(w*dpr)||lensCv.height!==Math.round(h*dpr)){lensCv.width=Math.round(w*dpr);lensCv.height=Math.round(h*dpr);}
@@ -11178,6 +11183,13 @@ async function aiLoadWasm(){
   catch(e){ ses=await ort.InferenceSession.create('ai/yolov8n.onnx',{executionProviders:['wasm']}); ses.S=640; }
   AI.wasm=ses; return ses;
 }
+/* modelo de 640 (el más fino del navegador) para analizar a todas las jugadoras de un plano abierto */
+async function aiLoad640(){
+  if(AI.w640) return AI.w640;
+  await aiLoadWasm();
+  try{ const m=await ort.InferenceSession.create('ai/yolov8n.onnx',{executionProviders:['wasm']}); m.S=640; AI.w640=m; }catch(e){ return await aiLoadWide(); }
+  return AI.w640;
+}
 /* modelo mediano (416) para buscar a la jugadora en todo el encuadre cuando la pierde */
 async function aiLoadWide(){
   if(AI.ses&&AI.ses.native&&!AI.useWasm) return AI.ses;
@@ -11306,17 +11318,17 @@ async function aiTrackRun(p,secs,t0,ui){
 }
 
 /* ===== ANÁLISIS DE TODAS LAS JUGADORAS (como Once): se detecta a todas en el clip y cada una recibe un ID fijo ===== */
-async function aiMultiRun(secs,t0,ui){
+async function aiMultiRun(secs,t0,ui,sel){
   AI.src=null;
   const vw=video.videoWidth, vh=video.videoHeight; if(!vw||!vh) return null;
   ui.msg('Cargando la IA…'); let ses=await aiLoad(); AI.useWasm=false; AI.rate0=userRate(); AI.muted0=video.muted;
-  const useNative=!!ses.native; if(!useNative){ try{ ses=await aiLoadWide(); }catch(e){} }
+  const useNative=!!ses.native; if(!useNative){ try{ ses=await aiLoad640(); }catch(e){} }
   const cv=document.createElement('canvas'); cv.width=cv.height=640; const cx=cv.getContext('2d',{willReadFrequently:true});
   const full={x:0,y:0,w:vw,h:vh}, snap=document.createElement('canvas'); snap.width=vw; snap.height=vh; const sx_=snap.getContext('2d'); AI.src=snap;
   const gcv=document.createElement('canvas'); gcv.width=288; gcv.height=Math.max(32,Math.round(288*vh/vw)); const gcx=gcv.getContext('2d',{willReadFrequently:true});
   await new Promise(res=>{ let d=false; const f=()=>{ if(d) return; d=true; video.removeEventListener('seeked',f); res(); }; video.addEventListener('seeked',f); try{ video.currentTime=t0; }catch(e){} setTimeout(f,1500); });
   sx_.drawImage(video,0,0); let prevG=aiGray(gcv,gcx);
-  const tracks=[]; let nid=0, tPrev=-1, nF=0, ema=0, pEma=0, stall=0; const step=useNative?0.12:0.18, MAXLOST=Math.round(2.2/step);
+  const tracks=[]; let nid=0, tPrev=-1, nF=0, ema=0, pEma=0, stall=0, tgt=null; const step=useNative?0.12:0.18, MAXLOST=Math.round(2.2/step);
   const newTrack=(b,img,S,lt)=>({id:++nid,fx:b.vx,fy:b.fy,px:b.vx,py:b.fy,vx:0,vy:0,h:b.vh,sig:aiSig(img,b,S),lost:0,last:lt,pts:[[+lt.toFixed(3),b.vx/vw,b.fy/vh]],dead:false});
   let useP=typeof video.requestVideoFrameCallback==='function';
   if(useP){ try{ video.muted=true; video.playbackRate=0.5; await video.play(); }catch(e){ useP=false; } }
@@ -11332,13 +11344,13 @@ async function aiMultiRun(secs,t0,ui){
     if(!firstFrame){ const curG=aiGray(gcv,gcx); const pan=aiPan(prevG,curG,gcv.width,gcv.height); prevG=curG; sx=pan.dx*vw/gcv.width; sy=pan.dy*vh/gcv.height; }
     const tD=performance.now(); const det=await aiDetect(ses,cv,cx,full,0.25); { const d_=performance.now()-tD; nF++; if(nF>1) ema=ema?ema*0.7+d_*0.3:d_; }
     /* si la IA nativa va lenta en este equipo se cambia a la ligera */
-    if(ses.native&&nF>=4&&ema>420){ try{ ses=await aiLoadWide(); AI.useWasm=true; }catch(e){} }
+    if(ses.native&&nF>=4&&ema>420){ try{ ses=await aiLoad640(); AI.useWasm=true; }catch(e){} }
     const B=det.boxes.filter(b=>b.vh>vh*0.035);
     B.forEach(b=>{ b.sg=aiSig(det.img,b,det.S); });
     const act=tracks.filter(t=>!t.dead);
     act.forEach(t=>{ t.px=t.fx+sx+t.vx*dt; t.py=t.fy+sy+t.vy*dt; t.fx=t.px; t.fy=t.py; });   /* dónde debería estar ahora (paneo + velocidad) */
     const pairs=[];
-    if(!firstFrame) act.forEach((t,ti)=>B.forEach((b,bi)=>{ const dist=Math.hypot(b.vx-t.px,b.fy-t.py)/t.h, gate=0.8+Math.min(t.lost,10)*0.3; if(dist>gate) return; const col=aiDist(t.sig,b.sg), cost=dist*(t.lost?0.6:1)+col*1.7; if(cost<2.1) pairs.push([cost,ti,bi]); }));
+    if(!firstFrame) act.forEach((t,ti)=>B.forEach((b,bi)=>{ const dist=Math.hypot(b.vx-t.px,b.fy-t.py)/t.h, gate=0.8+Math.min(t.lost,10)*0.3; if(dist>gate) return; const col=aiDist(t.sig,b.sg); if(col>(t.lost>3?0.5:0.62)) return; const cost=dist*(t.lost?0.6:1)+col*2.6; if(cost<2.2) pairs.push([cost,ti,bi]); }));
     pairs.sort((a,b)=>a[0]-b[0]); const ut=new Set(), ub=new Set();
     pairs.forEach(([c,ti,bi])=>{ if(ut.has(ti)||ub.has(bi)) return; ut.add(ti); ub.add(bi); const t=act[ti], b=B[bi];
       const lim=t.h*4, nvx=(b.vx-(t.fx-t.vx*dt)-sx)/dt, nvy=(b.fy-(t.fy-t.vy*dt)-sy)/dt;
@@ -11347,6 +11359,8 @@ async function aiMultiRun(secs,t0,ui){
       t.pts.push([+lt.toFixed(3),b.vx/vw,b.fy/vh]); });
     act.forEach((t,ti)=>{ if(ut.has(ti)) return; t.lost++; t.vx*=0.85; t.vy*=0.85; if(t.lost>MAXLOST) t.dead=true; });
     B.forEach((b,bi)=>{ if(ub.has(bi)) return; tracks.push(newTrack(b,det.img,det.S,lt)); });
+    if(firstFrame&&sel){ let bd=1e9; tracks.forEach(t=>{ const q=t.pts[0], hh=Math.max(0.03,t.h/vh), d=Math.min(Math.hypot((q[1]-sel.x)*vw/vh,q[2]-sel.y)/hh, Math.hypot((q[1]-sel.x)*vw/vh,q[2]-hh*0.5-sel.y)/hh); if(d<bd){ bd=d; tgt=t; } }); if(bd>0.9) tgt=null; }
+    else if(tgt&&ui.pt&&!tgt.dead&&tgt.last===lt){ ui.pt(tgt.pts[tgt.pts.length-1]); }
     if(useP){ const proc=(performance.now()-tIni)/1000; pEma=pEma?pEma*0.8+proc*0.2:proc; try{ video.playbackRate=Math.max(0.2,Math.min(2,step*0.9/Math.max(0.02,pEma))); }catch(e){} }
     ui.msg((ses.native&&!AI.useWasm?'IA nativa':'IA')+' analizando a todas las jugadoras… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/fotograma':''));
     if(ui.frame) ui.frame(tracks.filter(t=>!t.dead&&!t.lost).map(t=>[t.fx/vw,t.fy/vh,t.h/vh]));
@@ -11386,10 +11400,10 @@ async function autoTrack(p,secs,opts){
       /* 1) análisis de todas las jugadoras del clip (se guarda: las demás jugadoras del mismo clip salen al instante) */
       const single=((document.getElementById('dwTrkMode')||{}).value==='auto1');
       let M=(!single&&AI.multi&&AI.multi.key===videoKey&&Math.abs(AI.multi.t0-t0)<0.04&&AI.multi.secs>=secs-0.01)?AI.multi:null;
-      if(!M&&!single){ try{ const trs=await aiMultiRun(secs,t0,ui0); if(trs&&trs.length) M=AI.multi={key:videoKey,t0,secs,tracks:trs}; }catch(e){ console.warn('Análisis múltiple no disponible',e); } }
+      if(!M&&!single){ try{ const trs=await aiMultiRun(secs,t0,Object.assign({pt:q=>{ s.pts.push(q); tl.rev++; }},ui0),p); if(trs&&trs.length) M=AI.multi={key:videoKey,t0,secs,tracks:trs}; }catch(e){ console.warn('Análisis múltiple no disponible',e); } }
       if(M&&!stop) aiPts=aiPick(M.tracks,p,secs);
       /* 2) si no hay nadie donde pulsó, el seguimiento de una sola jugadora de siempre */
-      if(!aiPts&&!stop) aiPts=await aiTrackRun(p,secs,t0,{pt:q=>{ s.pts.push(q); tl.rev++; },msg:ui0.msg,stop:ui0.stop}); }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); toast('La IA no se pudo cargar ('+((e&&e.message)||e)+'). Uso el seguimiento básico, que falla más. Revisa que la carpeta «ai» esté subida a GitHub.'); }
+      if(!aiPts&&!stop){ s.pts.length=1; tl.rev++; aiPts=await aiTrackRun(p,secs,t0,{pt:q=>{ s.pts.push(q); tl.rev++; },msg:ui0.msg,stop:ui0.stop}); }; }catch(e){ console.warn('IA no disponible, uso el seguimiento básico',e); toast('La IA no se pudo cargar ('+((e&&e.message)||e)+'). Uso el seguimiento básico, que falla más. Revisa que la carpeta «ai» esté subida a GitHub.'); }
     if(aiPts&&aiPts.length>=4){
       /* recorrido suave: se promedia cada punto con sus vecinos (dos pasadas) para quitar los tirones de la detección */
       const A=aiPts.map(q=>q.slice()); for(let pass=0;pass<2;pass++){ const B=A.map(q=>q.slice()); for(let i=1;i<A.length-1;i++){ B[i][1]=A[i-1][1]*0.25+A[i][1]*0.5+A[i+1][1]*0.25; B[i][2]=A[i-1][2]*0.25+A[i][2]*0.5+A[i+1][2]*0.25; } for(let i=0;i<A.length;i++){ A[i][1]=B[i][1]; A[i][2]=B[i][2]; } }
@@ -12162,7 +12176,7 @@ function barBuild(){
     ap(); }
 }
 function barSync(){
-  const on=!!teleEd; dwBar.hidden=!on; try{ cutsSync(); }catch(_){} if(!on) return;
+  const on=!!teleEd; dwBar.hidden=!on; { const vw0=document.getElementById('vwrap'); if(vw0&&vw0.classList.contains('dwOn')!==on){ vw0.classList.toggle('dwOn',on); try{ layoutTele(); }catch(_){} } } try{ cutsSync(); }catch(_){} if(!on) return;
   const ed=teleEd, s=ed.sel!=null?ed.tele.items[ed.sel]:null;
   dwBar.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===ed.tool));
   if(ed._n==null) ed._n=ed.tele.items.length;
@@ -12710,7 +12724,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zx · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
