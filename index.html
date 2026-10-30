@@ -3781,7 +3781,7 @@ If you want to offset all timestamps of a track such that the first one is zero,
 /* ===== Ediciones: una sola app, funciones que se encienden o apagan =====
    EDITION: 'pro' (todo) o 'publica' (sin IA, seguimiento, Cortes FEB, YouTube, cámara en vivo, nube ni envío a Entrenador).
    Para probar la pública desde la edición pro: añade ?ed=publica a la dirección. */
-const EDITION='publica';
+const EDITION='pro';
 const ED=(function(){ let e=EDITION; try{ if(e==='pro'&&new URLSearchParams(location.search).get('ed')==='publica') e='publica'; }catch(_){} return e; })();
 const FEAT=(function(){ const pro=ED==='pro'; return {seguimiento:pro,febcuts:pro,ytmarks:pro,vivo:pro,nube:pro,ia:pro,entrenador:pro}; })();
 if(!FEAT.nube||!FEAT.vivo||!FEAT.seguimiento) document.documentElement.classList.add('ed-pub');
@@ -12216,7 +12216,7 @@ function barBuild(){
     strip.append(o,m); const pan=document.createElement('div'); pan.className='dwp'; k.slice(3).forEach(x=>pan.append(x));
     /* en la fila solo las herramientas de cada día; el resto va en «Más» (dentro del panel) para no tapar el vídeo */
     { const g=strip.querySelector('.g'); if(g){ const main=['select','arrow','line','curve','circle','rect','text','pen','spot','track'];
-        const more=document.createElement('div'); more.className='g dwmore'; [...g.children].forEach(b=>{ if(!main.includes(b.dataset.tool)) more.append(b); }); pan.insertBefore(more,pan.firstChild);
+        { const tr_=g.querySelector('[data-tool="track"]'), se_=g.querySelector('[data-tool="select"]'); if(tr_&&se_) se_.after(tr_); } strip.addEventListener('wheel',ev=>{ if(Math.abs(ev.deltaY)>Math.abs(ev.deltaX)){ strip.scrollLeft+=ev.deltaY; ev.preventDefault(); } },{passive:false}); const more=document.createElement('div'); more.className='g dwmore'; [...g.children].forEach(b=>{ if(!main.includes(b.dataset.tool)) more.append(b); }); pan.insertBefore(more,pan.firstChild);
         const lb=document.createElement('div'); lb.className='hint'; lb.textContent='Más herramientas'; pan.insertBefore(lb,more); } } dwBar.append(strip,pan); if(colEl) dwBar.append(colEl);
     let mn=false; try{ mn=localStorage.getItem('bbtag.dwMin')==='1'; }catch(_){}
     const ap=()=>{ dwBar.classList.toggle('min',mn); m.textContent=mn?'✏ Herramientas ▾':'▲'; o.classList.toggle('on',dwBar.classList.contains('opts')); };
@@ -12776,7 +12776,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz3 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz4 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
