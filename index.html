@@ -11038,7 +11038,7 @@ function handlesOf(s){
   switch(s.type){
     case 'arrow':case 'line':case 'wave':case 'tline':case 'move':case 'cone':case 'wall':case 'ghost':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2]];
     case 'curve':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2],['c',s.cx,s.cy]];
-    case 'track':{ const h=[['r',s.cx+(s.r||0.024),s.cy]], P=s.pts||[]; if(P.length>5){ const st=Math.max(1,Math.round(P.length/10)); for(let i=st;i<P.length;i+=st) h.push(['k'+i,P[i][1],P[i][2]]); h.push(['k'+(P.length-1),P[P.length-1][1],P[P.length-1][2]]); } return h; }
+    case 'track':{ const h=[['r',s.cx+(s.r||0.024),s.cy]], P=s.pts||[]; return h; }
     case 'circle':case 'spot':case 'lens':case 'beam':return [['r',s.cx+(s.r||0.024),s.cy]];
     case 'rect':case 'img':case 'play':return [['br',s.x+s.rw,s.y+s.rh]];
     case 'zone':return (s.pts||[]).map((p,i)=>['v'+i,p[0],p[1]]);
@@ -11105,7 +11105,7 @@ function trackDraw(ctx,s,W,H,lt){
     g.addColorStop(0,rgba(0.4)); g.addColorStop(0.6,rgba(0.14)); g.addColorStop(1,rgba(0));
     ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(px-R*0.8,py); ctx.lineTo(px-R*0.62,py-gh); ctx.lineTo(px+R*0.62,py-gh); ctx.lineTo(px+R*0.8,py); ctx.closePath(); ctx.fill();
     const E=(k)=>{ ctx.beginPath(); ctx.ellipse(px,py,R*k,ry*k,0,0,Math.PI*2); };
-    ctx.fillStyle=rgba(0.55); E(0.84); ctx.fill();
+    ctx.fillStyle=rgba(st.fill!=null?st.fill:0.55); E(0.84); ctx.fill();
     ctx.shadowColor=col; ctx.shadowBlur=R*0.25;
     ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,R*0.075); E(0.84); ctx.stroke();
     ctx.shadowBlur=0;
@@ -11592,7 +11592,7 @@ document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.tar
     beam:{rows:[['color','Color de la luz'],['c2','Color del aro']],presets:[['Normal',{c2:undefined,sw:4}],['Sin aro',{c2:'none'}],['Grande',{sw:8}]]},
     wall:{rows:[['color','Color']],presets:W3},
     ghost:{rows:[['color','Color']],presets:[]},
-    track:{rows:[['color','Color interior'],['c2','Color exterior'],['c4','Color de la trayectoria']],presets:[['Anillo',{st:{ring:1,beam:0,trail:0,panel:0}}],['Anillo y estela',{st:{ring:1,beam:0,trail:1,panel:0}}],['Foco de luz',{st:{ring:1,beam:1,trail:0,panel:0}}],['Panel',{st:{ring:1,beam:0,trail:0,panel:1}}]]}
+    track:{rows:[['color','Color interior'],['c2','Color exterior'],['c4','Color de la trayectoria']],presets:[['Anillo',{st:{ring:1,beam:0,trail:0,panel:0}}],['Anillo y estela',{st:{ring:1,beam:0,trail:1,panel:0}}],['Foco de luz',{st:{ring:1,beam:1,trail:0,panel:0}}],['Panel',{st:{ring:1,beam:0,trail:0,panel:1}}],['Anillo transparente',{st:{ring:1,beam:0,trail:0,panel:0,fill:0.12}}],['Anillo sólido',{st:{ring:1,beam:0,trail:0,panel:0,fill:0.9}}]]}
   };
   const KEYS=['color','sw','c2','c3','c4','tst','t3d','zst','dim','st','zoom','dbl'];
   const GEO={line:{x1:.3,y1:.65,x2:.7,y2:.35},wave:{x1:.3,y1:.6,x2:.7,y2:.4},pen:{pts:[[.3,.6],[.4,.4],[.5,.6],[.6,.4],[.7,.55]]},hl:{pts:[[.3,.55],[.5,.45],[.7,.55]]},num:{x:.5,y:.5,label:'1'},cone:{x1:.3,y1:.5,x2:.75,y2:.5},traj:{pts:[[.3,.65],[.45,.4],[.6,.6],[.72,.35]]},tline:{x1:.3,y1:.5,x2:.7,y2:.5,label:'4 m'},move:{x1:.3,y1:.6,x2:.7,y2:.4},beam:{cx:.5,cy:.8,r:.07},wall:{x1:.3,y1:.6,x2:.7,y2:.4},text:{x:.2,y:.62,text:'Texto'},circle:{cx:.5,cy:.5,r:.13},rect:{x:.3,y:.3,rw:.4,rh:.3},zone:{pts:[[.3,.7],[.7,.7],[.6,.3],[.4,.3]]},arrow:{x1:.3,y1:.65,x2:.7,y2:.35},curve:{x1:.3,y1:.7,cx:.5,cy:.25,x2:.7,y2:.4},spot:{cx:.5,cy:.5,r:.13}};
@@ -12942,7 +12942,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz10 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz12 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
