@@ -1759,7 +1759,7 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
               <button class="mini" id="dwDel">Borrar figura</button>
               <button class="mini" id="dwText" hidden>Editar texto</button>
               <span id="dwTrkTool" hidden style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="dwTrkMode" title="Cómo seguir a la jugadora"><option value="auto">Automático (todas las jugadoras)</option><option value="auto1">Automático (solo una)</option><option value="man">A mano</option></select><select id="dwTrkDur" title="Hasta cuándo seguirla"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select><span class="hint" style="margin:0">Pulsa en sus pies y confirma</span></span>
-              <span id="dwTrk" hidden style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap"><label><input type="checkbox" data-trk="beam"> Foco</label><label><input type="checkbox" data-trk="ring"> Anillo</label><label><input type="checkbox" data-trk="trail"> Estela</label><label><input type="checkbox" data-trk="panel"> Panel</label><button class="mini" id="dwTrkRe">Repetir seguimiento</button></span>
+              <span id="dwTrk" hidden style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap"><label><input type="checkbox" data-trk="beam"> Foco</label><label><input type="checkbox" data-trk="ring"> Anillo</label><label><input type="checkbox" data-trk="trail"> Estela</label><label><input type="checkbox" data-trk="panel"> Panel</label><button class="mini" id="dwTrkRe">Repetir seguimiento</button><button class="mini" id="dwTrkEd" title="Muestra puntos del recorrido para arrastrarlos y corregirlo">Editar recorrido</button></span>
               <span id="dwPlay" hidden style="display:inline-flex;gap:6px;align-items:center"><select id="dwPlayV" title="Cómo se ve la jugada"><option value="ambas">2D + 3D</option><option value="2d">Solo 2D</option><option value="3d">Solo 3D</option></select><button class="mini" id="dwPlayF">Cambiar jugada</button></span>
             </div>
             <div class="r2">
@@ -5387,9 +5387,23 @@ async function openLib(){
     (err?'<p style="color:var(--danger,#e55)">'+esc(err)+'</p>':'')+
     (tNames.length?'<label style="display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:13px;color:var(--muted)">Equipo <select id="lbTeam" style="flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--text)"><option value="">Todos</option>'+tNames.map(n=>'<option'+(n===libTeamF?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>':'')+
     (rows||(err?'':'<p style="color:var(--muted)">Todavía no hay partidos. Abre un vídeo y etiquétalo: aparecerá aquí.</p>'))+
-    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">'+(hasVideo&&lastFile&&!window.scoutDesktop&&!FSA()?'<button class="btn" id="lbSave" title="Solo hace falta en iPad/Safari">💾 Guardar copia del vídeo abierto</button>':'')+'<button class="btn" id="lbNo">Cerrar</button></div>');
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">'+(list.length>1?'<button class="btn danger" id="lbAll" title="Borra todos los partidos de esta lista, con sus etiquetas, clips y dibujos">🗑 Borrar todos ('+list.length+')</button>':'')+(hasVideo&&lastFile&&!window.scoutDesktop&&!FSA()?'<button class="btn" id="lbSave" title="Solo hace falta en iPad/Safari">💾 Guardar copia del vídeo abierto</button>':'')+'<button class="btn" id="lbNo">Cerrar</button></div>');
   const sv=d.querySelector('#lbSave'); if(sv) sv.onclick=async()=>{sv.disabled=true;sv.textContent='Guardando…';await vidSave(lastFile);openLib();};
   d.querySelector('#lbNo').onclick=expClose;
+  { const ba=d.querySelector('#lbAll'); if(ba) ba.onclick=async()=>{
+    if(!(await window.__askOk('¿Borrar los '+list.length+' partidos de la lista?','Se borran sus etiquetas, clips y dibujos de este dispositivo. No se puede deshacer.','Borrar todos'))) return;
+    const keys=list.map(v=>v.key);
+    for(const k of keys){
+      try{ localStorage.removeItem('bbtag.project.'+k); localStorage.removeItem('bbtag.pts.'+k); }catch(e){}
+      try{ await vdbTx('readwrite',st=>st.delete(k)); }catch(e){}
+    }
+    try{ const tm=titlesGet(); keys.forEach(k=>{ delete tm[k]; }); lsSet('bbtag.titles',JSON.stringify(tm)); }catch(e){}
+    try{ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); gs.forEach(g=>{ if(g&&Array.isArray(g.keys)) g.keys=g.keys.filter(x=>!keys.includes(x)); }); lsSet('bbtag.groups',JSON.stringify(gs)); }catch(e){}
+    try{ const r=JSON.parse(lsGet('bbtag.recent')||'[]'); lsSet('bbtag.recent',JSON.stringify(r.filter(x=>x&&!keys.includes(x.key)))); }catch(e){}
+    if(keys.includes(videoKey)){ videoKey=null; events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[]; selectedId=null; try{ renderAll(); }catch(e){} }
+    try{ if(window.__renderRec) window.__renderRec(); }catch(e){}
+    toast('Partidos borrados.'); openLib();
+  }; }
   { const tf=d.querySelector('#lbTeam'); if(tf) tf.onchange=()=>{ libTeamF=tf.value; openLib(); }; }
   d.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>vidOpenLib(b.dataset.o));
   d.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{
@@ -7792,7 +7806,7 @@ function wbSet(on){
       window.addEventListener('message',e=>{ const d=e.data; if(d&&d.scoutflowEntrenador==='cerrar'&&WB.on) wbSet(false); });
     }
     const tp=document.querySelector('.top'); el.style.top=((tp&&tp.getBoundingClientRect().bottom)||54)+'px';
-    const fr=el.querySelector('#wbFr'); if(!fr.getAttribute('src')) fr.setAttribute('src','pizarra.html');
+    const fr=el.querySelector('#wbFr'); if(!fr.getAttribute('src')) fr.setAttribute('src','pizarra.html?pizarra=1');
     el.hidden=false; }
   else if(el) el.hidden=true;
   const bp=document.getElementById('bPiz'); if(bp) bp.classList.toggle('on',!!on);
@@ -11030,7 +11044,7 @@ function handlesOf(s){
     case 'arrow':case 'line':case 'wave':case 'tline':case 'move':case 'cone':case 'wall':case 'ghost':case 'screen':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2]];
     case 'text':{ const fs=20+(s.sw||4)*3; return [['ts',s.x+(String(s.text||'').length*fs*0.58+16)/SW,s.y]]; }
     case 'curve':return [['p1',s.x1,s.y1],['p2',s.x2,s.y2],['c',s.cx,s.cy]];
-    case 'track':{ const h=[['r',s.cx+(s.r||0.024),s.cy]], P=s.pts||[]; return h; }
+    case 'track':{ const h=[['r',s.cx+(s.r||0.024),s.cy]], P=s.pts||[]; if(window.__trkEdit&&P.length>5){ const st=Math.max(1,Math.round(P.length/10)); for(let i=st;i<P.length;i+=st) h.push(['k'+i,P[i][1],P[i][2]]); h.push(['k'+(P.length-1),P[P.length-1][1],P[P.length-1][2]]); } return h; }
     case 'circle':case 'spot':case 'lens':case 'beam':return [['r',s.cx+(s.r||0.024),s.cy]];
     case 'rect':case 'img':case 'play':return [['br',s.x+s.rw,s.y+s.rh]];
     case 'zone':return (s.pts||[]).map((p,i)=>['v'+i,p[0],p[1]]);
@@ -11538,6 +11552,7 @@ function startTrack(p){
   });
 }
 document.addEventListener('change',e=>{ const c=e.target&&e.target.closest&&e.target.closest('#dwTrk [data-trk]'); if(!c||!teleEd) return; const s=teleEd.tele.items[teleEd.sel]; if(!s||s.type!=='track') return; s.st=s.st||{}; s.st[c.dataset.trk]=c.checked?1:0; teleEd.tele.rev++; teleKey=''; commitTele(); });
+document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.target.closest('#dwTrkEd'); if(!b||!teleEd) return; window.__trkEdit=!window.__trkEdit; b.textContent=window.__trkEdit?'Terminar edición':'Editar recorrido'; teleEd.tele.rev++; teleKey=''; commitTele(true); });
 document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.target.closest('#dwTrkRe'); if(!b||!teleEd) return; const ed=teleEd, s=ed.tele.items[ed.sel]; if(!s||s.type!=='track') return; AI.multi=null; ed.tele.items.splice(ed.sel,1); ed.tele.rev++; setTool('track'); toast('Pulsa en sus pies y síguela de nuevo.'); });
 
 /* selector de color como el de Once: recientes, hex, confirmar y restablecer */
@@ -11962,11 +11977,20 @@ function pmkRehacer(){
   if(!PMK.raf){ const loop=()=>{ if(!PMK.dlg||!PMK.dlg.open){PMK.raf=0;return;} const cv=PMK.dlg.querySelector('#pmkPv'), ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); const b=PMK.baked, lt=((performance.now()-PMK.t0)/1000)%(b.dur+0.8); playDraw(ctx,{x:0,y:0,rw:1,rh:1,vista:'ambas',play:b},cv.width,cv.height,lt); PMK.raf=requestAnimationFrame(loop); }; PMK.raf=requestAnimationFrame(loop); }
 }
 function pmkAbrir(tl,idx){
-  const d=pmkDlg(); PMK.tl=tl; PMK.idx=idx;
-  const s=tl.items[idx], prev=s&&s.play&&s.play.modelo;
-  PMK.m=prev?JSON.parse(JSON.stringify(prev)):pmkNuevo(); PMK.fase=0;
-  d.querySelector('#pmkN').value=PMK.m.nombre||''; d.querySelector('#pmkC').value=PMK.m.campo; d.querySelector('#pmkD').checked=!!PMK.m.def;
-  pmkFasesUi(); if(!d.open) d.showModal(); pmkRehacer();
+  /* la jugada se crea en la pizarra de ScoutFlow Entrenador (pizarra.html), en pantalla completa */
+  PMK.tl=tl; PMK.idx=idx;
+  let el=document.getElementById('pmkFr');
+  if(!el){ el=document.createElement('div'); el.id='pmkFr'; el.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column';
+    el.innerHTML='<iframe title="Pizarra" style="flex:1;width:100%;border:0;background:#fff"></iframe><button type="button" id="pmkFrX" style="position:absolute;right:12px;bottom:14px;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#111;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">↩ Volver al vídeo</button>';
+    document.body.appendChild(el); el.querySelector('#pmkFrX').onclick=()=>{ el.hidden=true; el.querySelector('iframe').removeAttribute('src'); };
+    window.addEventListener('message',e=>{ const d=e.data; if(!d) return;
+      if(d.scoutflowEntrenador==='cerrar'&&!el.hidden&&PMK.tl){ el.hidden=true; el.querySelector('iframe').removeAttribute('src'); }
+      if(d.jugadaParaVideo&&!el.hidden){ const j=d.jugadaParaVideo, tl2=PMK.tl, s2=tl2&&tl2.items[PMK.idx];
+        if(!playOk(j)){ toast('No se pudo usar esa jugada.'); return; }
+        if(s2&&s2.type==='play'){ s2.play=j; s2.vista=s2.vista||'ambas'; tl2.hold=clamp(Math.ceil(j.dur+1),1,60); tl2.rev++; teleKey=''; commitTele(); renderDrawPanel(); toast('Jugada «'+(j.nombre||'sin nombre')+'» lista ('+Math.round(j.dur)+' s).'); }
+        el.hidden=true; el.querySelector('iframe').removeAttribute('src'); } });
+  }
+  el.hidden=false; el.querySelector('iframe').setAttribute('src','pizarra.html?video=1');
 }
 function pmkCerrar(ok){
   const d=PMK.dlg; if(ok){
@@ -12943,7 +12967,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz17 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz19 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
