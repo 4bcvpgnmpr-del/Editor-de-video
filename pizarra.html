@@ -844,6 +844,7 @@ const NOMBRE_ACCION = { corte: "Corte", bote: "Bote", pase: "Pase", pantalla: "P
 const MOVEDORAS = ["corte", "bote", "pantalla", "mueve", "entrega"];
 const SB = { url: "https://tizmzblksovdqqnlxpli.supabase.co", anon: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpem16Ymxrc292ZHFxbmx4cGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NDQxMjMsImV4cCI6MjEwNjUyMDEyM30.eXScUQYTkSxtnNb4TO-FJUsdKpnkTk5z-1QLPjxHAGo" };
 const PARAMS = new URLSearchParams(location.search);
+const MODO_VIDEO = (PARAMS.get("video") === "1" || PARAMS.get("pizarra") === "1") && window.parent !== window;
 const VISOR = PARAMS.get("visor") === "1", PARTIDO = PARAMS.get("partido") === "1";
 const EJ = PARAMS.get("tabla") === "ejercicios", ORIG = {}, CATEG = ["Calentamiento", "Técnica individual", "Tiro", "Defensa", "Ataque", "Juego reducido", "Físico", "Estrategia", "Otro"], TABLA = EJ ? "ejercicios" : "jugadas";
 const EDITOR = PARAMS.get("editor") === "1", ID_ED = PARAMS.get("id") || "", CARPETA_ED = PARAMS.get("carpeta") || "";
@@ -2236,6 +2237,7 @@ function pintarLista() {
       <div class="cuerpo">
         <b class="n">${x.favorita ? "⭐ " : ""}${esc(x.nombre)}</b>
         <div class="sub">${esc(x.tipo)} · ${x.pasos.length} ${x.pasos.length === 1 ? "fase" : "fases"}${(x.videos || []).length ? " · 🎬" : ""} ${x.compartida ? '<span class="insignia comp">📤 Jugadoras</span>' : ""}</div>
+        ${MODO_VIDEO ? '<div class="ins" style="margin-bottom:6px"><button class="naranja" data-a="envid" style="flex:1">🎬 Poner en el vídeo</button><button class="gris" data-a="mostrar2d3d" title="Verla en 2D y 3D">▶ 2D/3D</button></div>' : ""}
         <div class="ins"><button class="gris" data-a="abrir">✏️ Editar</button><button class="gris" data-a="fav" title="Favorita">${x.favorita ? "★" : "☆"}</button>
           <button class="gris" data-a="comp" title="Mostrar u ocultar a las jugadoras">📤</button><button class="gris" data-a="dup" title="Duplicar">⧉</button><button class="gris" data-a="borrar" title="Borrar">🗑️</button></div>
       </div></div>`).join("")
@@ -2245,6 +2247,12 @@ function pintarLista() {
 async function accionLista(id, a) {
   const x = BIB.find(y => y.id === id); if (!x) return;
   if (a === "ver") { $("modalVer").classList.add("ver"); visorGrande.abrir(x); return; }
+  if (a === "envid" || a === "mostrar2d3d") {
+    let d = null; try { d = hornearJugada(normalizar(clonar(x)), 1200); } catch (e) { d = null; }
+    if (!d) { aviso("Esta jugada no tiene acciones (pase, corte, bote…) que animar."); return; }
+    try { parent.postMessage({ jugadaParaVideo: d, accion: a === "envid" ? "use" : "show" }, "*"); aviso(a === "envid" ? "Enviada al vídeo ✓" : "Abriendo en 2D y 3D…"); } catch (e) { aviso("No se pudo enviar al vídeo."); }
+    return;
+  }
   if (a === "abrir") { jugada = normalizar(clonar(x)); paso = 0; hist = []; rehacer = []; cargarCampos(); mostrarVista("ed"); irPestana("Draw"); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
   if (a === "fav") { const c = clonar(x); c.favorita = !c.favorita; if (await guardarJugada(c)) recargarBib(); return; }
   if (a === "comp") { const c = clonar(x); c.compartida = !c.compartida; if (await guardarJugada(c)) { aviso(c.compartida ? "Ahora la ven las jugadoras 📤" : "Ya no la ven las jugadoras"); recargarBib(); } return; }
