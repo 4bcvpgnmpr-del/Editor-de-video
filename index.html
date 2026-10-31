@@ -11708,7 +11708,7 @@ document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.tar
 (function(){
   const vw=document.getElementById('vwrap'); if(!vw) return;
   const mk=(id,html)=>{ const q=document.createElement('div'); q.id=id; q.hidden=true; q.style.cssText='position:absolute;z-index:14;display:flex;gap:6px;pointer-events:auto'; q.innerHTML=html; vw.appendChild(q); return q; };
-  const q=mk('teleQ','<button class="btn" id="tqE" type="button">✎ Editar</button><button class="btn danger" id="tqD" type="button">🗑 Borrar</button>');
+  const q=mk('teleQ','<button class="btn" id="tqE" type="button">✎ Editar</button><button class="btn danger" id="tqD" type="button">🗑 Borrar</button><button class="btn" id="tqV" type="button" hidden title="Abre la jugada grande, en 2D, en 3D o las dos">⤢ Ampliar</button><button class="btn" id="tqH" type="button" hidden title="Esconde o muestra la jugada mientras ves el vídeo">🙈 Ocultar</button>');
   const qi=mk('teleI','<button class="btn danger" id="tiD" type="button" title="Borrar solo esta figura (Supr)">🗑 Borrar esto</button><button class="btn" id="tiU" type="button" title="Deshacer la última figura">↶</button><span id="tiT" style="display:flex;gap:4px;align-items:center;background:#0d1117ee;border:1px solid #fff3;border-radius:8px;padding:2px 6px;font-size:11px;color:#fff" title="Segundos del dibujo en que aparece y desaparece esta figura">⏱<input id="tiA" type="number" min="0" step="0.5" placeholder="0" style="width:46px;background:#0006;color:#fff;border:1px solid #fff3;border-radius:4px"><span>→</span><input id="tiB" type="number" min="0" step="0.5" placeholder="fin" style="width:46px;background:#0006;color:#fff;border:1px solid #fff3;border-radius:4px"></span>');
   let cur=null;
   const box=(items)=>{ let b=null; items.forEach(s=>{ const x=bboxOf(s); if(!x) return; b=b?[Math.min(b[0],x[0]),Math.min(b[1],x[1]),Math.max(b[2],x[2]),Math.max(b[3],x[3])]:x.slice(); }); return b; };
@@ -11724,6 +11724,7 @@ document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.tar
     let tl=null; try{ tl=(!teleEd&&!freeze&&hasVideo&&!TRK.on)?teleVisible():null; }catch(e){} cur=tl;
     const ok=!!(tl&&tl.items&&tl.items.length);
     if(q.hidden===ok) q.hidden=!ok; if(ok) place(q,box(tl.items));
+    { const hp=!!(ok&&tl.items.some(x=>x.type==='play'&&x.play)); const bv=q.querySelector('#tqV'), bh=q.querySelector('#tqH'); if(bv.hidden===hp) bv.hidden=!hp; if(bh.hidden===hp) bh.hidden=!hp; const lb=window.__plHide?'👁 Mostrar':'🙈 Ocultar'; if(hp&&bh.textContent!==lb) bh.textContent=lb; }
     /* en el editor: botón junto a la figura elegida */
     let s=null; try{ if(teleEd&&teleEd.sel!=null) s=teleEd.tele.items[teleEd.sel]; }catch(e){}
     if(qi.hidden===!!s) qi.hidden=!s; if(s){ place(qi,box([s])); const A=qi.querySelector('#tiA'),B=qi.querySelector('#tiB'),T=qi.querySelector('#tiT'); T.style.display=s.type==='track'?'none':'flex'; if(document.activeElement!==A) A.value=s.t0>0?s.t0:''; if(document.activeElement!==B) B.value=s.t1!=null?s.t1:''; }
@@ -11732,6 +11733,8 @@ document.addEventListener('click',e=>{ const b=e.target&&e.target.closest&&e.tar
   ['#tiA','#tiB'].forEach(i=>qi.querySelector(i).addEventListener('change',tmSet));
   q.querySelector('#tqE').onclick=e=>{ e.stopPropagation(); if(cur) openTele(cur); };
   q.querySelector('#tqD').onclick=e=>{ e.stopPropagation(); if(cur) deleteTele(cur); };
+  q.querySelector('#tqV').onclick=e=>{ e.stopPropagation(); if(!cur) return; const it=cur.items.find(x=>x.type==='play'&&x.play); if(it){ try{ video.pause(); }catch(_){} playShow(it.play); } };
+  q.querySelector('#tqH').onclick=e=>{ e.stopPropagation(); window.__plHide=!window.__plHide; teleKey=''; try{ teleRender(); }catch(_){} };
   qi.querySelector('#tiD').onclick=e=>{ e.stopPropagation(); teleDeleteSel(); };
   qi.querySelector('#tiU').onclick=e=>{ e.stopPropagation(); const ed=teleEd; if(!ed||!ed.tele.items.length) return; ed.tele.items.pop(); ed.sel=null; commitTele(); };
   [q,qi].forEach(x=>['pointerdown','mousedown','touchstart'].forEach(ev=>x.addEventListener(ev,e=>e.stopPropagation())));
@@ -11851,7 +11854,7 @@ function playView(ctx,p,fr,box,mode,yaw,pitch){
 }
 /* dibuja el recuadro entero: fondo, vista 2D, 3D o las dos */
 function playDraw(ctx,s,W,H,lt){
-  const p=s.play; if(!playOk(p)) return;
+  const p=s.play; if(!playOk(p)) return; if(window.__plHide&&!teleEd&&!EXP.busy) return;
   const x=s.x*W, y=s.y*H, w=s.rw*W, h=s.rh*H; if(w<20||h<20) return;
   const fr=playFrame(p,Math.max(0,lt)), vista=s.vista||'ambas';
   ctx.save();
@@ -12993,7 +12996,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz21 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz22 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
