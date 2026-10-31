@@ -2456,6 +2456,7 @@ function conectarPC(idBoton, idCaja) {
 }
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && pcActivo && pcApi) salirPC(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && pcActivo) salirPC(); });
+window.addEventListener("message", (ev) => { if (ev.data && ev.data.pedirJugadaVideo) { try { $("btnHornear").click(); } catch (e) { /* nada */ } } });
 $("btnHornear").addEventListener("click", () => {
   try { volcarCampos(); } catch (e) { /* nada */ }
   const d = hornearJugada(jugada, Number($("vel").value) || 1200);

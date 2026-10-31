@@ -11981,11 +11981,12 @@ function pmkAbrir(tl,idx){
   PMK.tl=tl; PMK.idx=idx;
   let el=document.getElementById('pmkFr');
   if(!el){ el=document.createElement('div'); el.id='pmkFr'; el.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column';
-    el.innerHTML='<iframe title="Pizarra" style="flex:1;width:100%;border:0;background:#fff"></iframe><button type="button" id="pmkFrX" style="position:absolute;right:12px;bottom:14px;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#111;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">↩ Volver al vídeo</button>';
-    document.body.appendChild(el); el.querySelector('#pmkFrX').onclick=()=>{ el.hidden=true; el.querySelector('iframe').removeAttribute('src'); };
+    el.innerHTML='<iframe title="Pizarra" style="flex:1;width:100%;border:0;background:#fff"></iframe><button type="button" id="pmkFrOk" style="position:absolute;right:170px;bottom:14px;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#e2622a;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">🎬 Poner en el vídeo</button><button type="button" id="pmkFrX" style="position:absolute;right:12px;bottom:14px;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#111;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">↩ Volver al vídeo</button>';
+    document.body.appendChild(el); el.querySelector('#pmkFrOk').onclick=()=>{ const f=el.querySelector('iframe'); PMK.got=false; try{ f.contentWindow.postMessage({pedirJugadaVideo:1},'*'); }catch(e){} setTimeout(()=>{ if(!PMK.got&&!el.hidden) toast('Dibuja primero alguna acción (pase, corte…) en la pizarra. Si ya lo hiciste, sube también el pizarra.html nuevo.'); },2500); };
+    el.querySelector('#pmkFrX').onclick=()=>{ el.hidden=true; el.querySelector('iframe').removeAttribute('src'); };
     window.addEventListener('message',e=>{ const d=e.data; if(!d) return;
       if(d.scoutflowEntrenador==='cerrar'&&!el.hidden&&PMK.tl){ el.hidden=true; el.querySelector('iframe').removeAttribute('src'); }
-      if(d.jugadaParaVideo&&!el.hidden){ const j=d.jugadaParaVideo, tl2=PMK.tl, s2=tl2&&tl2.items[PMK.idx];
+      if(d.jugadaParaVideo&&!el.hidden){ PMK.got=true; const j=d.jugadaParaVideo, tl2=PMK.tl, s2=tl2&&tl2.items[PMK.idx];
         if(!playOk(j)){ toast('No se pudo usar esa jugada.'); return; }
         if(s2&&s2.type==='play'){ s2.play=j; s2.vista=s2.vista||'ambas'; tl2.hold=clamp(Math.ceil(j.dur+1),1,60); tl2.rev++; teleKey=''; commitTele(); renderDrawPanel(); toast('Jugada «'+(j.nombre||'sin nombre')+'» lista ('+Math.round(j.dur)+' s).'); }
         el.hidden=true; el.querySelector('iframe').removeAttribute('src'); } });
@@ -12967,7 +12968,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz19 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz20 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
