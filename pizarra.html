@@ -2461,11 +2461,11 @@ $("btnHornear").addEventListener("click", () => {
   try { volcarCampos(); } catch (e) { /* nada */ }
   const d = hornearJugada(jugada, Number($("vel").value) || 1200);
   if (!d) { aviso("Dibuja alguna acción (pase, corte…) para poder animarla."); return; }
-  if (PARAMS.get("video") === "1" && window.parent !== window) { try { parent.postMessage({ jugadaParaVideo: d }, "*"); aviso("Enviada al vídeo ✓"); return; } catch (e) { /* si falla, se descarga */ } }
+  if ((PARAMS.get("video") === "1" || PARAMS.get("pizarra") === "1") && window.parent !== window) { try { parent.postMessage({ jugadaParaVideo: d }, "*"); aviso("Enviada al vídeo ✓"); return; } catch (e) { /* si falla, se descarga */ } }
   descargar(nombreArchivo() + ".jugada.json", new Blob([JSON.stringify(d)], { type: "application/json" }));
   aviso("Descargada. En el editor de vídeo usa la herramienta «Jugada» y elige este archivo.");
 });
-if (PARAMS.get("video") === "1" && window.parent !== window) { const bh = $("btnHornear"); if (bh) bh.textContent = "🎬 Poner en el vídeo"; }
+if ((PARAMS.get("video") === "1" || PARAMS.get("pizarra") === "1") && window.parent !== window) { const bh = $("btnHornear"); if (bh) bh.textContent = "🎬 Poner en el vídeo"; }
 conectarPC("btnFsAni", "cajaAni"); conectarPC("mvFs", "mvCaja"); conectarPC("vsFs", "visor");
 if ($("btnDatos")) { $("btnDatos").addEventListener("click", () => document.querySelector(".datos-ed").classList.toggle("plegado")); if (window.innerWidth <= 760) document.querySelector(".datos-ed").classList.add("plegado"); }
 

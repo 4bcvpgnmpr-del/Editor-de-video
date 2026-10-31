@@ -7800,8 +7800,15 @@ function wbSet(on){
   WB.on=on; let el=document.getElementById('ipWb');
   if(on){ try{ video.pause(); }catch(e){}
     if(!el){ el=document.createElement('div'); el.id='ipWb'; el.style.padding='0';
-      el.innerHTML='<iframe id="wbFr" title="Pizarra" style="flex:1;width:100%;border:0;background:#fff" allow="fullscreen"></iframe><button id="wbX" type="button" style="position:absolute;right:12px;bottom:14px;z-index:5;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#111;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">↩ Volver al vídeo</button>';
+      el.innerHTML='<iframe id="wbFr" title="Pizarra" style="flex:1;width:100%;border:0;background:#fff" allow="fullscreen"></iframe><button id="wbShow" type="button" style="position:absolute;right:340px;bottom:14px;z-index:5;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#1e4fd8;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">▶ Mostrar en 2D y 3D</button><button id="wbUse" type="button" style="position:absolute;right:170px;bottom:14px;z-index:5;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#e2622a;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">🎬 Usar en el vídeo</button><button id="wbX" type="button" style="position:absolute;right:12px;bottom:14px;z-index:5;border:0;border-radius:22px;padding:11px 18px;font:700 14px system-ui,sans-serif;background:#111;color:#fff;box-shadow:0 4px 14px #0006;cursor:pointer">↩ Volver al vídeo</button>';
       el.querySelector('#wbX').onclick=()=>wbSet(false);
+      const ask=m=>{ WB.mode=m; WB.got=false; try{ el.querySelector('#wbFr').contentWindow.postMessage({pedirJugadaVideo:1},'*'); }catch(e){} setTimeout(()=>{ if(!WB.got&&WB.on) toast('Dibuja primero alguna acción (pase, corte…) en la pizarra. Si ya lo hiciste, sube también el pizarra.html nuevo.'); },2500); };
+      el.querySelector('#wbShow').onclick=()=>ask('show');
+      el.querySelector('#wbUse').onclick=()=>{ if(!hasVideo){ toast('Abre primero un vídeo.'); return; } ask('use'); };
+      window.addEventListener('message',e=>{ const d=e.data; if(!d||!d.jugadaParaVideo||!WB.on||!WB.mode) return; WB.got=true; const j=d.jugadaParaVideo, m=WB.mode; WB.mode=null;
+        if(!playOk(j)){ toast('No se pudo usar esa jugada.'); return; }
+        if(m==='show') playShow(j);
+        else { window.__pendPlay=j; wbSet(false); toast('Jugada lista: pausa el vídeo, elige la herramienta «Jugada» (arriba en «Más») y arrastra un recuadro donde quieras verla.'); } });
       document.body.appendChild(el);
       window.addEventListener('message',e=>{ const d=e.data; if(d&&d.scoutflowEntrenador==='cerrar'&&WB.on) wbSet(false); });
     }
@@ -11977,6 +11984,7 @@ function pmkRehacer(){
   if(!PMK.raf){ const loop=()=>{ if(!PMK.dlg||!PMK.dlg.open){PMK.raf=0;return;} const cv=PMK.dlg.querySelector('#pmkPv'), ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height); const b=PMK.baked, lt=((performance.now()-PMK.t0)/1000)%(b.dur+0.8); playDraw(ctx,{x:0,y:0,rw:1,rh:1,vista:'ambas',play:b},cv.width,cv.height,lt); PMK.raf=requestAnimationFrame(loop); }; PMK.raf=requestAnimationFrame(loop); }
 }
 function pmkAbrir(tl,idx){
+  if(window.__pendPlay){ const j=window.__pendPlay, s0=tl.items[idx]; window.__pendPlay=null; if(s0&&s0.type==='play'){ s0.play=j; s0.vista=s0.vista||'ambas'; tl.hold=clamp(Math.ceil(j.dur+1),1,60); tl.rev++; teleKey=''; commitTele(); renderDrawPanel(); toast('Jugada «'+(j.nombre||'sin nombre')+'» puesta ('+Math.round(j.dur)+' s).'); return; } }
   /* la jugada se crea en la pizarra de ScoutFlow Entrenador (pizarra.html), en pantalla completa */
   PMK.tl=tl; PMK.idx=idx;
   let el=document.getElementById('pmkFr');
@@ -12001,6 +12009,23 @@ function pmkCerrar(ok){
   cancelAnimationFrame(PMK.raf); PMK.raf=0; if(d&&d.open) d.close();
 }
 /*FINPLAYMK*/
+/* visor a pantalla completa de una jugada de la pizarra en 2D y 3D, sin vídeo */
+function playShow(j){
+  let el=document.getElementById('plShow');
+  if(!el){ el=document.createElement('div'); el.id='plShow'; el.style.cssText='position:fixed;inset:0;z-index:100001;background:#0b0f14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px';
+    el.innerHTML='<canvas id="plShowCv" width="1400" height="720" style="width:min(1300px,96vw);max-height:78vh;background:#0c1018;border-radius:14px"></canvas><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button data-v="ambas" class="btn on">2D + 3D</button><button data-v="2d" class="btn">Solo 2D</button><button data-v="3d" class="btn">Solo 3D</button><button id="plShowRe" class="btn">↺ Repetir</button><button id="plShowX" class="btn primary">✕ Cerrar</button></div>';
+    document.body.appendChild(el); el.dataset.vista='ambas';
+    el.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{ el.dataset.vista=b.dataset.v; el.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('on',x===b)); });
+    el.querySelector('#plShowRe').onclick=()=>{ el._t0=performance.now(); };
+    el.querySelector('#plShowX').onclick=()=>{ el.hidden=true; cancelAnimationFrame(el._raf); };
+  }
+  el.hidden=false; el._j=j; el._t0=performance.now();
+  const cv=el.querySelector('#plShowCv'), ctx=cv.getContext('2d');
+  const tick=()=>{ if(el.hidden) return; const dur=Math.max(0.5,el._j.dur||1), lt=((performance.now()-el._t0)/1000)%(dur+1.2);
+    ctx.clearRect(0,0,cv.width,cv.height); try{ playDraw(ctx,{type:'play',play:el._j,vista:el.dataset.vista,x:0.01,y:0.02,rw:0.98,rh:0.96},cv.width,cv.height,Math.min(lt,dur)); }catch(e){}
+    el._raf=requestAnimationFrame(tick); };
+  cancelAnimationFrame(el._raf); tick();
+}
 function hasLens(tl){return tl&&tl.items.some(s=>s.type==='lens'||s.type==='track'||s.type==='ptri'||(s.type==='play'&&s.play));}
 function drawTeleSVG(tl){
   if(!tl){tele.hidden=true;teleSvg.innerHTML='';clearLens();return;}
@@ -12968,7 +12993,7 @@ histInit();
 window.__bb={get events(){return events;},get markers(){return markers;},get layout(){return layout;},get cfg(){return cfg;},get teles(){return teles;},get playlists(){return playlists;},get teleEd(){return teleEd;},get freeze(){return freeze;}};
 
 /* app instalable: service worker + bloqueo de zoom/rebote en iPad */
-try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz20 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
+try{ const vv=document.createElement('div'); vv.textContent='Versión 29-10-zz21 · '+location.protocol.replace(':',''); vv.style.cssText='position:fixed;left:8px;bottom:4px;z-index:5;font:10px system-ui;opacity:.45;color:#fff;pointer-events:none'; document.body.appendChild(vv); }catch(e){}
 try{ if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{ try{ reg.update(); }catch(_){} }).catch(()=>{}); if('serviceWorker' in navigator&&navigator.serviceWorker.controller){ let rl=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(rl) return; rl=true; try{ toast('Hay una versión nueva de la app.',{label:'Recargar',fn:()=>location.reload()}); }catch(_){} }); } }catch(e){}
 })();
 </script>
