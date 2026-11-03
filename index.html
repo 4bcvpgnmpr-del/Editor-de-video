@@ -5805,6 +5805,19 @@ function openCoverEditor(coverId,addToPl){
   Promise.all(W.layers.filter(l=>l.type==='img').map(l=>cvImg(l.src))).then(draw);
   draw();
 }
+/* los vídeos de otros partidos de un montaje se buscan solos (guardados, recordados o abiertos antes); solo se pregunta por los que no aparecen */
+async function plResolve(p,ask){
+  const faltan=[];
+  for(const id of ((p&&p.items)||[])){
+    if(!isExtId(id)) continue; const x=extOf(id); if(!x||extFiles[x.id]||!x.fname) continue;
+    let f=null; try{ f=await vidFile(x.fname+'|'+x.size); }catch(e){}
+    if(f) extFiles[x.id]=f; else faltan.push(x);
+  }
+  if(ask&&faltan.length){
+    const keys=[...new Set(faltan.map(x=>x.fname+'|'+x.size))];
+    for(const k of keys){ const m=faltan.filter(x=>x.fname+'|'+x.size===k); let f=null; try{ f=await vidAsk(k,m[0].src||k.split('|')[0]); }catch(e){} if(f) m.forEach(x=>{ extFiles[x.id]=f; }); }
+  }
+}
 /* elementos de una playlist convertidos para exportar (clips y portadas) */
 function plExpand(p){
   const missing=[];
@@ -6956,7 +6969,7 @@ async function sfSubir(o,m){
   await up({id:'_meta_videos',nombre:JSON.stringify(meta),tipo:'ajustes',ruta:'',mime:'',tamano:0});
 }
 window.__sfShowExported=showExported;
-$('#plExp').onclick=e=>{ const p=curPl(); if(!p) return; DLGDOC=e.currentTarget.ownerDocument; openExport(plExpand(p),p.name); };
+$('#plExp').onclick=async e=>{ const p=curPl(); if(!p) return; const doc=e.currentTarget.ownerDocument; DLGDOC=doc; await plResolve(p,true); DLGDOC=doc; openExport(plExpand(p),p.name); };
 function baseName(){return (videoName||'partido').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_').slice(0,60)||'partido';}
 const num=n=>n.toFixed(1).replace('.',',');
 
@@ -8627,7 +8640,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const fileOf=v=>new File([v.blob],v.name,{type:v.type||'video/mp4'});
   async function autoLink(){
     let ch=false;
-    for(const x of externals){ if(extFiles[x.id]||!x.fname) continue; const v=await get(x.fname+'|'+x.size); if(v&&v.blob){ extFiles[x.id]=fileOf(v); ch=true; } }
+    for(const x of externals){ if(extFiles[x.id]||!x.fname) continue; let f=null; try{ f=await vidFile(x.fname+'|'+x.size); }catch(e){} if(f){ extFiles[x.id]=f; ch=true; } }
     if(ch){ try{ renderAll(); }catch(e){} }
   }
   video.addEventListener('loadedmetadata',()=>{ setTimeout(autoLink,300); });
