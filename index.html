@@ -7269,6 +7269,19 @@ $('#fileProject').onchange=async e=>{
       cfg=migrateCfg({v:o.version>=4?3:(o.version>=2?2:1),pages:o.pages,cats:o.cats,descs:o.descs,rosters:o.rosters,teamNames:o.teamNames||cfg.teamNames,buttons:o.buttons.filter(b=>b&&b.id&&b.label).map(b=>Object.assign({},b,{id:String(b.id),label:String(b.label),key:String(b.key||'').toLowerCase().slice(0,1)}))});
     } else if(o.teamNames) cfg.teamNames=Object.assign({L:'Local',R:'Rival'},o.teamNames);
     if(!cfg.pages.includes(page)) page=cfg.pages[0];
+    /* sin vídeo abierto (p. ej. desde el inicio): el proyecto se guarda en «Mis proyectos» y sus cortes salen al elegir el vídeo del partido */
+    if(!hasVideo||!videoKey){
+      const key=(typeof o.videoKey==='string'&&o.videoKey)?o.videoKey:'';
+      if(!key||/^live\|/.test(key)){ toast('Abre primero el vídeo de ese partido y luego carga el archivo de proyecto.'); return; }
+      saveCfg();
+      lsSet('bbtag.project.'+key,JSON.stringify({events:o.events,markers:Array.isArray(o.markers)?o.markers:[],stints:Array.isArray(o.stints)?o.stints:[],teles:Array.isArray(o.teles)?o.teles:[],playlists:Array.isArray(o.playlists)?o.playlists:[],covers:Array.isArray(o.covers)?o.covers:[],externals:Array.isArray(o.externals)?o.externals:[],meta:(o.meta&&typeof o.meta==='object')?o.meta:null}));
+      lsSet('bbtag.pts.'+key,String(Date.now()));
+      const nm=String(o.videoName||key.split('|')[0]);
+      try{ const ra=JSON.parse(lsGet('bbtag.recent')||'[]')||[], pr=ra.find(r=>r&&r.key===key), rest=ra.filter(r=>r&&r.key!==key); rest.unshift({key,name:nm,at:Date.now(),th:(pr&&pr.th)||'',n:o.events.length,src:pr&&pr.src}); lsSet('bbtag.recent',JSON.stringify(rest.slice(0,30))); }catch(_){}
+      try{ window.__renderRec&&window.__renderRec(); }catch(_){}
+      toast('Proyecto «'+nm+'» recuperado: '+o.events.length+' cortes. Ábrelo en «Mis proyectos» y elige su vídeo.');
+      return;
+    }
     const idMap={};
     events=o.events.filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(x=>{const id=uid();idMap[x.id]=id;return normEvent(Object.assign({},x,{id}));});
     markers=Array.isArray(o.markers)?o.markers.filter(m=>m&&isFinite(m.t)).map(m=>({id:uid(),t:+m.t,text:String(m.text||'Marcador')})):[];
