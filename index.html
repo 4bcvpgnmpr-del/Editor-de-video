@@ -5824,7 +5824,7 @@ function plExpand(p){
   const missing=[];
   const out=p.items.map(id=>{
     if(isCoverId(id)){ const c=coverOf(id); return c?{cover:true,id,img:c.img,dur:c.dur,name:c.name,label:c.name,color:'#EB8300',pts:0,start:0,end:c.dur,tags:[],desc:[],btnId:'',team:'L',player:'',period:'1C',note:''}:null; }
-    if(isExtId(id)){ const x=extOf(id); if(!x) return null; const f=extFiles[x.id]; if(!f){ missing.push(x.name); return null; } return {ext:true,id,file:f,from:x.from,to:x.to,name:extTitle(x),label:extTitle(x),color:'#4DA3FF',pts:0,start:x.from,end:x.to,dur:x.to-x.from,tags:[],desc:[],btnId:'',team:'L',player:'',period:'1C',note:''}; }
+    if(isExtId(id)){ const x=extOf(id); if(!x) return null; const f=extFiles[x.id]; if(!f){ missing.push(x.name); return null; } return {ext:true,id,file:f,from:x.from,to:x.to,name:extTitle(x),label:extTitle(x),titulo:(x.en?[x.en,x.mt].filter(Boolean).join(' · '):x.name),color:'#4DA3FF',pts:0,start:x.from,end:x.to,dur:x.to-x.from,tags:[],desc:[],btnId:'',team:'L',player:'',period:'1C',note:''}; }
     return events.find(x=>x.id===id)||null;
   }).filter(Boolean);
   if(missing.length) toast('Faltan archivos externos: '+missing.join(', ')+'. Edítalos (✎) y vuelve a elegirlos.');
@@ -5873,11 +5873,30 @@ function fitDraw(ctx,src,ow,oh,sw,sh){
   if(Math.abs(w-ow)>1||Math.abs(h-oh)>1){ ctx.fillStyle='#000'; ctx.fillRect(0,0,ow,oh); }
   ctx.drawImage(src,(ow-w)/2,(oh-h)/2,w,h);
 }
-function drawTitle(ctx,ev,ow,oh,o){
-  if(!o.title||!ev) return; const nm=evName(ev); if(!nm) return;
-  const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(nm).width, pad=fs*0.5;
+/* texto que sale en pantalla en el vídeo exportado: acción · jugadora (con su número) · descriptores */
+const EXPT={};
+function expTO(){ if(EXPT.player===undefined){ let h={}; try{ h=(window.__hud&&window.__hud.get())||{}; }catch(e){} EXPT.player=h.player!==false; EXPT.cat=h.cat!==false; EXPT.desc=h.desc!==false; } return EXPT; }
+function expTitleText(ev){
+  try{
+    if(!ev||ev.cover) return '';
+    if(ev.titulo) return ev.titulo;
+    if(ev.ext) return ev.name||ev.label||'';
+    const lab=(info(ev)||{}).label||'', nm=ev.name||'';
+    const pl=(ev.player!==''&&ev.player!=null)?playerLabel(ev.team,ev.player):'';
+    const ds=(typeof descText==='function')?descText(ev):'';
+    const T=expTO(), parts=[]; [T.cat?(nm||lab):'',T.cat&&nm?lab:'',T.player?pl:'',T.desc?ds:''].forEach(x=>{ if(x&&!parts.includes(x)) parts.push(x); });
+    return parts.join(' · ')||evName(ev)||'';
+  }catch(e){ try{ return evName(ev)||''; }catch(_){ return ''; } }
+}
+function expTitleBox(ctx,nm,ow,oh){
+  if(!nm) return;
+  let fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; let tw=ctx.measureText(nm).width, pad=fs*0.5;
+  const maxW=ow-fs*1.2; if(tw+pad*2>maxW){ fs=Math.max(10,Math.floor(fs*maxW/(tw+pad*2))); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; tw=ctx.measureText(nm).width; pad=fs*0.5; }
   ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(fs*0.6,fs*0.6,tw+pad*2,fs*1.5);
   ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(nm,fs*0.6+pad,fs*0.6+fs*0.75);
+}
+function drawTitle(ctx,ev,ow,oh,o){
+  if(!o.title||!ev) return; expTitleBox(ctx,expTitleText(ev),ow,oh);
 }
 function openExtEditor(extId,addToPl){
   const ex=extId?externals.find(x=>x.id===extId):null;
@@ -6259,12 +6278,7 @@ async function fxRun(list,o,prog){
       const emit=(frame,tl,out,al)=>{
         fitDraw(ctx,frame,ow,oh);
         if(tl){ ctx.globalAlpha=al==null?1:al; const im=expPick(imgs,anims,tl,EXP_LT); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh,frame,sw,sh); ctx.globalAlpha=1; }
-        if(o.title&&ev.name!==undefined){
-          const nm=evName(ev);
-          const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(nm).width, pad=fs*0.5;
-          ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(fs*0.6,fs*0.6,tw+pad*2,fs*1.5);
-          ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(nm,fs*0.6+pad,fs*0.6+fs*0.75);
-        }
+        if(o.title&&ev.name!==undefined) expTitleBox(ctx,expTitleText(ev),ow,oh);
         let ts=Math.round(out*1e6); if(ts<lastTs+Math.round(0.6e6/fps)) ts=lastTs+Math.round(1e6/fps); lastTs=ts;
         const vf=new VideoFrame(cv,{timestamp:ts,duration:Math.round(1e6/fps)});
         enc.encode(vf,{keyFrame:kfNext||nFrames%(fps*2)===0}); kfNext=false; vf.close(); nFrames++;
@@ -6437,11 +6451,7 @@ async function expRecord(list,o,prog){
   const draw=(ev,tl,al)=>{
     ctx.drawImage(video,0,0,ow,oh);
     if(tl){ ctx.globalAlpha=al==null?1:al; const im=expPick(imgs,anims,tl,EXP_LT); if(im) ctx.drawImage(im,0,0,ow,oh); if(hasLens(tl)) expLens(ctx,tl,ow,oh); ctx.globalAlpha=1; }
-    if(o.title&&ev&&ev.name){
-      const fs=Math.round(oh*0.045); ctx.font='700 '+fs+'px Barlow,Arial,sans-serif'; const tw=ctx.measureText(ev.name).width, pad=fs*0.5;
-      ctx.fillStyle='rgba(0,0,0,.62)'; ctx.fillRect(fs*0.6,fs*0.6,tw+pad*2,fs*1.5);
-      ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(ev.name,fs*0.6+pad,fs*0.6+fs*0.75);
-    }
+    if(o.title&&ev&&!ev.cover) expTitleBox(ctx,expTitleText(ev),ow,oh);
   };
   rec.start(1000);
   let cancelled=false;
@@ -6541,7 +6551,7 @@ function openExport(list,defName){
     '<div class="xg"><div class="xc"><label class="xl">Archivo</label><select id="exMode"><option value="one">Un solo vídeo con todos los clips</option>'+(list.length>1?'<option value="each">Un archivo por clip</option>':'')+'</select><div class="xh">'+list.length+' clip'+(list.length===1?'':'s')+' · dura ≈ '+fmt(dur)+'</div></div>'+
     '<div class="xc"><label class="xl">Tipo de vídeo</label>'+qsel+'<div class="xh" id="exQh"></div></div></div>'+
     '<div class="xc"><div id="exNmBox"></div></div>'+
-    '<div class="xc"><div class="xl">Incluir:</div><div class="xchk"><label><input type="checkbox" id="exDraw" checked> Dibujos, lupas y imágenes congeladas</label><label><input type="checkbox" id="exTit" checked> Nombre del clip en pantalla</label></div></div>'+
+    '<div class="xc"><div class="xl">Incluir:</div><div class="xchk"><label><input type="checkbox" id="exDraw" checked> Dibujos, lupas y imágenes congeladas</label><label><input type="checkbox" id="exTit" checked> Texto en pantalla:</label><span style="display:flex;gap:12px;flex-wrap:wrap;margin-left:22px"><label><input type="checkbox" id="exTP" '+(expTO().player?'checked':'')+'> Jugadora</label><label><input type="checkbox" id="exTC" '+(expTO().cat?'checked':'')+'> Acción</label><label><input type="checkbox" id="exTD" '+(expTO().desc?'checked':'')+'> Descriptores</label></span></div></div>'+
     efRowHtml()+
     '<div class="xh" style="color:#8b8c93;font-size:12px;padding:0 4px">Durante la grabación no cambies de pestaña ni bloquees la pantalla. Formato: '+(/mp4/.test(mm)?'MP4':'WebM (en iPad/iPhone se ve mejor el MP4)')+'.</div>',
     'Opciones de exportación de vídeo',
@@ -6554,8 +6564,8 @@ function openExport(list,defName){
       else { box.innerHTML='<label class="xl">Nombre de cada clip <small style="font-weight:400">(déjalo como está o cámbialo)</small></label><div style="max-height:170px;overflow:auto;display:flex;flex-direction:column;gap:5px">'+list.map((e,i)=>'<input data-nm="'+i+'" type="text" value="'+esc(keep[i]!=null?keep[i]:defs[i])+'">').join('')+'</div>'; } };
     sel.addEventListener('change',draw); draw(); d.__exNames=()=>{ const o={one:'',each:[]}; const a=box.querySelector('#exNm'); if(a) o.one=expCleanU(a.value); box.querySelectorAll('[data-nm]').forEach(x=>o.each.push(expCleanU(x.value))); return o; }; }
   { const qs=d.querySelector('#exQ'), qh=d.querySelector('#exQh'); const ayuda={'1080':'Igual de rápido que el de 720p (usa la tarjeta de vídeo) pero en 1920×1080 y con más calidad. Si tu vídeo es 1080p, este es el que conserva el detalle.','9001':'Misma compatibilidad que «Compatible con todo», pero en 1080p y con mejor calidad. En el navegador tarda bastante más (puede ser 3-6 veces lo que dura el vídeo) y usa más memoria: déjalo trabajar sin cambiar de pestaña.','9000':window.scoutDesktop?'Cortes exactos en 1080p, compatible con cualquier reproductor y editor. Rápido gracias a la app de Mac.':'Compatibilidad máxima (iMovie, Premiere, DaVinci). En el navegador es LENTO: tarda varias veces lo que dura el vídeo. Úsalo solo si el rápido no abre en tu editor.','720':'Rápido y ligero, se abre en QuickTime, iMovie, WhatsApp y el móvil. Se hace casi a la velocidad del vídeo.','0':'Corta el vídeo original tal cual, sin dibujos. Lo más rápido.'}; const act=()=>{ qh.textContent=ayuda[qs.value]||''; }; qs.onchange=act; act(); }
-  d.querySelector('#exQ9').onclick=()=>{ xqAdd(list,(d.__exNames().one||defName),d.querySelector('#exMode').value,{ff:true,hq:+d.querySelector('#exQ').value===9001,w:(window.scoutDesktop||+d.querySelector('#exQ').value===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
-  d.querySelector('#exGo').onclick=()=>{
+  d.querySelector('#exQ9').onclick=()=>{EXPT.player=d.querySelector('#exTP').checked; EXPT.cat=d.querySelector('#exTC').checked; EXPT.desc=d.querySelector('#exTD').checked;  xqAdd(list,(d.__exNames().one||defName),d.querySelector('#exMode').value,{ff:true,hq:+d.querySelector('#exQ').value===9001,w:(window.scoutDesktop||+d.querySelector('#exQ').value===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}); };
+  d.querySelector('#exGo').onclick=()=>{EXPT.player=d.querySelector('#exTP').checked; EXPT.cat=d.querySelector('#exTC').checked; EXPT.desc=d.querySelector('#exTD').checked; 
     if(EXP.busy){ toast('Hay una exportación de la cola en marcha. Usa «A la cola».'); return; }
     const q=+d.querySelector('#exQ').value, o=(q===9000||q===9001)?{ff:true,hq:q===9001,w:(window.scoutDesktop||q===9001)?1920:1280,bps:0,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked}:q===0?{copy:true,w:1920,bps:8e6,draw:false,title:false}:{w:q>=1088?1920:Math.round(q*16/9),pro:q>=1088,bps:q>=1088?20e6:q>=1080?14e6:q>=720?8e6:4e6,draw:d.querySelector('#exDraw').checked,title:d.querySelector('#exTit').checked};
     efPerm().then(ok=>{EXPF.ok=ok;});
@@ -6717,7 +6727,7 @@ async function ffRun(list,o,prog){
     const doClip=async(i,ctx)=>{
       const ff=ctx.ff, mountFor=f=>mountFor2(ctx,f), segs=[]; const e=list[i]; let seg='seg'+i+'.mp4'; ctx.p=0; prog(i,n,{name:e.name||e.label||''});
       let dur, args; const seqAll=[];
-      const title=(o.title&&!e.cover)?(e.name||e.label||''):'';
+      const title=(o.title&&!e.cover)?expTitleText(e):'';
       if(title){ await ff.writeFile('t'+i+'.png',await ffTitlePng(title,W,H)); }
       if(e.cover){
         dur=Math.max(0.5,e.dur||3); const m=/^data:image\/(\w+);base64,(.*)$/.exec(e.img||''); if(!m) throw new Error('Portada no válida.');
@@ -6886,11 +6896,15 @@ async function xqPump(){
 
 /* ===== carpeta de destino (Chrome/Edge en ordenador) ===== */
 const EXPF={dir:null,name:'',use:lsGet('bbtag.exfolder')==='1',ok:false};
-const efHas=()=>!!window.showDirectoryPicker;
+const efDesk=()=>!!(window.scoutDesktop&&window.scoutDesktop.chooseDir&&window.scoutDesktop.writeFile);
+const efHas=()=>efDesk()||!!window.showDirectoryPicker;
 function efDb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('bbtag-fs',1); r.onupgradeneeded=()=>r.result.createObjectStore('h'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
-(async()=>{ if(!efHas()) return; try{ const db=await efDb(); const h=await new Promise(r=>{ const q=db.transaction('h').objectStore('h').get('dir'); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); if(h){ EXPF.dir=h; EXPF.name=h.name; } }catch(e){} })();
-async function efPick(w){ w=w||window; const h=await (w.showDirectoryPicker?w:window).showDirectoryPicker({mode:'readwrite',id:'bbtagexport'}); EXPF.dir=h; EXPF.name=h.name; try{ const db=await efDb(); db.transaction('h','readwrite').objectStore('h').put(h,'dir'); }catch(e){} return h; }
-async function efPerm(){ if(!EXPF.use||!EXPF.dir) return false; try{ let p=await EXPF.dir.queryPermission({mode:'readwrite'}); if(p!=='granted') p=await EXPF.dir.requestPermission({mode:'readwrite'}); return p==='granted'; }catch(e){ return false; } }
+(async()=>{ if(efDesk()){ try{ const d=lsGet('bbtag.xqDir'); if(d){ EXPF.dir={desk:true,path:d}; EXPF.name=d.split('/').filter(Boolean).pop()||d; if(lsGet('bbtag.exfolder')===null){ EXPF.use=true; lsSet('bbtag.exfolder','1'); } } }catch(e){} return; }
+  if(!efHas()) return; try{ const db=await efDb(); const h=await new Promise(r=>{ const q=db.transaction('h').objectStore('h').get('dir'); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); if(h){ EXPF.dir=h; EXPF.name=h.name; } }catch(e){} })();
+async function efPick(w){
+  if(efDesk()){ const d=await window.scoutDesktop.chooseDir(); if(!d){ const er=new Error('cancelado'); er.name='AbortError'; throw er; } EXPF.dir={desk:true,path:d}; EXPF.name=d.split('/').filter(Boolean).pop()||d; lsSet('bbtag.xqDir',d); return EXPF.dir; }
+  w=w||window; const h=await (w.showDirectoryPicker?w:window).showDirectoryPicker({mode:'readwrite',id:'bbtagexport'}); EXPF.dir=h; EXPF.name=h.name; try{ const db=await efDb(); db.transaction('h','readwrite').objectStore('h').put(h,'dir'); }catch(e){} return h; }
+async function efPerm(){ if(!EXPF.use||!EXPF.dir) return false; if(EXPF.dir.desk) return true; try{ let p=await EXPF.dir.queryPermission({mode:'readwrite'}); if(p!=='granted') p=await EXPF.dir.requestPermission({mode:'readwrite'}); return p==='granted'; }catch(e){ return false; } }
 window.__expMute=()=>lsGet('bbtag.expMute')==='1';
 function efRowHtml(){
   const mute='<div class="xc"><div class="xrow"><label style="flex:1"><input type="checkbox" id="exMute"'+(window.__expMute()?' checked':'')+'> Exportar sin sonido <span style="font-size:12px;color:#8b8c93">(si el audio sale desfasado)</span></label></div></div>';
@@ -6907,6 +6921,11 @@ function efBind(root){
 }
 window.__EXPF=EXPF; window.__efSave=(o)=>efSave(o);
 async function efSave(out){
+  if(EXPF.dir&&EXPF.dir.desk){
+    const D=window.scoutDesktop, sub=expClean(baseName())||'ScoutFlow';
+    for(const o of out){ const buf=await o.blob.arrayBuffer(); await D.writeFile(EXPF.dir.path,sub,o.fn||(o.name+'.'+expExt(o.mime)),buf); }
+    return EXPF.name+' / '+sub;
+  }
   const sub=await EXPF.dir.getDirectoryHandle(baseName(),{create:true}); const names=[];
   for(const o of out){
     let n=o.fn, k=1; const dot=n.lastIndexOf('.'), stem=n.slice(0,dot), ext=n.slice(dot);
