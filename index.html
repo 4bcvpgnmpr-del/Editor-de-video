@@ -1362,6 +1362,7 @@ body:not(.ipad) #bLive,body:not(.ipad) #bCloud,body:not(.ipad) #bTeams,body:not(
 @media (max-width:1500px){body:not(.ipad) #bProd .tx,body:not(.ipad) #bMode .tx,body:not(.ipad) #bLayout .tx{display:none}body:not(.ipad) #bProd,body:not(.ipad) #bMode,body:not(.ipad) #bLayout{padding:6px 9px;font-size:16px}}
 @media (max-width:1200px){body:not(.ipad) #bLib .tx{display:none}body:not(.ipad) #bLib{padding:6px 9px;font-size:16px}}
 body:not(.ipad) #bOpen,body:not(.ipad) #bLib{display:none!important}
+#bLib,#bLib2{display:none!important}
 body:not(.ipad) .ip-scrub{height:26px;padding:0 6px;background:transparent;margin-top:2px}
 body:not(.ipad) #ipSeek{height:26px}
 body:not(.ipad) #ipSeek::-webkit-slider-thumb{width:16px;height:16px;margin-top:-5px;border-width:2px}
@@ -8899,13 +8900,13 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     try{
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
       const gs=gGet(); if(gs.some(g=>g.keys.includes(videoKey))) return;
-      if(!gs.length) return; /* sin proyectos creadas, no se pregunta nada */
       const act=gs.find(x=>x.id===aGet());
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
         if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
-      if(skGet().includes(videoKey)) return;
-      if(!(q(videoKey)&&q(videoKey).events&&q(videoKey).events.length)&&!events.length) { /* partido recién abierto: se pregunta igualmente */ }
-      DLGDOC=null; askProject(videoKey);
+      /* todo son proyectos: un vídeo que no está en ninguno crea su proyecto solo (sin partidos sueltos) */
+      { const T0=titlesGet(), base=(T0[videoKey]&&T0[videoKey].t)||String(videoName||'Proyecto').replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim()||'Proyecto';
+        const a=gGet(), g={id:uid(),name:base.slice(0,60),keys:[videoKey]}; a.push(g); gSet(a); lsSet(AK,g.id);
+        toast('Proyecto «'+g.name+'» creado con este vídeo.'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__pjHome&&window.__pjHome(); }catch(e){} }
     }catch(e){}
   },1200); });
 
