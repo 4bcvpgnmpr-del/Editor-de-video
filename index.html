@@ -5430,12 +5430,19 @@ function vidRelink(key){
     inp.click();
   };
 }
+window.__pjLoadOn=function(name){ try{ window.__pjLoadOff&&window.__pjLoadOff(); window.__openT0=performance.now();
+  const o=document.createElement('div'); o.id='pjLoad'; o.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(10,10,10,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;font:600 18px var(--f-body,sans-serif);text-align:center;padding:20px';
+  o.innerHTML='<div style="width:46px;height:46px;border:5px solid #444;border-top-color:var(--accent,#F0832F);border-radius:50%;animation:pjSp 1s linear infinite"></div><div></div><small style="opacity:.7;font-weight:500">Abriendo el proyecto con todos sus partidos… toca para ocultar</small><style>@keyframes pjSp{to{transform:rotate(360deg)}}</style>';
+  o.children[1].textContent='Abriendo «'+name+'»'; o.onclick=()=>o.remove(); document.body.appendChild(o); setTimeout(()=>{ if(o.parentNode) o.remove(); },120000); }catch(e){} };
+window.__pjLoadOff=function(){ const o=document.getElementById('pjLoad'); if(o) o.remove(); };
+video.addEventListener('loadedmetadata',()=>{ const t=window.__openT0; window.__pjLoadOff(); if(t){ window.__openT0=0; const sec=((performance.now()-t)/1000).toFixed(1); if(sec>3) setTimeout(()=>toast('Abierto en '+sec+' s.'),300); } });
+video.addEventListener('error',()=>{ window.__pjLoadOff(); });
 async function vidOpenLib(key){
   try{
     const f=await vidFile(key,true);
-    if(!f){ if(window.scoutDesktop&&window.__vfWhy) toast('No se pudo abrir solo: '+window.__vfWhy); vidRelink(key); return; }
+    if(!f){ window.__pjLoadOff(); if(window.scoutDesktop&&window.__vfWhy) toast('No se pudo abrir solo: '+window.__vfWhy); vidRelink(key); return; }
     expClose(); loadFile(f,true);
-  }catch(e){toast('No se pudo abrir: '+((e&&e.message)||e)); try{ vidRelink(key); }catch(_){} }
+  }catch(e){ window.__pjLoadOff(); toast('No se pudo abrir: '+((e&&e.message)||e)); try{ vidRelink(key); }catch(_){} }
 }
 let libTeamF='';
 async function openLib(){
@@ -8979,15 +8986,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       if(!k0){ const ph=document.getElementById('hmPhoto'); if(ph) ph.click(); return; }
       const openK=k=>{
       if(k===videoKey&&hasVideo){ const x=document.getElementById('hmX'); if(x) x.click(); return; }
-      try{ let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){} toast('Abriendo «'+g.name+'»… (los vídeos grandes tardan unos segundos)'); if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre el vídeo con «Abrir un vídeo»; se añadirá a «'+g.name+'».'); const ph=document.getElementById('hmPhoto'); if(ph) ph.click(); }
+      try{ let r=null; try{ r=JSON.parse(lsGet('bbtag.recent')||'[]').find(x=>x.key===k); }catch(e){} window.__pjLoadOn(g.name); if(r&&r.src&&window.__openSrc) window.__openSrc(r.src); else vidOpenLib(k); }catch(e){ toast('Abre el vídeo con «Abrir un vídeo»; se añadirá a «'+g.name+'».'); const ph=document.getElementById('hmPhoto'); if(ph) ph.click(); }
       };
-      if(g.keys.length<2){ openK(k0); return; }
-      const T=titlesGet(), ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
-      ov.innerHTML='<div style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(460px,100%);max-height:86vh;overflow:auto"><h3 style="margin:0 0 4px;font:700 20px var(--f-head)"></h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">Toca el partido que quieres abrir.</p><div id="pcL" style="display:flex;flex-direction:column;gap:8px"></div><div style="text-align:right;margin-top:10px"><button class="btn" id="pcNo">Cerrar</button></div></div>';
-      ov.querySelector('h3').textContent=g.name; const L=ov.querySelector('#pcL');
-      g.keys.slice().reverse().forEach((k,i)=>{ const o=q(k), n=((o&&o.events)||[]).length, t=(T[k]&&T[k].t)||(o&&o.meta&&o.meta.L&&o.meta.L.name?matchTitle(o.meta):'')||k.split('|')[0];
-        const b=document.createElement('button'); b.className=i===0?'btn primary':'btn'; b.style.cssText='text-align:left;padding:12px;font-size:15px'; b.textContent=(i===0?'▶ ':'')+t+' · '+n+' cortes'+(i===0?' (el último)':''); b.onclick=()=>{ ov.remove(); openK(k); }; L.appendChild(b); });
-      document.body.appendChild(ov); ov.querySelector('#pcNo').onclick=()=>ov.remove(); ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+      openK(k0);
     });
     c.querySelector('#hmPgNew').onclick=newProject;
     c.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=async e=>{
