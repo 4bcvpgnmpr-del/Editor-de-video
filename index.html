@@ -9295,6 +9295,13 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   window.__vtRender=render; render();
 })();
 
+/* ===== Al cerrar la app o la pestaña se guarda el proyecto abierto (por si el último cambio no se había guardado) ===== */
+(function(){
+  const g=()=>{ try{ if(typeof hasVideo!=='undefined'&&hasVideo&&videoKey&&!/^live\|/.test(videoKey)) saveProject(); }catch(e){} };
+  window.addEventListener('beforeunload',g); window.addEventListener('pagehide',g);
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') g(); });
+})();
+
 /* ===== Volumen del reproductor: se guarda por proyecto (no por partido) ===== */
 (function(){
   const r=document.getElementById('volR'); if(!r) return;
