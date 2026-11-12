@@ -5442,9 +5442,10 @@ window.__pjLoadOn=function(name){ try{ window.__pjLoadOff&&window.__pjLoadOff();
 window.__pjLoadOff=function(){ const o=document.getElementById('pjLoad'); if(o) o.remove(); };
 video.addEventListener('loadedmetadata',()=>{ const t=window.__openT0; window.__pjLoadOff(); if(t){ window.__openT0=0; const sec=((performance.now()-t)/1000).toFixed(1); if(sec>3) setTimeout(()=>toast('Abierto en '+sec+' s.'),300); } });
 video.addEventListener('loadedmetadata',()=>{ window.__switching=false; clearTimeout(window.__swT); });
-video.addEventListener('error',()=>{ window.__pjLoadOff(); if(window.__switching){ window.__switching=false; try{ toast('No se pudo abrir ese vídeo. Prueba a elegirlo de nuevo.'); }catch(e){} } });
+video.addEventListener('error',()=>{ window.__pjLoadOff(); if(window.__switching){ window.__switching=false; const k=videoKey; try{ if(k&&!/^(yt|url|live)\|/.test(k)) setTimeout(()=>vidRelink(k),300); }catch(e){} } });
 async function vidOpenLib(key){
   try{
+    { let nm=''; try{ nm=((titlesGet()[key]||{}).t)||''; }catch(e){} if(!nm) nm=String(key).split('|')[0]; window.__pjLoadOn(nm); }
     const f=await vidFile(key,true);
     if(!f){ window.__pjLoadOff(); if(window.scoutDesktop&&window.__vfWhy) toast('No se pudo abrir solo: '+window.__vfWhy); vidRelink(key); return; }
     expClose(); loadFile(f,true);
