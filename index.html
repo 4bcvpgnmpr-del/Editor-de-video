@@ -5444,14 +5444,20 @@ window.__pjLoadOn=function(name){ try{ window.__pjLoadOff&&window.__pjLoadOff();
   o.children[1].textContent='Abriendo «'+name+'»'; o.onclick=()=>o.remove(); document.body.appendChild(o); setTimeout(()=>{ if(o.parentNode) o.remove(); },120000); }catch(e){} };
 window.__pjLoadOff=function(){ const o=document.getElementById('pjLoad'); if(o) o.remove(); };
 video.addEventListener('loadedmetadata',()=>{ const t=window.__openT0; window.__pjLoadOff(); if(t){ window.__openT0=0; const sec=((performance.now()-t)/1000).toFixed(1); if(sec>3) setTimeout(()=>toast('Abierto en '+sec+' s.'),300); } });
-video.addEventListener('loadedmetadata',()=>{ window.__switching=false; clearTimeout(window.__swT); });
-video.addEventListener('error',()=>{ window.__pjLoadOff(); if(window.__switching){ window.__switching=false; const k=videoKey; try{ if(k&&!/^(yt|url|live)\|/.test(k)) setTimeout(()=>vidRelink(k),300); }catch(e){} } });
+video.addEventListener('loadedmetadata',()=>{ window.__switching=false; window.__opening=null; clearTimeout(window.__swT); });
+video.addEventListener('error',()=>{ window.__pjLoadOff(); const op=window.__opening; window.__opening=null; if(window.__switching||op){ window.__switching=false; const k=op||videoKey; try{ if(k&&!/^(yt|url|live)\|/.test(k)) setTimeout(()=>vidRelink(k),300); }catch(e){} } });
+window.__pjLoadMsg=function(t,btn){ try{ const o=document.getElementById('pjLoad'); if(!o) return; const sm=o.querySelector('small'); if(sm) sm.textContent=t;
+  let b=o.querySelector('#pjLoadRe'); if(btn){ if(!b){ b=document.createElement('button'); b.id='pjLoadRe'; b.className='btn primary'; b.style.cssText='margin-top:6px;padding:10px 18px;font-size:15px'; b.textContent='Elegir el vídeo otra vez'; b.onclick=e=>{ e.stopPropagation(); const k=window.__opening; window.__pjLoadOff(); if(k) vidRelink(k); }; o.appendChild(b); } } else if(b) b.remove(); }catch(e){} };
 async function vidOpenLib(key){
+  window.__opening=key; const tk=Date.now(); window.__openTk=tk;
   try{
     { let nm=''; try{ nm=((titlesGet()[key]||{}).t)||''; }catch(e){} if(!nm) nm=String(key).split('|')[0]; window.__pjLoadOn(nm); }
-    const f=await vidFile(key,true);
+    window.__pjLoadMsg('Buscando el archivo del vídeo…');
+    let f=await Promise.race([vidFile(key,true),new Promise(r=>setTimeout(()=>r('TO'),15000))]);
+    if(f==='TO'){ window.__pjLoadOff(); toast('No se encuentra el archivo a tiempo (¿está en iCloud, un disco externo o lo moviste?).'); vidRelink(key); return; }
     if(!f){ window.__pjLoadOff(); if(window.scoutDesktop&&window.__vfWhy) toast('No se pudo abrir solo: '+window.__vfWhy); vidRelink(key); return; }
-    expClose(); loadFile(f,true);
+    expClose(); window.__pjLoadMsg('Cargando el vídeo… (puede tardar si pesa mucho)'); loadFile(f,true);
+    setTimeout(()=>{ if(window.__openTk===tk&&document.getElementById('pjLoad')&&window.__opening===key) window.__pjLoadMsg('Está tardando más de lo normal. Puedes esperar o elegir el archivo otra vez.',true); },20000);
   }catch(e){ window.__pjLoadOff(); toast('No se pudo abrir: '+((e&&e.message)||e)); try{ vidRelink(key); }catch(_){} }
 }
 let libTeamF='';
