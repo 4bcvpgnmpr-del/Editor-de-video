@@ -9797,11 +9797,13 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     '<button id="hhPj"><span class="ic">📁</span><b>Proyecto nuevo</b><small>Con uno o varios vídeos</small></button>'+
     '<button id="hhLive"><span class="ic" style="color:#ff4d4d">●</span><b>Cámara en vivo</b><small>Graba y etiqueta un partido a la vez</small></button>';
   h2.after(hero);
-  document.getElementById('hhOpen').onclick=()=>clk('hmPhoto');
+  /* «Nuevo proyecto» = proyecto propio: no se mezcla con el proyecto que estaba activo; el vídeo empieza de cero */
+  const nuevoSolo=()=>{ try{ localStorage.setItem('bbtag.group.active',''); }catch(e){} window.__pjFresh=Date.now(); clk('hmPhoto'); };
+  document.getElementById('hhOpen').onclick=nuevoSolo;
   document.getElementById('hhPj').onclick=()=>wizard();
   document.getElementById('hhLive').onclick=()=>clk('hmLive');
   /* barra de menús */
-  const M=[['Archivo',[['Nuevo proyecto','Elegir el vídeo y etiquetar','hmPhoto'],['Proyecto con varios partidos','Dos o más vídeos juntos','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Exportar vídeo','Los cortes como archivo de vídeo','@savevid'],['Guardar proyecto','Archivo de proyecto','bJson'],['Cargar proyecto','Abrir un archivo de proyecto','bLoad'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
+  const M=[['Archivo',[['Nuevo proyecto','Elegir el vídeo y etiquetar','@nuevo'],['Proyecto con varios partidos','Dos o más vídeos juntos','@wizard'],['Otras carpetas','Discos, USB, red','hmFile'],['Enlace','YouTube, directos, URL','hmLink'],['Recuperar marcas','Archivo de proyecto','hmMarks'],['-'],['Exportar vídeo','Los cortes como archivo de vídeo','@savevid'],['Guardar proyecto','Archivo de proyecto','bJson'],['Cargar proyecto','Abrir un archivo de proyecto','bLoad'],['-'],['Cámara en vivo','Grabar y etiquetar un partido','hmLive']]],
     ['Herramientas',[['Análisis previo','Vídeos guardados','hmPrev'],['Editar set de botones','Tu botonera de etiquetas','hmEdit'],['Equipos','Jugadoras guardadas','hmTeams'],['Nube','Sincronizar iPad y ordenador','hmCloud'],['-'],['Ajustes','Preferencias y copia de seguridad','hmSet']]],
     ['Ayuda',[['Primeros pasos','Equipos, fotos y proyectos','@guide'],['Tutorial de cada función','','hmHelp']]]];
   if(!FEAT.vivo||!FEAT.nube){ const hide=new Set([!FEAT.vivo&&'hmLive',!FEAT.nube&&'hmCloud'].filter(Boolean)); M.forEach(m=>{ m[1]=m[1].filter(it=>!hide.has(it[2])); const o=[]; m[1].forEach(it=>{ if(it[0]==='-'&&(!o.length||o[o.length-1][0]==='-')) return; o.push(it); }); while(o.length&&o[o.length-1][0]==='-') o.pop(); m[1]=o; }); }
@@ -9811,7 +9813,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   const closeAll=()=>bar.querySelectorAll('.mn.open').forEach(x=>x.classList.remove('open'));
   bar.querySelectorAll('.mn>button').forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); const m=b.parentNode, was=m.classList.contains('open'); closeAll(); if(!was) m.classList.add('open'); };
     b.onmouseenter=()=>{ if(bar.querySelector('.mn.open')){ closeAll(); b.parentNode.classList.add('open'); } }; });
-  bar.querySelectorAll('.dd button').forEach(b=>b.onclick=()=>{ closeAll(); const t=b.dataset.t; if(t==='@wizard') wizard(); else if(t==='@guide') guide(); else if(t==='@savevid'){ if(window.__saveVideo) window.__saveVideo(); } else clk(t); });
+  bar.querySelectorAll('.dd button').forEach(b=>b.onclick=()=>{ closeAll(); const t=b.dataset.t; if(t==='@wizard') wizard(); else if(t==='@nuevo') nuevoSolo(); else if(t==='@guide') guide(); else if(t==='@savevid'){ if(window.__saveVideo) window.__saveVideo(); } else clk(t); });
   document.getElementById('hbGear').onclick=()=>clk('hmSet');
   document.addEventListener('click',e=>{ if(!bar.contains(e.target)) closeAll(); });
   /* guía de primeros pasos (se muestra una vez, y desde Ayuda) */
