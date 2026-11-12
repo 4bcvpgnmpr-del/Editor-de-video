@@ -9735,7 +9735,20 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&B.classList.contains('hmForce')&&hasVideo&&!document.querySelector('dialog[open]')&&!document.getElementById('expDlg')) $h('hmX').click(); });
   const btn=document.createElement('button'); btn.id='ipHomeBtn'; btn.className='btn'; btn.title='Inicio'; btn.setAttribute('aria-label','Inicio');
   btn.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>';
-  btn.onclick=()=>{ force=true; B.classList.add('hmForce'); renderRec(); };
+  const irInicio=()=>{ force=true; B.classList.add('hmForce'); renderRec(); };
+  /* la casita, estando dentro de un proyecto: pregunta si se guarda antes de salir */
+  btn.onclick=()=>{
+    let est=null; try{ est=window.__estadoSalir&&window.__estadoSalir(); }catch(e){}
+    if(!est||!est.abierto||document.getElementById('salirOv')){ irInicio(); return; }
+    const ov=document.createElement('div'); ov.id='salirOv'; ov.style.cssText='position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
+    ov.innerHTML='<div style="background:var(--panel,#1c1c1c);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;padding:18px;width:min(440px,100%);box-shadow:0 12px 40px rgba(0,0,0,.4)"><h3 style="margin:0 0 6px;font:700 20px var(--f-head,inherit)"></h3><p style="margin:0 0 14px;color:var(--muted,#aaa);font-size:14px">Tus cortes se guardan solos mientras trabajas. Al guardar y salir quedan guardados otra vez antes de volver al inicio.</p><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="soNo">Seguir en el proyecto</button><button class="btn primary" id="soOk">Guardar y salir</button></div></div>';
+    ov.querySelector('h3').textContent='¿Guardar el proyecto «'+(est.nombre||'sin nombre')+'»?';
+    document.body.appendChild(ov);
+    ov.querySelector('#soNo').onclick=()=>ov.remove();
+    ov.querySelector('#soOk').onclick=()=>{ try{ window.__guardarAlSalir&&window.__guardarAlSalir(); }catch(e){} ov.remove(); try{ toast('Proyecto guardado.'); }catch(e){} irInicio(); };
+    ov.addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Escape') ov.remove(); });
+    setTimeout(()=>{ const o=ov.querySelector('#soOk'); if(o) o.focus(); },30);
+  };
   const ta=document.querySelector('.top-actions'); if(ta) ta.insertBefore(btn,ta.firstChild);
   /* recientes */
   const RK='bbtag.recent'; let RF='';
