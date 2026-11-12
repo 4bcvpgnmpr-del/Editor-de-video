@@ -1502,6 +1502,9 @@ body:not(.extSrc):has(#empty:not([hidden])) .top .score,body:not(.extSrc):has(#e
           <div class="tsel">
             <label title="Mostrar los dibujos y congelaciones durante la reproducción"><input type="checkbox" id="chkTele" checked> Dibujos
             </label>
+            <label title="Volumen del reproductor: se recuerda por proyecto">Volumen
+              <input type="range" id="volR" min="0" max="1" step="0.05" value="1" style="width:78px;vertical-align:middle">
+            </label>
             <label>Velocidad
               <select id="speed">
                 <option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="0.75">0,75×</option>
@@ -9290,6 +9293,18 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   video.addEventListener('loadedmetadata',()=>setTimeout(add,200));
   new MutationObserver(()=>render()).observe(document.getElementById('videoName'),{childList:true,characterData:true,subtree:true});
   window.__vtRender=render; render();
+})();
+
+/* ===== Volumen del reproductor: se guarda por proyecto (no por partido) ===== */
+(function(){
+  const r=document.getElementById('volR'); if(!r) return;
+  const proy=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'); const ac=lsGet('bbtag.group.active'); const g=a.find(x=>x&&x.id===ac&&(x.keys||[]).includes(videoKey))||a.find(x=>x&&(x.keys||[]).includes(videoKey))||a.find(x=>x&&x.id===ac); return g?g.id:'_'; }catch(e){ return '_'; } };
+  const K=()=>'bbtag.vol.'+proy();
+  let aplicando=false;
+  function aplicar(){ let v=parseFloat(lsGet(K())); if(!(v>=0&&v<=1)) v=1; aplicando=true; try{ video.volume=v; r.value=String(v); }catch(e){} aplicando=false; }
+  r.addEventListener('input',()=>{ const v=parseFloat(r.value); try{ video.volume=v; video.muted=(v===0); }catch(e){} lsSet(K(),String(v)); });
+  video.addEventListener('loadedmetadata',()=>{ setTimeout(aplicar,60); setTimeout(aplicar,1500); });
+  aplicar();
 })();
 
 /* ===== Exportar el montaje para editores profesionales (EDL + XML) ===== */
