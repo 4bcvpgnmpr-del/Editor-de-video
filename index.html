@@ -5290,6 +5290,9 @@ video.addEventListener('loadedmetadata',()=>{
         try{ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); localStorage.removeItem('bbtag.psy.'+videoKey); }catch(e){}
         setTimeout(()=>toast('Proyecto nuevo: este vídeo empieza de cero. Lo anterior queda guardado como copia.'),500); }
       restored=applyProjectObj(null);
+      /* proyecto nuevo: sin los equipos del partido anterior y se pregunta cuáles son */
+      try{ localStorage.removeItem('bbtag.asked.'+videoKey); if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
+        cfg.teamNames=Object.assign({},cfg.teamNames,{L:'Local',R:'Rival'}); cfg.rosters=Object.assign({},cfg.rosters,{L:[],R:[]}); ['L','R'].forEach(k=>{ try{ phFill(k,cfg.teamNames[k]); }catch(e){} }); }catch(e){}
     } else
     restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
   }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];matchMeta=null;}
