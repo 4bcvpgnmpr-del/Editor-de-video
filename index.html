@@ -9311,6 +9311,10 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') g(); });
 })();
 
+/* ===== Para la app de Mac: al cerrar pregunta si se guarda el proyecto abierto ===== */
+window.__estadoSalir=function(){ try{ const ab=!!(hasVideo&&videoKey&&!/^live\|/.test(videoKey)); let nombre=''; if(ab){ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), ac=lsGet('bbtag.group.active'); const g=a.find(x=>x&&x.id===ac&&(x.keys||[]).includes(videoKey))||a.find(x=>x&&(x.keys||[]).includes(videoKey)); nombre=g?g.name:String(videoName||'').replace(/\.[^.]+$/,''); } return {live:!!window.__liveOn,abierto:ab,nombre:nombre}; }catch(e){ return null; } };
+window.__guardarAlSalir=function(){ try{ saveProject(); return true; }catch(e){ return false; } };
+
 /* ===== Volumen del reproductor: se guarda por proyecto (no por partido) ===== */
 (function(){
   const r=document.getElementById('volR'); if(!r) return;
@@ -9829,7 +9833,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     '<button id="hhLive"><span class="ic" style="color:#ff4d4d">●</span><b>Cámara en vivo</b><small>Graba y etiqueta un partido a la vez</small></button>';
   h2.after(hero);
   /* «Nuevo proyecto» = proyecto propio: no se mezcla con el proyecto que estaba activo; el vídeo empieza de cero */
-  const nuevoSolo=()=>{ try{ localStorage.setItem('bbtag.group.active',''); }catch(e){} window.__pjFresh=Date.now(); clk('hmPhoto'); };
+  const nuevoSolo=()=>{ const go=n=>{ try{ if(n&&window.__pjApi){ window.__pjApi.create(n); } else localStorage.setItem('bbtag.group.active',''); }catch(e){} window.__pjFresh=Date.now(); clk('hmPhoto'); }; if(window.__askName) window.__askName('Nombre del proyecto','',go); else go(''); };
   document.getElementById('hhOpen').onclick=nuevoSolo;
   document.getElementById('hhPj').onclick=()=>wizard();
   document.getElementById('hhLive').onclick=()=>clk('hmLive');
