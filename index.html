@@ -5251,10 +5251,14 @@ function loadFile(file,fromLib){
   if(window.__extOff) window.__extOff();
   if(objectURL&&!/^scout:/.test(objectURL)) URL.revokeObjectURL(objectURL);
   stopClip(false);
+  /* cambiar de partido con otro ya abierto: no se enseña el inicio mientras carga el nuevo vídeo */
+  window.__switching=!!hasVideo; clearTimeout(window.__swT); window.__swT=setTimeout(()=>{ window.__switching=false; },45000);
   hasVideo=false;
   objectURL=file.scoutUrl||URL.createObjectURL(file);
   videoName=file.name; videoKey=file.name+'|'+file.size;
-  window.__freshNew=!fromLib&&!!window.__pjFresh&&(Date.now()-window.__pjFresh<180000); window.__pjFresh=0;
+  /* un vídeo elegido para un proyecto nuevo (o recién creado y vacío) empieza de cero aunque ya se hubiera usado antes */
+  const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).length; }catch(e){ return false; } };
+  window.__freshNew=!fromLib&&((!!window.__pjFresh&&(Date.now()-window.__pjFresh<900000))||__vacio()); window.__pjFresh=0;
   window.__fresh=fromLib?null:videoKey;   /* elegir un archivo empieza de cero; solo «Mis partidos»/proyectos recuperan lo guardado */
   video.src=objectURL;
   $('#videoName').textContent=file.name;
@@ -5278,7 +5282,7 @@ video.addEventListener('loadedmetadata',()=>{
   let restored=0;
   try{
     /* un partido ya guardado se recupera con sus cortes al volver a elegir su vídeo (antes se borraban si no estaba en un grupo); para empezarlo de cero se borra desde Mis proyectos (🗑) */
-    if(window.__freshNew){ window.__freshNew=false; const raw0=lsGet('bbtag.project.'+videoKey);
+    if(window.__freshNew){ window.__freshNew=false; window.__freshWas=true; const raw0=lsGet('bbtag.project.'+videoKey);
       if(raw0){ try{ const o0=JSON.parse(raw0); if(o0&&((o0.events&&o0.events.length)||(o0.markers&&o0.markers.length))){ lsSet('bbtag.project.'+videoKey+'.copia',raw0); } }catch(e){}
         try{ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); localStorage.removeItem('bbtag.psy.'+videoKey); }catch(e){}
         setTimeout(()=>toast('Proyecto nuevo: este vídeo empieza de cero. Lo anterior queda guardado como copia.'),500); }
@@ -5437,7 +5441,8 @@ window.__pjLoadOn=function(name){ try{ window.__pjLoadOff&&window.__pjLoadOff();
   o.children[1].textContent='Abriendo «'+name+'»'; o.onclick=()=>o.remove(); document.body.appendChild(o); setTimeout(()=>{ if(o.parentNode) o.remove(); },120000); }catch(e){} };
 window.__pjLoadOff=function(){ const o=document.getElementById('pjLoad'); if(o) o.remove(); };
 video.addEventListener('loadedmetadata',()=>{ const t=window.__openT0; window.__pjLoadOff(); if(t){ window.__openT0=0; const sec=((performance.now()-t)/1000).toFixed(1); if(sec>3) setTimeout(()=>toast('Abierto en '+sec+' s.'),300); } });
-video.addEventListener('error',()=>{ window.__pjLoadOff(); });
+video.addEventListener('loadedmetadata',()=>{ window.__switching=false; clearTimeout(window.__swT); });
+video.addEventListener('error',()=>{ window.__pjLoadOff(); if(window.__switching){ window.__switching=false; try{ toast('No se pudo abrir ese vídeo. Prueba a elegirlo de nuevo.'); }catch(e){} } });
 async function vidOpenLib(key){
   try{
     const f=await vidFile(key,true);
@@ -8899,8 +8904,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     try{
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
-      const gs=gGet(); if(gs.some(g=>g.keys.includes(videoKey))) return;
-      const act=gs.find(x=>x.id===aGet());
+      const gs=gGet(); const act=gs.find(x=>x.id===aGet()); const fw=!!window.__freshWas; window.__freshWas=false;
+      if(act&&act.keys.includes(videoKey)) return;
+      if(!fw&&gs.some(g=>g.keys.includes(videoKey))) return;
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
         if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
       /* todo son proyectos: un vídeo que no está en ninguno crea su proyecto solo (sin partidos sueltos) */
@@ -8923,7 +8929,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
 
   /* empezar un partido dentro de un proyecto: elegir de dónde viene el vídeo */
   function pickSource(g){
-    lsSet(AK,g.id);
+    lsSet(AK,g.id); window.__pjFresh=Date.now();
     const d=expDlgShell('<h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Proyecto «'+esc(g.name)+'»</h3><p class="hint" style="margin:0 0 10px">¿De dónde viene el vídeo del partido?</p><div id="psB" style="display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="psNo">Cerrar</button></div>');
     d.firstElementChild.style.width='min(440px,100%)';
     const B=d.querySelector('#psB'), IP=document.body.classList.contains('ipad')||(typeof IPM!=='undefined'&&IPM.on);
@@ -8964,7 +8970,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   }); }
   window.__askOk=askOk;
   window.__pjNew=newProject;
-  window.__pjApi={addKey:(key,name)=>{ const a=gGet(); let g=a.find(x=>x.id===lsGet(AK)); if(!g){ g=a.find(x=>x.keys.includes(key)); } if(!g){ g={id:uid(),name:String(name||'Proyecto').slice(0,60),keys:[]}; a.push(g); } if(!g.keys.includes(key)) g.keys.push(key); gSet(a); lsSet(AK,g.id); try{ window.__pjHome(); }catch(e){} return g; },create:(name)=>{ const a=gGet(), g={id:uid(),name:String(name).slice(0,60),keys:[]}; a.push(g); gSet(a); lsSet(AK,g.id); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return g; }};
+  window.__pjApi={addKey:(key,name)=>{ const a=gGet(); let g=a.find(x=>x.id===lsGet(AK)); if(!g){ g=a.find(x=>x.keys.includes(key)); } if(!g){ g={id:uid(),name:String(name||'Proyecto').slice(0,60),keys:[]}; a.push(g); } if(!g.keys.includes(key)) g.keys.push(key); gSet(a); lsSet(AK,g.id); try{ window.__pjHome(); }catch(e){} return g; },create:(name)=>{ const a=gGet(), g={id:uid(),name:String(name).slice(0,60),keys:[]}; a.push(g); gSet(a); lsSet(AK,g.id); window.__pjFresh=Date.now(); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return g; }};
 
   /* inicio: tarjetas de proyectos */
   window.__pjHome=function(){
@@ -9740,7 +9746,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
       if(FSA()) return;
       if(lastFile.size<2e9) vidSave(lastFile);
     }catch(e){} },2500); } });
-  const tick=()=>{ const tp=document.querySelector('.top'); if(tp) document.documentElement.style.setProperty('--hmT',Math.round(tp.getBoundingClientRect().bottom)+'px'); B.classList.toggle('ipHome',(!hasVideo||force)); if(!hasVideo) B.classList.remove('hmForce'); };
+  const tick=()=>{ const tp=document.querySelector('.top'); if(tp) document.documentElement.style.setProperty('--hmT',Math.round(tp.getBoundingClientRect().bottom)+'px'); B.classList.toggle('ipHome',((!hasVideo&&!window.__switching)||force)); if(!hasVideo) B.classList.remove('hmForce'); };
   setInterval(tick,250); tick(); renderRec();
 })();
 /*HOME2*/
