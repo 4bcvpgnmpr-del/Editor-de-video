@@ -11573,6 +11573,7 @@ async function aiTrackRun(p,secs,t0,ui){
 /* copia oculta del vídeo para analizar: el vídeo de pantalla se queda quieto mientras la IA piensa, como en Once */
 async function aiClone(){
   try{ const src=video.currentSrc||video.src; if(!src) return video;
+    if((video.videoWidth||0)*(video.videoHeight||0)>2100000) return video;   /* vídeos 2K/4K: un 2º decodificador a la vez puede tumbar la app, se analiza en el principal */
     const av=document.createElement('video'); av.muted=video.muted; av.preload='auto'; av.playsInline=true; av.crossOrigin=video.crossOrigin||null; av.style.cssText='position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none'; av.src=src; document.body.appendChild(av);
     await new Promise((res,rej)=>{ let d=false; const ok=()=>{ if(!d){ d=true; res(); } }; av.addEventListener('loadeddata',ok,{once:true}); av.addEventListener('error',()=>{ if(!d){ d=true; rej(new Error('clon')); } },{once:true}); setTimeout(()=>{ if(!d){ d=true; rej(new Error('clon')); } },8000); });
     if(!av.videoWidth) throw new Error('clon'); return av; }catch(e){ return video; }
@@ -11595,7 +11596,8 @@ async function aiMultiRun2(video,isClone,secs,t0,ui,sel){
   const newTrack=(b,img,S,lt)=>({id:++nid,fx:b.vx,fy:b.fy,px:b.vx,py:b.fy,vx:0,vy:0,h:b.vh,sig:aiSig(img,b,S),lost:0,last:lt,pts:[[+lt.toFixed(3),b.vx/vw,b.fy/vh]],dead:false});
   let useP=false;
   if(useP){ try{ video.muted=true; video.playbackRate=0.5; await video.play(); }catch(e){ useP=false; } }
-  for(let n=0;!ui.stop();n++){
+  let vErr=false; const onVErr=()=>{ vErr=true; }; video.addEventListener('error',onVErr);
+  for(let n=0;!ui.stop()&&!vErr;n++){
     let lt, firstFrame=(n===0);
     if(firstFrame) lt=0;
     else if(useP){ lt=await new Promise(res=>{ let d=false; const fin=v=>{ if(!d){ d=true; res(v); } }; const cb=(now,meta)=>{ if(meta.mediaTime>=t0+tPrev+step*0.9||video.ended) fin(meta.mediaTime-t0); else video.requestVideoFrameCallback(cb); }; video.requestVideoFrameCallback(cb); setTimeout(()=>fin(video.currentTime-t0),1500); }); }
@@ -11628,6 +11630,7 @@ async function aiMultiRun2(video,isClone,secs,t0,ui,sel){
     ui.msg((ses.native&&!AI.useWasm?'IA nativa':'IA')+' analizando a todas las jugadoras… '+Math.min(100,Math.round(lt/secs*100))+'%'+(ema?' · '+Math.round(ema)+' ms/fotograma':''));
     if(ui.frame) ui.frame(tracks.filter(t=>!t.dead&&!t.lost).map(t=>[t.fx/vw,t.fy/vh,t.h/vh]));
   }
+  video.removeEventListener('error',onVErr); if(vErr) ui.msg('El vídeo dejó de decodificarse durante el análisis; se guarda lo analizado hasta ahí.');
   try{ video.pause(); video.playbackRate=AI.rate0||1; }catch(e){}
   AI.src=null; if(ui.frame) ui.frame(null);
   return tracks.filter(t=>t.pts.length>=3).map(t=>({id:t.id,pts:t.pts,h:t.h/vh,sig:t.sig}));
