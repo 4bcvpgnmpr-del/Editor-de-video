@@ -5258,9 +5258,12 @@ function loadFile(file,fromLib){
   window.__switching=!!hasVideo; clearTimeout(window.__swT); window.__swT=setTimeout(()=>{ window.__switching=false; },45000);
   hasVideo=false;
   objectURL=file.scoutUrl||URL.createObjectURL(file);
+  /* los cortes marcados del vídeo que se deja no se pierden: pasan a «marcados de otros partidos» para producirlos todos juntos */
+  try{ if(videoKey&&CK.size){ CK.forEach(id=>{ const ev=events.find(x=>x.id===id); if(ev) CKX.set(videoKey+'#'+id,{k:videoKey,e:ev}); }); CK.clear(); } }catch(e){}
   videoName=file.name; videoKey=file.name+'|'+file.size;
-  /* un vídeo elegido para un proyecto nuevo (o recién creado y vacío) empieza de cero aunque ya se hubiera usado antes */
-  const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).length; }catch(e){ return false; } };
+  /* un vídeo que entra en un proyecto que todavía no lo tenía empieza de cero aunque ya se hubiera usado en otro proyecto
+     (lo anterior queda guardado como copia) */
+  const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).includes(videoKey); }catch(e){ return false; } };
   window.__freshNew=!fromLib&&((!!window.__pjFresh&&(Date.now()-window.__pjFresh<900000))||__vacio()); window.__pjFresh=0;
   window.__fresh=fromLib?null:videoKey;   /* elegir un archivo empieza de cero; solo «Mis partidos»/proyectos recuperan lo guardado */
   video.src=objectURL;
@@ -5288,6 +5291,7 @@ video.addEventListener('loadedmetadata',()=>{
     if(window.__freshNew){ window.__freshNew=false; window.__freshWas=true; const raw0=lsGet('bbtag.project.'+videoKey);
       if(raw0){ try{ const o0=JSON.parse(raw0); if(o0&&((o0.events&&o0.events.length)||(o0.markers&&o0.markers.length))){ lsSet('bbtag.project.'+videoKey+'.copia',raw0); } }catch(e){}
         try{ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); localStorage.removeItem('bbtag.psy.'+videoKey); }catch(e){}
+        lsSet('bbtag.freshAt.'+videoKey,String(Date.now()));
         setTimeout(()=>toast('Proyecto nuevo: este vídeo empieza de cero. Lo anterior queda guardado como copia.'),500); }
       restored=applyProjectObj(null);
       /* proyecto nuevo: sin los equipos del partido anterior y se pregunta cuáles son */
@@ -8078,7 +8082,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     try{
       const rows=await rest('video_projects?select=ts,data&key=eq.'+encodeURIComponent(key)+'&limit=1');
       if(key!==videoKey) return;
-      const r=rows&&rows[0], lts=num('bbtag.pts.'+key), psy=num('bbtag.psy.'+key), hasLocal=!!lsGet('bbtag.project.'+key);
+      let r=rows&&rows[0]; const lts=num('bbtag.pts.'+key), psy=num('bbtag.psy.'+key), hasLocal=!!lsGet('bbtag.project.'+key);
+      /* este vídeo empezó de cero en un proyecto nuevo: lo que hay en la nube de antes son las etiquetas viejas, no se recuperan */
+      const fra=num('bbtag.freshAt.'+key); if(r&&fra&&r.ts<=fra) r=null;
       if(r&&(!hasLocal||r.ts>psy&&r.ts>lts||(r.ts>psy&&lts>psy&&confirm('Hay cambios nuevos en la nube y en este dispositivo.\nAceptar = usar la versión de la nube.\nCancelar = conservar la de este dispositivo.')))){
         if(teleEd) return;
         APPLY=true;
@@ -9209,7 +9215,14 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     else { const k=c.dataset.vk; evsOf(k).filter(filtPred()).forEach(ev=>{ if(c.checked) CKX.set(k+'#'+ev.id,{k,e:ev}); else CKX.delete(k+'#'+ev.id); }); renderList(); }
     bulkRender();
   },true);
-  video.addEventListener('loadedmetadata',()=>{ CKX.clear(); });
+  video.addEventListener('loadedmetadata',()=>{
+    const g=act(), ks=(g&&g.keys)||[];
+    [...CKX.entries()].forEach(([id,v])=>{
+      if(v.k===videoKey){ if(events.some(x=>x.id===v.e.id)) CK.add(v.e.id); CKX.delete(id); }
+      else if(!ks.includes(v.k)) CKX.delete(id);   /* de otro proyecto: fuera */
+    });
+    try{ renderList(); }catch(e){}
+  });
   window.__xMarkAll=on=>{ const g=act(); if(!g||g.keys.length<2||!videoKey||!g.keys.includes(videoKey)||!mode()) return; g.keys.forEach(k=>{ if(k===videoKey) return; evsOf(k).filter(filtPred()).forEach(ev=>{ if(on) CKX.set(k+'#'+ev.id,{k,e:ev}); else CKX.delete(k+'#'+ev.id); }); }); };
   /* producir un vídeo (o añadir a la playlist) con los cortes marcados de TODOS los partidos */
   window.__xProduce=async function(produce){
