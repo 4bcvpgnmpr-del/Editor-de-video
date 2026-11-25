@@ -9095,7 +9095,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     function head(){
       const gs=gGet(), act=aGet();
       if(S.gid){ const g=gs.find(x=>x.id===S.gid); if(g){ if(act!==g.id) lsSet(AK,g.id);
-        return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><h3 style="margin:0;font:700 22px var(--f-head)">📁 '+esc(g.name)+'</h3><span style="flex:1"></span><button style="'+btn+'" id="pjRen">✎ Cambiar nombre</button><button style="'+btn+'" id="pjDel" title="Borrar proyecto">🗑 Borrar</button><button class="btn" id="pjX">Cerrar</button></div>'; } }
+        return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><h3 style="margin:0;font:700 22px var(--f-head)">📁 '+esc(g.name)+'</h3><span style="flex:1"></span><button style="'+btn+'" id="pjPart" title="Elegir qué partidos van en este proyecto">⇄ Partidos</button><button style="'+btn+'" id="pjRen">✎ Cambiar nombre</button><button style="'+btn+'" id="pjDel" title="Borrar proyecto">🗑 Borrar</button><button class="btn" id="pjX">Cerrar</button></div>'; } }
       return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0;font:700 20px var(--f-head)">📚 Proyectos y biblioteca</h3><span style="flex:1"></span><button class="btn" id="pjX">Cerrar</button></div>'+
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><select id="pjG" style="'+inp+';min-width:200px"><option value="">Todos los partidos guardados</option>'+gs.map(g=>'<option value="'+esc(g.id)+'"'+(g.id===S.gid?' selected':'')+'>'+esc(g.name)+' ('+g.keys.length+')</option>').join('')+'</select>'+
         '<button style="'+btn+'" id="pjNew">＋ Nuevo proyecto</button>'+
@@ -9106,16 +9106,22 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       const pg=B.querySelector('#pjG'); if(pg) pg.onchange=e=>{ S.gid=e.target.value; S.cat=S.game=S.side=''; S.sel=new Set(); S.view='lib'; draw(); };
       const pn=B.querySelector('#pjNew'); if(pn) pn.onclick=()=>{ expClose(); newProject(); };
       const ap=B.querySelector('#pjAdd'); if(ap) ap.onclick=()=>{ const g=gGet().find(x=>x.id===S.gid); expClose(); DLGDOC=null; pickSource(g); };
+      const pp=B.querySelector('#pjPart'); if(pp) pp.onclick=()=>{ S.view='games'; draw(); };
       const r=B.querySelector('#pjRen'); if(r) r.onclick=()=>{ const g0=gGet().find(x=>x.id===S.gid); askName('Nombre del proyecto',g0.name,n=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); g.name=n.slice(0,60); gSet(gs); draw(); }); };
       const dl=B.querySelector('#pjDel'); if(dl) dl.onclick=async()=>{ const gs=gGet(), g=gs.find(x=>x.id===S.gid); if(!(await askOk('¿Borrar el proyecto «'+g.name+'»?','Se quital proyecto. Los vídeos que no estén en otro proyecto empezarán de cero al abrirlos.'))) return; gSet(gs.filter(x=>x.id!==g.id)); if(aGet()===g.id) lsSet(AK,''); S.gid=''; draw(); };
       const pa=B.querySelector('#pjParts'); if(pa) pa.onclick=()=>{ S.view=S.view==='games'?'lib':'games'; draw(); };
       const ac=B.querySelector('#pjAct'); if(ac) ac.onchange=()=>{ lsSet(AK,ac.checked?S.gid:''); toast(ac.checked?'Proyecto activo: los vídeos nuevos se añaden aquí.':'Ya no se añaden vídeos solos.'); };
     }
     function drawGames(){
-      const gs=gGet(), g=gs.find(x=>x.id===S.gid); const all=Object.keys(gameOf).sort((a,b)=>(gameOf[b].added||0)-(gameOf[a].added||0));
+      const gs=gGet(), g=gs.find(x=>x.id===S.gid);
+      /* todos los partidos: los guardados en «Mis partidos» y los de cualquier proyecto (también los abiertos desde el disco en la app de Mac) */
+      const set=new Set(Object.keys(gameOf)); gs.forEach(x=>(x.keys||[]).forEach(k=>set.add(k)));
+      try{ for(let i=0;i<localStorage.length;i++){ const lk=localStorage.key(i); if(lk&&lk.indexOf('bbtag.project.')===0){ const k=lk.slice(14); if(!/\.(copia|nuevo)$/.test(k)) set.add(k); } } }catch(e){}
+      const enG=k=>gs.filter(x=>x.id!==S.gid&&(x.keys||[]).includes(k)).map(x=>x.name);
+      const all=[...set].sort((a,b)=>((g.keys.includes(b)?1:0)-(g.keys.includes(a)?1:0))||(((gameOf[b]||{}).added||0)-((gameOf[a]||{}).added||0)));
       B.innerHTML=head()+'<p class="hint" style="margin:0 0 8px">Marca los partidos que forman parte de «'+esc(g.name)+'». Salen los vídeos guardados en «Mis partidos» de este dispositivo.</p>'+
         '<div style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px">'+
-        (all.map(k=>{ const n=(q(k)&&q(k).events||[]).length||(k===videoKey?events.length:0); return '<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;cursor:pointer;border-bottom:1px solid var(--line)"><input type="checkbox" data-k="'+esc(k)+'"'+(g.keys.includes(k)?' checked':'')+'><span style="flex:1"><b>'+esc(titleOf(k))+'</b>'+(dateOf(k)?' · '+esc(matchDate(dateOf(k))):'')+'<br><span style="color:var(--muted);font-size:12.5px">'+n+' cortes</span></span></label>'; }).join('')||'<p style="color:var(--muted);padding:8px">No hay vídeos guardados todavía. Abre un partido y etiquétalo: se guarda solo en «Mis partidos».</p>')+'</div>'+
+        (all.map(k=>{ const n=(q(k)&&q(k).events||[]).length||(k===videoKey?events.length:0); return '<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;cursor:pointer;border-bottom:1px solid var(--line)"><input type="checkbox" data-k="'+esc(k)+'"'+(g.keys.includes(k)?' checked':'')+'><span style="flex:1"><b>'+esc(titleOf(k))+'</b>'+(dateOf(k)?' · '+esc(matchDate(dateOf(k))):'')+'<br><span style="color:var(--muted);font-size:12.5px">'+n+' cortes'+(enG(k).length?' · también en: '+esc(enG(k).join(', ')):'')+'</span></span></label>'; }).join('')||'<p style="color:var(--muted);padding:8px">No hay vídeos guardados todavía. Abre un partido y etiquétalo: se guarda solo en «Mis partidos».</p>')+'</div>'+
         '<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn primary" id="pjOk">Listo</button></div>';
       bind();
       B.querySelectorAll('[data-k]').forEach(c=>c.onchange=()=>{ const gg=gGet(), x=gg.find(y=>y.id===S.gid); if(c.checked){ if(!x.keys.includes(c.dataset.k)) x.keys.push(c.dataset.k); } else x.keys=x.keys.filter(k=>k!==c.dataset.k); gSet(gg); });
