@@ -10529,7 +10529,7 @@ function pjOthers(){
     const a=lsGet('bbtag.group.active'), g=JSON.parse(lsGet('bbtag.groups')||'[]').find(x=>x&&x.id===a);
     if(!g||!Array.isArray(g.keys)||g.keys.length<2||!g.keys.includes(videoKey)) return [];
     const T=titlesGet(), out=[];
-    g.keys.forEach(k=>{ if(k===videoKey) return; let evs=[]; try{ const o=JSON.parse(lsGet('bbtag.project.'+k)||'null'); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).sort((p,q)=>p.t-q.t); }catch(e){} if(evs.length) out.push({k,title:(T[k]&&T[k].t)||k.split('|')[0],evs}); });
+    g.keys.forEach(k=>{ if(k===videoKey) return; let evs=[]; try{ const o=JSON.parse(lsGet('bbtag.project.'+k)||'null'); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).sort((p,q)=>p.t-q.t); }catch(e){} if(evs.length){ let nm={}; try{ const o2=JSON.parse(lsGet('bbtag.project.'+k)||'null')||{}; nm={L:(o2.meta&&o2.meta.L&&o2.meta.L.name)||'Local',R:(o2.meta&&o2.meta.R&&o2.meta.R.name)||'Rival'}; }catch(e){ nm={L:'Local',R:'Rival'}; } out.push({k,title:(T[k]&&T[k].t)||k.split('|')[0],evs,nm}); } });
     return out;
   }catch(e){ return []; }
 }
@@ -10550,12 +10550,13 @@ async function addXClips(list,doc){
 }
 const mf={cat:'',type:'',player:'',desc:{}};
 const mfActive=()=>!!(mf.cat||mf.type||mf.player||Object.values(mf.desc).some(Boolean)||($('#plQ')&&$('#plQ').value.trim()));
-function mfMatch(e){
+const mfKey=(nm,e)=>String((nm||teamName(e.team))||'').trim().toLowerCase()+'|'+e.player;
+function mfMatch(e,nm){
   const toks=$('#plQ').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if(toks.length){const h=hayOf(e); if(!toks.every(t=>h.includes(t))) return false;}
   if(mf.cat&&info(e).group!==mf.cat) return false;
   if(mf.type&&e.btnId!==mf.type) return false;
-  if(mf.player&&mf.player!==e.team+'|'+e.player) return false;
+  if(mf.player&&mf.player!==mfKey(nm,e)) return false;
   for(const g in mf.desc){ if(mf.desc[g]&&!e.desc.some(o=>o.d===g&&o.i===mf.desc[g])) return false; }
   return true;
 }
@@ -10565,7 +10566,7 @@ function renderMesaFilters(){
   const cats=cfg.cats.filter(c=>events.some(e=>info(e).group===c));
   const xs=pjOthers();
   const types=[]; events.concat(...pjOthers().map(g=>g.evs)).forEach(e=>{if(!types.some(t=>t[0]===e.btnId)) types.push([e.btnId,info(e).label]);});
-  const players=playerOptions().map(o=>[o.v,o.label]);
+  const players=(()=>{ const m=new Map(); const add=(nm,n,lab)=>{ const k=String(nm||'').trim().toLowerCase()+'|'+n; if(!m.has(k)) m.set(k,[k,lab]); }; playerOptions().forEach(o=>{ const t=o.v.split('|')[0], n=o.v.slice(2); add(teamName(t),n,o.label); }); xs.forEach(g=>g.evs.forEach(e=>{ if(e.player!==''&&e.player!=null){ const nm=g.nm[e.team==='R'?'R':'L']; add(nm,e.player,nm+' · #'+e.player); } })); return [...m.values()].sort((p,q)=>p[1].localeCompare(q[1],'es',{numeric:true})); })();
   const descs=cfg.descs.filter(g=>g.items.length);
   const act=mfActive();
   const sig=JSON.stringify([cats,types,players,descs.map(g=>[g.id,g.name,g.items.map(i=>[i.id,i.label])]),mf,act]);
@@ -10630,7 +10631,8 @@ function renderPlaylists(){
   const av=events.filter(e=>!inPl.has(e.id)&&mfMatch(e));
   shownAv=av.map(e=>e.id);
   const others=pjOthers(), exSet=new Set(cur?cur.items.filter(id=>isExtId(id)).map(extOf).filter(Boolean).map(x=>x.fname+'|'+x.size+'|'+x.from.toFixed(2)+'|'+x.to.toFixed(2)):[]);
-  const xg=others.map(g=>({g,rows:g.evs.filter(e=>!exSet.has(g.k+'|'+e.start.toFixed(2)+'|'+e.end.toFixed(2))&&mfMatch(e))}));
+  const o_nm=(g,e)=>(g.nm&&g.nm[e.team==='R'?'R':'L'])||'';
+  const xg=others.map(g=>({g,rows:g.evs.filter(e=>!exSet.has(g.k+'|'+e.start.toFixed(2)+'|'+e.end.toFixed(2))&&mfMatch(e,o_nm(g,e)))}));
   shownAvX=[]; xg.forEach(o=>o.rows.forEach(e=>shownAvX.push({k:o.g.k,title:o.g.title,e})));
   { const pj=$('#avPj'); if(pj){ pj.hidden=!pjHasGroup(); pj.querySelector('input').checked=lsGet('bbtag.pjmode')!=='0'; } }
   const nAll=av.length+shownAvX.length;
