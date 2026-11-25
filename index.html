@@ -8960,6 +8960,9 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
       const gs=gGet(); const act=gs.find(x=>x.id===aGet()); const fw=!!window.__freshWas; window.__freshWas=false;
       if(act&&act.keys.includes(videoKey)) return;
+      /* elegido con «＋ Vídeo»: se añade al proyecto abierto aunque ese vídeo ya esté en otro proyecto (conserva sus etiquetas) */
+      const viaAdd=!!window.__vtAdd&&(Date.now()-window.__vtAdd<15*60000); window.__vtAdd=0;
+      if(act&&viaAdd){ act.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       if(!fw&&gs.some(g=>g.keys.includes(videoKey))) return;
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
         if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
@@ -9340,6 +9343,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
           try{ window.__renderRec&&window.__renderRec(); }catch(_){}
         }
       }catch(_){}
+      window.__vtAdd=Date.now();   /* lo que se elija ahora entra en este proyecto aunque ya esté en otro */
       const f=document.getElementById('fileVideo'); if(f) f.click(); return; }
     const t=e.target.closest('.vt'); if(!t) return; const k=t.dataset.k;
     if(e.target.closest('[data-x]')){ hidden.add(k); render(); return; }
