@@ -8958,10 +8958,12 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     try{
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
-      const gs=gGet(); const act=gs.find(x=>x.id===aGet()); const fw=!!window.__freshWas; window.__freshWas=false;
-      if(act&&act.keys.includes(videoKey)) return;
-      /* elegido con «＋ Vídeo»: se añade al proyecto abierto aunque ese vídeo ya esté en otro proyecto (conserva sus etiquetas) */
       const viaAdd=!!window.__vtAdd&&(Date.now()-window.__vtAdd<15*60000); window.__vtAdd=0;
+      const gid=viaAdd&&window.__vtAddG; window.__vtAddG=null;
+      if(gid&&gGet().some(x=>x.id===gid)) lsSet(AK,gid);   /* el proyecto de destino es el que se estaba viendo al pulsar «＋ Vídeo» */
+      const gs=gGet(); const act=gs.find(x=>x.id===aGet()); const fw=!!window.__freshWas; window.__freshWas=false;
+      if(act&&act.keys.includes(videoKey)){ try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
+      /* elegido con «＋ Vídeo»: se añade al proyecto abierto aunque ese vídeo ya esté en otro proyecto (conserva sus etiquetas) */
       if(act&&viaAdd){ act.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       if(!fw&&gs.some(g=>g.keys.includes(videoKey))) return;
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
@@ -9340,12 +9342,16 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       /* añadir un vídeo al proyecto de ahora: si el partido abierto aún no está en ningún proyecto se crea uno con él, y el vídeo nuevo entra ahí en vez de abrir otro proyecto aparte */
       try{
         const gs=JSON.parse(lsGet('bbtag.groups')||'[]'), hay=videoKey&&hasVideo&&ok(videoKey);
-        if(hay){
+        /* el proyecto es el de las pestañas que se están viendo (el activo); el partido abierto también se queda guardado en él */
+        let ga=gs.find(x=>x&&x.id===lsGet('bbtag.group.active')&&Array.isArray(x.keys));
+        if(ga&&hay&&!ga.keys.includes(videoKey)){ try{ saveProject(); }catch(_){} ga.keys.push(videoKey); lsSet('bbtag.groups',JSON.stringify(gs)); }
+        if(ga) window.__vtAddG=ga.id;
+        if(hay&&!ga){
           let g=gs.find(x=>x&&Array.isArray(x.keys)&&x.keys.includes(videoKey));
           if(!g){ try{ saveProject(); }catch(_){}
             const T=titlesGet(); g={id:uid(),name:String((T[videoKey]&&T[videoKey].t)||videoName||'Proyecto').replace(/\.[^.]+$/,'').slice(0,60),keys:[videoKey]};
             gs.push(g); lsSet('bbtag.groups',JSON.stringify(gs)); }
-          lsSet('bbtag.group.active',g.id);
+          lsSet('bbtag.group.active',g.id); window.__vtAddG=g.id;
           try{ window.__renderRec&&window.__renderRec(); }catch(_){}
         }
       }catch(_){}
