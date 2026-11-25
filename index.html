@@ -4133,13 +4133,13 @@ function projPurge(k){ try{ const a='bbtag.project.'+k+'@', b='bbtag.pts.'+k+'@'
     const p=lsGet('bbtag.pts.'+k); if(p) lsSet('bbtag.pts.'+k+'@'+g.id,p); }));
   if(!fallos) lsSet('bbtag.pkMig','1');
 }catch(e){} })();
-function decideGid(){   /* en qué proyecto se abre el vídeo que se acaba de elegir */
+function decideGid(fromLib){   /* en qué proyecto se abre el vídeo que se acaba de elegir */
   try{
     if(!videoKey||/^live\|/.test(videoKey)) return '';
     const gs=grpList(), via=!!window.__vtAdd&&(Date.now()-window.__vtAdd<15*60000), want=(via&&window.__vtAddG)||actGid();
     const act=gs.find(x=>x.id===want), has=gs.filter(x=>x.keys.includes(videoKey));
     if(act&&has.some(x=>x.id===act.id)) return act.id;
-    if(act&&(!has.length||via||window.__freshNew)) return act.id;
+    if(act&&(!has.length||via||window.__freshNew||!fromLib)) return act.id;
     return has.length?has[0].id:'';
   }catch(e){ return ''; }
 }
@@ -5302,7 +5302,7 @@ function loadFile(file,fromLib){
   /* un vídeo elegido para un proyecto nuevo (o recién creado y vacío) empieza de cero aunque ya se hubiera usado antes */
   const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).length; }catch(e){ return false; } };
   window.__freshNew=!fromLib&&((!!window.__pjFresh&&(Date.now()-window.__pjFresh<900000))||__vacio()); window.__pjFresh=0;
-  curGid=decideGid();
+  window.__lastFromLib=!!fromLib; curGid=decideGid(!!fromLib);
   window.__fresh=fromLib?null:videoKey;   /* elegir un archivo empieza de cero; solo «Mis partidos»/proyectos recuperan lo guardado */
   video.src=objectURL;
   $('#videoName').textContent=file.name;
@@ -9010,28 +9010,29 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       if(!act||curGid!==act.id||events.length||lsGet('bbtag.project.'+pkOpen())) return;
       let src=null;
       for(const g of grpList()){ if(g.id===act.id||!g.keys.includes(videoKey)) continue; const o=projObj(videoKey,g.id); if(o&&Array.isArray(o.events)&&o.events.length){ src={name:g.name,o}; break; } }
+      if(!src){ const o=projObj(videoKey,''); if(o&&Array.isArray(o.events)&&o.events.length&&!grpList().some(g=>g.id!==act.id&&g.keys.includes(videoKey))) src={name:'tus partidos guardados',o}; }
       if(!src) return;
       const d=document.createElement('div'); d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
       d.innerHTML='<div style="background:var(--panel,#1c1f26);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;max-width:500px;width:100%;padding:18px;font-size:14.5px"><h3 style="margin:0 0 6px;font-size:19px">Este partido ya tiene etiquetas</h3><p style="margin:0 0 12px;color:var(--muted,#aaa)">Tiene '+src.o.events.length+' etiquetas en «'+esc(src.name)+'». En «'+esc(act.name)+'» empieza vacío. Cada proyecto guarda las suyas.</p><div style="display:flex;flex-direction:column;gap:8px"><button class="btn primary" id="a2New">Empezar de cero</button><button class="btn" id="a2Copy">Copiar las etiquetas de «'+esc(src.name)+'»</button></div></div>';
       document.body.appendChild(d);
-      d.querySelector('#a2New').onclick=()=>d.remove();
+      d.querySelector('#a2New').onclick=()=>{ d.remove(); try{ saveProject(); }catch(e){} };
       d.querySelector('#a2Copy').onclick=()=>{ d.remove(); try{ applyProjectObj(JSON.parse(JSON.stringify(src.o))); selectedId=null; sortEvents(); saveProject(); renderAll(); histInit(); toast('Etiquetas copiadas a «'+act.name+'».'); }catch(e){} };
     }catch(e){}
   };
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     try{
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
-      const viaAdd=!!window.__vtAdd&&(Date.now()-window.__vtAdd<15*60000); window.__vtAdd=0;
+      const viaAdd=(!!window.__vtAdd&&(Date.now()-window.__vtAdd<15*60000))||!window.__lastFromLib; window.__vtAdd=0;
       const gid=viaAdd&&window.__vtAddG; window.__vtAddG=null;
       if(gid&&gGet().some(x=>x.id===gid)) lsSet(AK,gid);   /* el proyecto de destino es el que se estaba viendo al pulsar «＋ Vídeo» */
       const gs=gGet(); const act=gs.find(x=>x.id===aGet()); const fw=!!window.__freshWas; window.__freshWas=false;
-      if(act&&act.keys.includes(videoKey)){ try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
+      if(act&&act.keys.includes(videoKey)){ try{ window.__vtRender&&window.__vtRender(); }catch(e){} try{ window.__ofrecerCopia&&window.__ofrecerCopia(act); }catch(e){} return; }
       /* elegido con «＋ Vídeo»: se añade al proyecto abierto aunque ese vídeo ya esté en otro proyecto (conserva sus etiquetas) */
       if(act&&viaAdd){
-        act.keys.push(videoKey); gSet(gs); if(!fw) window.__ofrecerCopia&&window.__ofrecerCopia(act); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
+        act.keys.push(videoKey); gSet(gs); window.__ofrecerCopia&&window.__ofrecerCopia(act); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       if(!fw&&gs.some(g=>g.keys.includes(videoKey))) return;
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
-        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); if(!fw) window.__ofrecerCopia&&window.__ofrecerCopia(act); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
+        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); window.__ofrecerCopia&&window.__ofrecerCopia(act); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
       /* todo son proyectos: un vídeo que no está en ninguno crea su proyecto solo (sin partidos sueltos) */
       { const T0=titlesGet(), base=(T0[videoKey]&&T0[videoKey].t)||String(videoName||'Proyecto').replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim()||'Proyecto';
         const a=gGet(), g={id:uid(),name:base.slice(0,60),keys:[videoKey]}; a.push(g); gSet(a); lsSet(AK,g.id);
