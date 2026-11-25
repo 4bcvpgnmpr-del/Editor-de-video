@@ -8964,7 +8964,17 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       const gs=gGet(); const act=gs.find(x=>x.id===aGet()); const fw=!!window.__freshWas; window.__freshWas=false;
       if(act&&act.keys.includes(videoKey)){ try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       /* elegido con «＋ Vídeo»: se añade al proyecto abierto aunque ese vídeo ya esté en otro proyecto (conserva sus etiquetas) */
-      if(act&&viaAdd){ act.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
+      if(act&&viaAdd){
+        /* este vídeo ya tiene etiquetas de OTRO proyecto: se pregunta, sin borrar nada por su cuenta */
+        try{ const otros=gs.filter(x=>x&&x.id!==act.id&&(x.keys||[]).includes(videoKey)); const nEv=events.length;
+          if(otros.length&&nEv&&!window.__ask2){ window.__ask2=1;
+            const d=document.createElement('div'); d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+            d.innerHTML='<div style="background:var(--panel,#1c1f26);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;max-width:500px;width:100%;padding:18px;font-size:14.5px"><h3 style="margin:0 0 6px;font-size:19px">Este partido ya tiene etiquetas</h3><p style="margin:0 0 12px;color:var(--muted,#aaa)">Tiene '+nEv+' etiquetas de «'+esc(otros.map(x=>x.name).join(', '))+'». ¿Qué quieres en «'+esc(act.name)+'»?</p><div style="display:flex;flex-direction:column;gap:8px"><button class="btn primary" id="a2Keep">Mantener las etiquetas</button><button class="btn" id="a2New">Empezar de cero (en «'+esc(otros[0].name)+'» también quedará vacío; se guarda una copia)</button></div></div>';
+            document.body.appendChild(d);
+            d.querySelector('#a2Keep').onclick=()=>{ d.remove(); window.__ask2=0; };
+            d.querySelector('#a2New').onclick=()=>{ d.remove(); window.__ask2=0; try{ const raw=lsGet('bbtag.project.'+videoKey); if(raw) lsSet('bbtag.project.'+videoKey+'.copia',raw); applyProjectObj(null); selectedId=null; saveProject(); renderAll(); histInit(); toast('Partido empezado de cero. Las etiquetas anteriores quedan como copia.'); }catch(e){} };
+          } }catch(e){ window.__ask2=0; }
+        act.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       if(!fw&&gs.some(g=>g.keys.includes(videoKey))) return;
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
         if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
