@@ -5261,9 +5261,8 @@ function loadFile(file,fromLib){
   /* los cortes marcados del vídeo que se deja no se pierden: pasan a «marcados de otros partidos» para producirlos todos juntos */
   try{ if(videoKey&&CK.size){ CK.forEach(id=>{ const ev=events.find(x=>x.id===id); if(ev) CKX.set(videoKey+'#'+id,{k:videoKey,e:ev}); }); CK.clear(); } }catch(e){}
   videoName=file.name; videoKey=file.name+'|'+file.size;
-  /* un vídeo que entra en un proyecto que todavía no lo tenía empieza de cero aunque ya se hubiera usado en otro proyecto
-     (lo anterior queda guardado como copia) */
-  const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).includes(videoKey); }catch(e){ return false; } };
+  /* un vídeo elegido para un proyecto nuevo (o recién creado y vacío) empieza de cero aunque ya se hubiera usado antes */
+  const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).length; }catch(e){ return false; } };
   window.__freshNew=!fromLib&&((!!window.__pjFresh&&(Date.now()-window.__pjFresh<900000))||__vacio()); window.__pjFresh=0;
   window.__fresh=fromLib?null:videoKey;   /* elegir un archivo empieza de cero; solo «Mis partidos»/proyectos recuperan lo guardado */
   video.src=objectURL;
@@ -8012,6 +8011,42 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     if(document.getElementById('pTags').classList.contains('editing')) return;
     setTimeout(()=>document.body.classList.add('lowOn'),30);
   });
+})();
+
+/* ===== RECUPERAR CORTES: partidos que se vaciaron al abrirlos (error del 24-25/11/2026). Su copia sigue guardada. ===== */
+(function(){
+  function afectados(){
+    const L=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.freshAt.')!==0) continue;
+      const key=k.slice(14), raw=lsGet('bbtag.project.'+key+'.copia'); if(!raw) continue;
+      let o=null; try{ o=JSON.parse(raw); }catch(e){} const n=(o&&o.events||[]).length; if(!n) continue;
+      let cur=null; try{ cur=JSON.parse(lsGet('bbtag.project.'+key)||'null'); }catch(e){}
+      L.push({key,n,ahora:(cur&&cur.events||[]).length,nombre:(o.meta&&(o.meta.L||o.meta.R))?matchTitle(o.meta):key.split('|')[0]}); } }catch(e){}
+    return L;
+  }
+  function recuperar(it){
+    const raw=lsGet('bbtag.project.'+it.key+'.copia'); if(!raw) return;
+    const cur=lsGet('bbtag.project.'+it.key); if(cur&&it.ahora) lsSet('bbtag.project.'+it.key+'.nuevo',cur);   /* lo hecho después se guarda aparte */
+    lsSet('bbtag.project.'+it.key,raw); lsSet('bbtag.pts.'+it.key,String(Date.now()));
+    try{ localStorage.removeItem('bbtag.freshAt.'+it.key); }catch(e){}
+    if(it.key===videoKey){ try{ applyProjectObj(JSON.parse(raw)); selectedId=null; sortEvents(); renderAll(); histInit(); }catch(e){} }
+  }
+  function ofrecer(){
+    const L=afectados(); if(!L.length) return;
+    const d=document.createElement('div');
+    d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+    d.innerHTML='<div style="background:var(--panel,#1c1f26);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;max-width:520px;width:100%;padding:18px;font-size:14.5px">'+
+      '<h3 style="margin:0 0 6px;font-size:19px">Recuperar tus cortes</h3>'+
+      '<p style="margin:0 0 12px;color:var(--muted,#aaa)">Por un error, estos partidos se vaciaron al abrirlos. Sus cortes estaban guardados en una copia y se pueden recuperar.</p>'+
+      L.map((it,i)=>'<label style="display:flex;gap:10px;align-items:center;padding:9px 10px;border:1px solid var(--line,#333);border-radius:10px;margin-bottom:8px;cursor:pointer"><input type="checkbox" data-i="'+i+'" checked style="width:18px;height:18px">'+
+        '<span><b>'+esc(it.nombre)+'</b><br><small style="color:var(--muted,#aaa)">'+it.n+' cortes guardados'+(it.ahora?' · ahora tiene '+it.ahora+' (se guardan aparte)':'')+'</small></span></label>').join('')+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" id="rcNo">Ahora no</button><button class="btn primary" id="rcSi">Recuperar</button></div></div>';
+    document.body.appendChild(d);
+    d.querySelector('#rcNo').onclick=()=>d.remove();
+    d.querySelector('#rcSi').onclick=()=>{ let n=0; d.querySelectorAll('input[data-i]').forEach(c=>{ if(c.checked){ recuperar(L[+c.dataset.i]); n++; } }); d.remove();
+      toast(n+(n===1?' partido recuperado.':' partidos recuperados.')); try{ if(window.__sfCloud&&window.__sfCloud.on()&&document.getElementById('clSync')) {} }catch(e){} };
+  }
+  window.__recuperarCortes=ofrecer;
+  setTimeout(ofrecer,1800);
 })();
 
 /* ===== NUBE (Supabase): sincroniza marcas, clips, dibujos y botonera entre dispositivos. El vídeo NO se sube. ===== */
