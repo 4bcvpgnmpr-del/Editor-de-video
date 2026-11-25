@@ -4090,7 +4090,7 @@ function normStint(x){ if(!x||!Array.isArray(x.players)||!isFinite(x.from)) retu
 const PART={pending:null};
 function partsOthers(){
   const out=[]; if(!matchMeta||!matchMeta.gid) return out;
-  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue; const key=k.slice(14); if(key===videoKey) continue;
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue; const sk=k.slice(14); if(sk===pkOpen()||/\.(copia|nuevo)$/.test(sk)) continue; const sp=splitPk(sk), key=sp.k; if(sp.g!==curGid||key===videoKey) continue;
     const o=JSON.parse(localStorage.getItem(k)||'null'); if(o&&o.meta&&o.meta.gid===matchMeta.gid) out.push({key,part:o.meta.part||0,events:(Array.isArray(o.events)?o.events:[]).filter(x=>x&&isFinite(x.t)&&isFinite(x.start)&&isFinite(x.end)).map(normEvent)}); } }catch(e){}
   return out.sort((a,b)=>a.part-b.part);
 }
@@ -4105,7 +4105,39 @@ function startNextPart(){
   toast('Elige el vídeo de la parte '+n+'. Se guardan los equipos y la botonera; las etiquetas van aparte.');
   $('#fileVideo').click();
 }
-function saveProject(){if(videoKey){ lsSet('bbtag.project.'+videoKey,JSON.stringify({events,markers,stints,teles,playlists,covers,externals,meta:matchMeta})); lsSet('bbtag.pts.'+videoKey,String(Date.now())); titleSet(videoKey); if(window.__clQ) window.__clQ(); }}
+/* ===== ETIQUETAS POR PROYECTO: cada proyecto guarda las suyas de cada partido («archivo@proyecto»). Lo antiguo (sin proyecto) no se toca. ===== */
+var curGid='';   /* proyecto en el que viven las etiquetas del vídeo abierto ('' = sin proyecto) */
+function pkOf(k,gid){ return gid?k+'@'+gid:k; }
+function pkOpen(){ return pkOf(videoKey,curGid); }
+function splitPk(sk){ const m=/^(.+)@([A-Za-z0-9_-]+)$/.exec(String(sk||'')); return m?{k:m[1],g:m[2]}:{k:String(sk||''),g:''}; }
+function grpList(){ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'); return Array.isArray(a)?a.filter(x=>x&&Array.isArray(x.keys)):[]; }catch(e){ return []; } }
+function actGid(){ return lsGet('bbtag.group.active')||''; }
+function projGet(k,gid){
+  if(gid){ const r=lsGet('bbtag.project.'+k+'@'+gid); if(r) return r; const g=grpList().find(x=>x.id===gid); if(g&&g.keys.includes(k)) return null; }
+  return lsGet('bbtag.project.'+k);
+}
+function projObj(k,gid){ try{ return JSON.parse(projGet(k,gid)||'null'); }catch(e){ return null; } }
+function gidFor(k,pref){ const gs=grpList(); pref=pref===undefined?actGid():pref; if(pref&&gs.some(x=>x.id===pref&&x.keys.includes(k))) return pref; const g=gs.find(x=>x.keys.includes(k)); return g?g.id:''; }
+function projPurge(k){ try{ const a='bbtag.project.'+k+'@', b='bbtag.pts.'+k+'@', c='bbtag.psy.'+k+'@', del=[]; for(let i=0;i<localStorage.length;i++){ const s=localStorage.key(i); if(s&&(s.indexOf(a)===0||s.indexOf(b)===0||s.indexOf(c)===0)) del.push(s); } del.forEach(s=>localStorage.removeItem(s)); }catch(e){} }
+/* una sola vez: cada proyecto recibe una COPIA de las etiquetas que ya tenía cada partido. No se borra nada. */
+(function pkMigrar(){ try{
+  if(lsGet('bbtag.pkMig')==='1') return; let fallos=0;
+  grpList().forEach(g=>g.keys.forEach(k=>{ const raw=lsGet('bbtag.project.'+k); if(!raw) return; const ck='bbtag.project.'+k+'@'+g.id; if(lsGet(ck)) return;
+    lsSet(ck,raw); if(lsGet(ck)!==raw){ fallos++; try{ localStorage.removeItem(ck); }catch(e){} return; }
+    const p=lsGet('bbtag.pts.'+k); if(p) lsSet('bbtag.pts.'+k+'@'+g.id,p); }));
+  if(!fallos) lsSet('bbtag.pkMig','1');
+}catch(e){} })();
+function decideGid(){   /* en qué proyecto se abre el vídeo que se acaba de elegir */
+  try{
+    if(!videoKey||/^live\|/.test(videoKey)) return '';
+    const gs=grpList(), via=!!window.__vtAdd&&(Date.now()-window.__vtAdd<15*60000), want=(via&&window.__vtAddG)||actGid();
+    const act=gs.find(x=>x.id===want), has=gs.filter(x=>x.keys.includes(videoKey));
+    if(act&&has.some(x=>x.id===act.id)) return act.id;
+    if(act&&(!has.length||via||window.__freshNew)) return act.id;
+    return has.length?has[0].id:'';
+  }catch(e){ return ''; }
+}
+function saveProject(){if(videoKey){ const _pk=pkOpen(); lsSet('bbtag.project.'+_pk,JSON.stringify({events,markers,stints,teles,playlists,covers,externals,meta:matchMeta})); lsSet('bbtag.pts.'+_pk,String(Date.now())); titleSet(videoKey); if(window.__clQ) window.__clQ(); }}
 /* ---- equipos guardados y datos del partido ---- */
 function teamsGet(){ try{ const a=JSON.parse(lsGet('bbtag.teams')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function teamsSave(a){ lsSet('bbtag.teams',JSON.stringify(a)); lsSet('bbtag.tts',String(Date.now())); if(window.__clT) window.__clT(); }
@@ -5264,6 +5296,7 @@ function loadFile(file,fromLib){
   /* un vídeo elegido para un proyecto nuevo (o recién creado y vacío) empieza de cero aunque ya se hubiera usado antes */
   const __vacio=()=>{ try{ const a=JSON.parse(lsGet('bbtag.groups')||'[]'), g=a.find(x=>x&&x.id===lsGet('bbtag.group.active')); return !!g&&!(g.keys||[]).length; }catch(e){ return false; } };
   window.__freshNew=!fromLib&&((!!window.__pjFresh&&(Date.now()-window.__pjFresh<900000))||__vacio()); window.__pjFresh=0;
+  curGid=decideGid();
   window.__fresh=fromLib?null:videoKey;   /* elegir un archivo empieza de cero; solo «Mis partidos»/proyectos recuperan lo guardado */
   video.src=objectURL;
   $('#videoName').textContent=file.name;
@@ -5287,7 +5320,7 @@ video.addEventListener('loadedmetadata',()=>{
   let restored=0;
   try{
     /* un partido ya guardado se recupera con sus cortes al volver a elegir su vídeo (antes se borraban si no estaba en un grupo); para empezarlo de cero se borra desde Mis proyectos (🗑) */
-    if(window.__freshNew){ window.__freshNew=false; window.__freshWas=true; const raw0=lsGet('bbtag.project.'+videoKey);
+    if(window.__freshNew){ window.__freshNew=false; window.__freshWas=true; const raw0=curGid?null:lsGet('bbtag.project.'+videoKey);   /* con proyecto propio no se toca nada de lo anterior */
       if(raw0){ try{ const o0=JSON.parse(raw0); if(o0&&((o0.events&&o0.events.length)||(o0.markers&&o0.markers.length))){ lsSet('bbtag.project.'+videoKey+'.copia',raw0); } }catch(e){}
         try{ localStorage.removeItem('bbtag.project.'+videoKey); localStorage.removeItem('bbtag.pts.'+videoKey); localStorage.removeItem('bbtag.psy.'+videoKey); }catch(e){}
         lsSet('bbtag.freshAt.'+videoKey,String(Date.now()));
@@ -5296,8 +5329,14 @@ video.addEventListener('loadedmetadata',()=>{
       /* proyecto nuevo: sin los equipos del partido anterior y se pregunta cuáles son */
       try{ localStorage.removeItem('bbtag.asked.'+videoKey); if(!baseTeams) baseTeams=JSON.stringify({teamNames:cfg.teamNames,rosters:cfg.rosters});
         cfg.teamNames=Object.assign({},cfg.teamNames,{L:'Local',R:'Rival'}); cfg.rosters=Object.assign({},cfg.rosters,{L:[],R:[]}); ['L','R'].forEach(k=>{ try{ phFill(k,cfg.teamNames[k]); }catch(e){} }); }catch(e){}
-    } else
-    restored=applyProjectObj(JSON.parse(lsGet('bbtag.project.'+videoKey)||'null'));
+    } else {
+      let raw=lsGet('bbtag.project.'+pkOpen());
+      if(!raw&&curGid){
+        const otro=grpList().some(x=>x.id!==curGid&&x.keys.includes(videoKey)), leg=lsGet('bbtag.project.'+videoKey);
+        if(leg&&(!otro||lsGet('bbtag.pkMig')!=='1')){ raw=leg; if(!otro){ lsSet('bbtag.project.'+pkOpen(),leg); const p0=lsGet('bbtag.pts.'+videoKey); lsSet('bbtag.pts.'+pkOpen(),p0||String(Date.now())); } }
+      }
+      restored=applyProjectObj(JSON.parse(raw||'null'));
+    }
   }catch(e){events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[];matchMeta=null;}
   if(PART.pending){ const pd=PART.pending; PART.pending=null;
     if(!restored){ matchMeta=JSON.parse(JSON.stringify(pd.meta)); matchApply(false); period=pd.n>=2?(pd.n===2?'3C':period):period; saveProject(); setTimeout(()=>toast('Parte '+pd.n+' lista. Seguimos con '+matchTitle(matchMeta)+'.'),400); }
@@ -5494,7 +5533,7 @@ async function openLib(){
     if(!(await window.__askOk('¿Borrar los '+list.length+' partidos de la lista?','Se borran sus etiquetas, clips y dibujos de este dispositivo. No se puede deshacer.','Borrar todos'))) return;
     const keys=list.map(v=>v.key);
     for(const k of keys){
-      try{ localStorage.removeItem('bbtag.project.'+k); localStorage.removeItem('bbtag.pts.'+k); }catch(e){}
+      try{ localStorage.removeItem('bbtag.project.'+k); localStorage.removeItem('bbtag.pts.'+k); projPurge(k); }catch(e){}
       try{ await vdbTx('readwrite',st=>st.delete(k)); }catch(e){}
     }
     try{ const tm=titlesGet(); keys.forEach(k=>{ delete tm[k]; }); lsSet('bbtag.titles',JSON.stringify(tm)); }catch(e){}
@@ -5509,7 +5548,7 @@ async function openLib(){
   d.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{
     const k=b.dataset.x, mt=window.__mt(k), nm=mt?mt.t:k.slice(0,k.lastIndexOf('|'));
     if(!(await window.__askOk('¿Borrar «'+nm+'»?','Se borran sus etiquetas, clips y dibujos de este dispositivo. No se puede deshacer.','Borrar'))) return;
-    try{ localStorage.removeItem('bbtag.project.'+k); localStorage.removeItem('bbtag.pts.'+k); const tm=titlesGet(); delete tm[k]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(e){}
+    try{ localStorage.removeItem('bbtag.project.'+k); localStorage.removeItem('bbtag.pts.'+k); projPurge(k); const tm=titlesGet(); delete tm[k]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(e){}
     try{ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); gs.forEach(g=>{ if(g&&Array.isArray(g.keys)) g.keys=g.keys.filter(x=>x!==k); }); lsSet('bbtag.groups',JSON.stringify(gs)); }catch(e){}
     try{ await vdbTx('readwrite',st=>st.delete(k)); }catch(e){}
     try{ const r=JSON.parse(lsGet('bbtag.recent')||'[]'); lsSet('bbtag.recent',JSON.stringify(r.filter(x=>x&&x.key!==k))); }catch(e){}
@@ -5957,7 +5996,7 @@ function extEnrich(x){
   if(x._e||x.tm||!x.fname) return; x._e=1;
   try{
     const key=x.fname+'|'+x.size; let evs,o=null;
-    if(key===videoKey) evs=events; else { o=JSON.parse(lsGet('bbtag.project.'+key)||'null'); evs=(o&&Array.isArray(o.events))?o.events.filter(v=>v&&isFinite(v.start)&&isFinite(v.end)).map(normEvent):[]; }
+    if(key===videoKey) evs=events; else { o=projObj(key,actGid()); evs=(o&&Array.isArray(o.events))?o.events.filter(v=>v&&isFinite(v.start)&&isFinite(v.end)).map(normEvent):[]; }
     const e=evs.find(v=>Math.abs(v.start-x.from)<0.06&&Math.abs(v.end-x.to)<0.06); if(!e) return;
     const T=titlesGet(), t=(T[key]&&T[key].t)||x.fname;
     const side=o?((o.meta&&o.meta[e.team==='R'?'R':'L']&&o.meta[e.team==='R'?'R':'L'].name)||(e.team==='R'?'Rival':'Local')):teamName(e.team);
@@ -7380,9 +7419,9 @@ function febParse(texto,ctx){
 $('#bYtMarks').onclick=()=>{
   if(!hasVideo||/^(yt|url|live)\|/.test(videoKey||'')){ toast('Abre primero el archivo de vídeo descargado y luego pulsa este botón.'); return; }
   const lst=[], tt=titlesGet();
-  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue; const key=k.slice(14); if(!/^(yt|url)\|/.test(key)) continue;
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue; const key=k.slice(14), fk=splitPk(key).k; if(!/^(yt|url)\|/.test(fk)||/\.(copia|nuevo)$/.test(key)) continue;
     const o=JSON.parse(localStorage.getItem(k)||'null'); const n=o&&Array.isArray(o.events)?o.events.length:0; if(!n) continue;
-    lst.push({key,n,mk:(o.markers||[]).length,t:(tt[key]&&tt[key].t)||key.replace(/^(yt|url)\|/,(m,a)=>a==='yt'?'YouTube ':'Enlace ')}); } }catch(e){}
+    lst.push({key,n,mk:(o.markers||[]).length,t:(tt[fk]&&tt[fk].t)||fk.replace(/^(yt|url)\|/,(m,a)=>a==='yt'?'YouTube ':'Enlace ')}); } }catch(e){}
   if(!lst.length){ toast('No hay marcas hechas sobre enlaces de YouTube en este dispositivo.'); return; }
   const ov=document.createElement('div'); ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
   ov.innerHTML='<div style="background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,100%);max-height:80vh;overflow:auto"><h3 style="margin:0 0 4px;font:700 20px var(--f-head)">Traer marcas de YouTube</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13.5px">Elige el enlace cuyas marcas quieres pasar a este vídeo. Se <b>añaden</b> a las que ya tiene (sin repetir las iguales).</p><div id="ymL"></div><div style="text-align:right;margin-top:10px"><button class="btn" id="ymNo">Cerrar</button></div></div>';
@@ -8076,7 +8115,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   async function pushProject(key){
     const raw=lsGet('bbtag.project.'+key); if(!raw) return;
     const o=JSON.parse(raw), ts=num('bbtag.pts.'+key)||Date.now();
-    await upsert({key,name:(o.meta&&(o.meta.L||o.meta.R)?matchTitle(o.meta)+(o.meta.date?' · '+matchDate(o.meta.date):''):((key===videoKey&&/^(yt|url)\|/.test(key))?videoName:key.split('|')[0])),n:(o.events||[]).length,ts,data:o});
+    await upsert({key,name:(o.meta&&(o.meta.L||o.meta.R)?matchTitle(o.meta)+(o.meta.date?' · '+matchDate(o.meta.date):''):((key===pkOpen()&&/^(yt|url)\|/.test(key))?videoName:key.split('|')[0])),n:(o.events||[]).length,ts,data:o});
     lsSet('bbtag.psy.'+key,String(ts));
   }
   async function pushTeams(){ const ts=num('bbtag.tts'); if(!ts) return; await upsert({key:'__teams__',name:'Equipos',n:0,ts,data:teamsGet()}); lsSet('bbtag.tsy',String(ts)); }
@@ -8098,7 +8137,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     catch(e){ keys.forEach(k=>dirty.add(k)); if(c) cDirty=true; if(t) tDirty=true; setSt('err',e.message); }
   }
   const later=()=>{ clearTimeout(qT); qT=setTimeout(flush,2500); setSt('pend'); };
-  window.__clQ=()=>{ if(!on()||APPLY||!videoKey||/^live\|/.test(videoKey)) return; dirty.add(videoKey); later(); };
+  window.__clQ=()=>{ if(!on()||APPLY||!videoKey||/^live\|/.test(videoKey)) return; dirty.add(pkOpen()); later(); };
   window.__clC=()=>{ if(!on()||APPLY) return; cDirty=true; later(); };
   window.__clT=()=>{ if(!on()||APPLY) return; tDirty=true; later(); };
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'&&(dirty.size||cDirty)) flush(); });
@@ -8111,12 +8150,12 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   }
   /* al abrir un vídeo: bajar o subir según lo más reciente */
   window.__cloudPull=async function(){
-    if(!on()||!videoKey) return; const key=videoKey;
-    if(window.__fresh===key) return;
-    try{ if(!/^live\|/.test(key)){ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); if(!gs.some(g=>g&&Array.isArray(g.keys)&&g.keys.includes(key))) return; } }catch(e){}
+    if(!on()||!videoKey) return; const vk=videoKey, key=pkOpen();
+    if(window.__fresh===vk) return;
+    try{ if(!/^live\|/.test(vk)){ const gs=JSON.parse(lsGet('bbtag.groups')||'[]'); if(!gs.some(g=>g&&Array.isArray(g.keys)&&g.keys.includes(vk))) return; } }catch(e){}
     try{
       const rows=await rest('video_projects?select=ts,data&key=eq.'+encodeURIComponent(key)+'&limit=1');
-      if(key!==videoKey) return;
+      if(vk!==videoKey||key!==pkOpen()) return;
       let r=rows&&rows[0]; const lts=num('bbtag.pts.'+key), psy=num('bbtag.psy.'+key), hasLocal=!!lsGet('bbtag.project.'+key);
       /* este vídeo empezó de cero en un proyecto nuevo: lo que hay en la nube de antes son las etiquetas viejas, no se recuperan */
       const fra=num('bbtag.freshAt.'+key); if(r&&fra&&r.ts<=fra) r=null;
@@ -8628,9 +8667,11 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   /* todos los cortes de todos los proyectos guardados en este dispositivo */
   function allProjects(){
     const out=[], T=titlesGet();
+    const conPk=new Set(); for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('bbtag.project.')===0){ const sp=splitPk(k.slice(14)); if(sp.g) conPk.add(sp.k); } }
     for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||k.indexOf('bbtag.project.')!==0) continue;
+      { const sp=splitPk(k.slice(14)); if(/\.(copia|nuevo)$/.test(k)||(!sp.g&&conPk.has(sp.k))) continue; }
       let o; try{ o=JSON.parse(localStorage.getItem(k)); }catch(e){ continue; } if(!o||!Array.isArray(o.events)) continue;
-      const key=k.slice('bbtag.project.'.length), m=o.meta||{};
+      const sk0=k.slice('bbtag.project.'.length), key=splitPk(sk0).k, m=o.meta||{};
       const tn=t=>(m[t]&&m[t].name)||(t==='R'?'Rival':'Local');
       const evs=o.events.filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).map(e=>{ const pl=((m[e.team]&&m[e.team].players)||[]).find(x=>String(x.n)===e.player); return {e,team:tn(e.team),pname:pl?pl.name:''}; });
       if(evs.length) out.push({k:key,title:(T[key]&&T[key].t)||key.split('|')[0],date:(T[key]&&T[key].d)||'',evs});
@@ -8814,7 +8855,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     if(ch){ try{ renderAll(); }catch(e){} }
   }
   video.addEventListener('loadedmetadata',()=>{ setTimeout(autoLink,300); });
-  const q=(k)=>{ try{ return JSON.parse(localStorage.getItem('bbtag.project.'+k)||'null'); }catch(e){ return null; } };
+  const q=(k)=>{ try{ return projObj(k,actGid()); }catch(e){ return null; } };
   async function openOther(){
     let p=curPl();
     if(!p){ p={id:uid(),name:'Montaje',folder:'',items:[]}; playlists.push(p); plCur=p.id; }
@@ -8893,7 +8934,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       });
       if(!items.length){ toast('El montaje no tiene clips válidos.'); return; }
       o.playlists.push({id:uid(),name:(cp.name+' · de '+myTitle).slice(0,60),folder:cp.folder||'',items});
-      lsSet('bbtag.project.'+g.key,JSON.stringify(o)); lsSet('bbtag.pts.'+g.key,String(Date.now()));
+      { const _p=pkOf(g.key,gidFor(g.key)); lsSet('bbtag.project.'+_p,JSON.stringify(o)); lsSet('bbtag.pts.'+_p,String(Date.now())); }
       expClose(); toast('Montaje llevado a «'+g.title+'» ('+items.length+' clips). Ábrelo desde «Mis partidos».');
     });
   }
@@ -8936,7 +8977,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const aGet=()=>{ try{ return lsGet(AK)||''; }catch(e){ return ''; } };
   const isFileKey=k=>!!k&&!/^live\|/.test(k);
   const getV=async key=>{ try{ return await vdbTx('readonly',st=>st.get(key)); }catch(e){ return null; } };
-  const q=k=>{ try{ return JSON.parse(localStorage.getItem('bbtag.project.'+k)||'null'); }catch(e){ return null; } };
+  const q=k=>{ try{ return projObj(k,(typeof S!=='undefined'&&S&&S.gid)||actGid()); }catch(e){ return null; } };
   const btn='padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;font-size:13.5px';
   const inp='padding:7px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13.5px';
   const S={gid:'',cat:'',game:'',side:'',q:'',sel:new Set(),view:'lib'};
@@ -8955,6 +8996,20 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     B.querySelector('#apSolo').onclick=()=>{ const k=skGet(); if(!k.includes(key)) k.push(key); lsSet(SK,JSON.stringify(k)); expClose(); };
     B.querySelector('#apNew').onclick=()=>askName('Nombre del proyecto','',n=>{ const a=gGet(), g={id:uid(),name:n.slice(0,60),keys:[]}; a.push(g); gSet(a); fin(g); });
   }
+  /* un partido que ya tenía etiquetas en otro proyecto entra VACÍO en este; se ofrece copiarlas (no se toca el otro proyecto) */
+  window.__ofrecerCopia=function(act){
+    try{
+      if(!act||curGid!==act.id||events.length||lsGet('bbtag.project.'+pkOpen())) return;
+      let src=null;
+      for(const g of grpList()){ if(g.id===act.id||!g.keys.includes(videoKey)) continue; const o=projObj(videoKey,g.id); if(o&&Array.isArray(o.events)&&o.events.length){ src={name:g.name,o}; break; } }
+      if(!src) return;
+      const d=document.createElement('div'); d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+      d.innerHTML='<div style="background:var(--panel,#1c1f26);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;max-width:500px;width:100%;padding:18px;font-size:14.5px"><h3 style="margin:0 0 6px;font-size:19px">Este partido ya tiene etiquetas</h3><p style="margin:0 0 12px;color:var(--muted,#aaa)">Tiene '+src.o.events.length+' etiquetas en «'+esc(src.name)+'». En «'+esc(act.name)+'» empieza vacío. Cada proyecto guarda las suyas.</p><div style="display:flex;flex-direction:column;gap:8px"><button class="btn primary" id="a2New">Empezar de cero</button><button class="btn" id="a2Copy">Copiar las etiquetas de «'+esc(src.name)+'»</button></div></div>';
+      document.body.appendChild(d);
+      d.querySelector('#a2New').onclick=()=>d.remove();
+      d.querySelector('#a2Copy').onclick=()=>{ d.remove(); try{ applyProjectObj(JSON.parse(JSON.stringify(src.o))); selectedId=null; sortEvents(); saveProject(); renderAll(); histInit(); toast('Etiquetas copiadas a «'+act.name+'».'); }catch(e){} };
+    }catch(e){}
+  };
   video.addEventListener('loadedmetadata',()=>{ setTimeout(()=>{
     try{
       if(!isFileKey(videoKey)||document.getElementById('expDlg')) return;
@@ -8965,22 +9020,14 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       if(act&&act.keys.includes(videoKey)){ try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       /* elegido con «＋ Vídeo»: se añade al proyecto abierto aunque ese vídeo ya esté en otro proyecto (conserva sus etiquetas) */
       if(act&&viaAdd){
-        /* este vídeo ya tiene etiquetas de OTRO proyecto: se pregunta, sin borrar nada por su cuenta */
-        try{ const otros=gs.filter(x=>x&&x.id!==act.id&&(x.keys||[]).includes(videoKey)); const nEv=events.length;
-          if(otros.length&&nEv&&!window.__ask2){ window.__ask2=1;
-            const d=document.createElement('div'); d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
-            d.innerHTML='<div style="background:var(--panel,#1c1f26);color:var(--text,#fff);border:1px solid var(--line,#333);border-radius:14px;max-width:500px;width:100%;padding:18px;font-size:14.5px"><h3 style="margin:0 0 6px;font-size:19px">Este partido ya tiene etiquetas</h3><p style="margin:0 0 12px;color:var(--muted,#aaa)">Tiene '+nEv+' etiquetas de «'+esc(otros.map(x=>x.name).join(', '))+'». ¿Qué quieres en «'+esc(act.name)+'»?</p><div style="display:flex;flex-direction:column;gap:8px"><button class="btn primary" id="a2Keep">Mantener las etiquetas</button><button class="btn" id="a2New">Empezar de cero (en «'+esc(otros[0].name)+'» también quedará vacío; se guarda una copia)</button></div></div>';
-            document.body.appendChild(d);
-            d.querySelector('#a2Keep').onclick=()=>{ d.remove(); window.__ask2=0; };
-            d.querySelector('#a2New').onclick=()=>{ d.remove(); window.__ask2=0; try{ const raw=lsGet('bbtag.project.'+videoKey); if(raw) lsSet('bbtag.project.'+videoKey+'.copia',raw); applyProjectObj(null); selectedId=null; saveProject(); renderAll(); histInit(); toast('Partido empezado de cero. Las etiquetas anteriores quedan como copia.'); }catch(e){} };
-          } }catch(e){ window.__ask2=0; }
-        act.keys.push(videoKey); gSet(gs); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
+        act.keys.push(videoKey); gSet(gs); if(!fw) window.__ofrecerCopia&&window.__ofrecerCopia(act); toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__vtRender&&window.__vtRender(); }catch(e){} return; }
       if(!fw&&gs.some(g=>g.keys.includes(videoKey))) return;
       if(act){ const prev=act.keys.filter(k=>k!==videoKey).map(k=>q(k)).filter(o=>o&&o.meta&&o.meta.L&&o.meta.L.name).pop(); act.keys.push(videoKey); gSet(gs);
-        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
+        if(prev&&!matchMeta){ try{ matchMeta={date:'',L:JSON.parse(JSON.stringify(prev.meta.L)),R:null}; matchApply(true); saveProject(); }catch(e){} } toast('Partido añadido al proyecto «'+act.name+'».'); if(!fw) window.__ofrecerCopia&&window.__ofrecerCopia(act); try{ window.__renderRec&&window.__renderRec(); }catch(e){} return; }
       /* todo son proyectos: un vídeo que no está en ninguno crea su proyecto solo (sin partidos sueltos) */
       { const T0=titlesGet(), base=(T0[videoKey]&&T0[videoKey].t)||String(videoName||'Proyecto').replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim()||'Proyecto';
         const a=gGet(), g={id:uid(),name:base.slice(0,60),keys:[videoKey]}; a.push(g); gSet(a); lsSet(AK,g.id);
+        curGid=g.id; try{ if(events.length||markers.length||matchMeta) saveProject(); }catch(e){}
         toast('Proyecto «'+g.name+'» creado con este vídeo.'); try{ window.__renderRec&&window.__renderRec(); }catch(e){} try{ window.__pjHome&&window.__pjHome(); }catch(e){} }
     }catch(e){}
   },1200); });
@@ -9128,7 +9175,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
       const gs=gGet(), g=gs.find(x=>x.id===S.gid);
       /* todos los partidos: los guardados en «Mis partidos» y los de cualquier proyecto (también los abiertos desde el disco en la app de Mac) */
       const set=new Set(Object.keys(gameOf)); gs.forEach(x=>(x.keys||[]).forEach(k=>set.add(k)));
-      try{ for(let i=0;i<localStorage.length;i++){ const lk=localStorage.key(i); if(lk&&lk.indexOf('bbtag.project.')===0){ const k=lk.slice(14); if(!/\.(copia|nuevo)$/.test(k)) set.add(k); } } }catch(e){}
+      try{ for(let i=0;i<localStorage.length;i++){ const lk=localStorage.key(i); if(lk&&lk.indexOf('bbtag.project.')===0){ const k=splitPk(lk.slice(14)).k; if(!/\.(copia|nuevo)$/.test(lk)) set.add(k); } } }catch(e){}
       const enG=k=>gs.filter(x=>x.id!==S.gid&&(x.keys||[]).includes(k)).map(x=>x.name);
       const all=[...set].sort((a,b)=>((g.keys.includes(b)?1:0)-(g.keys.includes(a)?1:0))||(((gameOf[b]||{}).added||0)-((gameOf[a]||{}).added||0)));
       B.innerHTML=head()+'<p class="hint" style="margin:0 0 8px">Marca los partidos que forman parte de «'+esc(g.name)+'». Salen los vídeos guardados en «Mis partidos» de este dispositivo.</p>'+
@@ -9212,9 +9259,10 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
   const act=()=>{ try{ const a=lsGet('bbtag.group.active'); return JSON.parse(lsGet('bbtag.groups')||'[]').find(x=>x.id===a)||null; }catch(e){ return null; } };
   const cache=new Map();
   function evsOf(k){
-    const ts=lsGet('bbtag.pts.'+k)||'', c=cache.get(k); if(c&&c.ts===ts) return c.evs;
-    let evs=[]; try{ const o=JSON.parse(lsGet('bbtag.project.'+k)||'null'); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent); }catch(e){}
-    cache.set(k,{ts,evs}); return evs;
+    const ag=(act()||{}).id||'', pk_=(ag&&grpList().some(x=>x.id===ag&&x.keys.includes(k)))?pkOf(k,ag):k;
+    const ts=lsGet('bbtag.pts.'+pk_)||'', c=cache.get(pk_); if(c&&c.ts===ts) return c.evs;
+    let evs=[]; try{ const o=projObj(k,ag); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent); }catch(e){}
+    cache.set(pk_,{ts,evs}); return evs;
   }
   const titleOf=k=>{ const T=titlesGet(); return (T[k]&&T[k].t)||k.split('|')[0]; };
   /* interruptor 📚 junto al contador */
@@ -9293,7 +9341,7 @@ function ipSegSync(){ const g=document.getElementById('ipSeg'); if(!g) return; g
     const items=[];
     use.forEach(r=>{
       if(r.loc){ items.push(r.e.id); return; }
-      const o=JSON.parse(lsGet('bbtag.project.'+r.k)||'null')||{}, v=files[r.k], sd=t=>(o.meta&&o.meta[t]&&o.meta[t].name)||(t==='R'?'Rival':'Local');
+      const o=projObj(r.k,actGid())||{}, v=files[r.k], sd=t=>(o.meta&&o.meta[t]&&o.meta[t].name)||(t==='R'?'Rival':'Local');
       const x=extFromEv(r.e,titleOf(r.k),v.name,v.size,sd(r.e.team==='R'?'R':'L'),r.e.player?'#'+r.e.player:''); externals.push(x); extFiles[x.id]=v; items.push('x:'+x.id);
     });
     if(produce){
@@ -9581,8 +9629,8 @@ window.__guardarAlSalir=function(){ try{ saveProject(); return true; }catch(e){ 
     const newKey=name+'|'+file.size, oldKey=info.key;
     /* pasar las marcas de la clave provisional a la del archivo */
     try{
-      let raw=lsGet('bbtag.project.'+oldKey);
-      if(raw){ lsSet('bbtag.project.'+newKey,raw); lsSet('bbtag.pts.'+newKey,String(Date.now())); localStorage.removeItem('bbtag.project.'+oldKey); localStorage.removeItem('bbtag.pts.'+oldKey); }
+      let raw=lsGet('bbtag.project.'+pkOf(oldKey,curGid))||(curGid?lsGet('bbtag.project.'+oldKey):null);
+      if(raw){ lsSet('bbtag.project.'+pkOf(newKey,curGid),raw); lsSet('bbtag.pts.'+pkOf(newKey,curGid),String(Date.now())); localStorage.removeItem('bbtag.project.'+oldKey); localStorage.removeItem('bbtag.pts.'+oldKey); if(curGid){ localStorage.removeItem('bbtag.project.'+pkOf(oldKey,curGid)); localStorage.removeItem('bbtag.pts.'+pkOf(oldKey,curGid)); } }
       if(!recovered){ videoKey=newKey; saveProject(); }
       const tm=titlesGet(); if(tm[oldKey]){ tm[newKey]=tm[oldKey]; delete tm[oldKey]; lsSet('bbtag.titles',JSON.stringify(tm)); }
     }catch(e){}
@@ -9838,7 +9886,7 @@ document.getElementById('ipLibMore').onclick=()=>document.body.classList.toggle(
     el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async e=>{
       e.stopPropagation(); const r=a[+b.dataset.del]; if(!r) return;
       if(!(await window.__askOk('¿Eliminar «'+r.name+'»?','Se borran sus etiquetas, clips y dibujos y el vídeo guardado en este dispositivo.','Eliminar'))) return;
-      try{ localStorage.removeItem('bbtag.project.'+r.key); const tm=titlesGet(); delete tm[r.key]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(er){}
+      try{ localStorage.removeItem('bbtag.project.'+r.key); projPurge(r.key); const tm=titlesGet(); delete tm[r.key]; lsSet('bbtag.titles',JSON.stringify(tm)); }catch(er){}
       try{ await vdbTx('readwrite',st=>st.delete(r.key)); }catch(er){}
       try{ lsSet(RK,JSON.stringify(getRec().filter(x=>x.key!==r.key))); }catch(er){}
       if(videoKey===r.key){ videoKey=null; events=[];markers=[];stints=[];teles=[];playlists=[];covers=[];externals=[]; selectedId=null; try{ renderAll(); }catch(er){} }
@@ -10539,7 +10587,7 @@ function pjOthers(){
     const a=lsGet('bbtag.group.active'), g=JSON.parse(lsGet('bbtag.groups')||'[]').find(x=>x&&x.id===a);
     if(!g||!Array.isArray(g.keys)||g.keys.length<2||!g.keys.includes(videoKey)) return [];
     const T=titlesGet(), out=[];
-    g.keys.forEach(k=>{ if(k===videoKey) return; let evs=[]; try{ const o=JSON.parse(lsGet('bbtag.project.'+k)||'null'); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).sort((p,q)=>p.t-q.t); }catch(e){} if(evs.length){ let nm={}; try{ const o2=JSON.parse(lsGet('bbtag.project.'+k)||'null')||{}; nm={L:(o2.meta&&o2.meta.L&&o2.meta.L.name)||'Local',R:(o2.meta&&o2.meta.R&&o2.meta.R.name)||'Rival'}; }catch(e){ nm={L:'Local',R:'Rival'}; } out.push({k,title:(T[k]&&T[k].t)||k.split('|')[0],evs,nm}); } });
+    g.keys.forEach(k=>{ if(k===videoKey) return; let evs=[]; try{ const o=projObj(k,g.id); evs=((o&&o.events)||[]).filter(x=>x&&isFinite(x.start)&&isFinite(x.end)).map(normEvent).sort((p,q)=>p.t-q.t); }catch(e){} if(evs.length){ let nm={}; try{ const o2=projObj(k,g.id)||{}; nm={L:(o2.meta&&o2.meta.L&&o2.meta.L.name)||'Local',R:(o2.meta&&o2.meta.R&&o2.meta.R.name)||'Rival'}; }catch(e){ nm={L:'Local',R:'Rival'}; } out.push({k,title:(T[k]&&T[k].t)||k.split('|')[0],evs,nm}); } });
     return out;
   }catch(e){ return []; }
 }
@@ -10551,7 +10599,7 @@ async function addXClips(list,doc){
   for(const r of list){
     if(!(r.k in files)){ files[r.k]=await vidFile(r.k); if(!files[r.k]) files[r.k]=await vidAsk(r.k,r.title,doc); if(!files[r.k]) falta.push(r.title); }
     const f=files[r.k]; if(!f) continue;
-    const o=JSON.parse(lsGet('bbtag.project.'+r.k)||'null')||{}, sd=tm=>(o.meta&&o.meta[tm]&&o.meta[tm].name)||(tm==='R'?'Rival':'Local');
+    const o=projObj(r.k,actGid())||{}, sd=tm=>(o.meta&&o.meta[tm]&&o.meta[tm].name)||(tm==='R'?'Rival':'Local');
     const x=extFromEv(r.e,r.title,f.name,f.size,sd(r.e.team==='R'?'R':'L'),r.e.player?'#'+r.e.player:''); externals.push(x); extFiles[x.id]=f; p.items.push('x:'+x.id); n++;
   }
   if(falta.length) toast('No se añadieron los cortes de «'+[...new Set(falta)].join(', ')+'» porque falta su vídeo.');
